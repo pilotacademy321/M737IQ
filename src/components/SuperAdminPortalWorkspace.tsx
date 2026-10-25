@@ -641,10 +641,11 @@ export const SuperAdminPortalWorkspace: React.FC<SuperAdminPortalWorkspaceProps>
     const radiology = usersList.filter(u => u.role === 'radiology_center').length;
     const laboratories = usersList.filter(u => u.role === 'laboratory').length;
     const pharmacies = usersList.filter(u => u.role === 'pharmacy').length;
+    const wholesalers = usersList.filter(u => u.role === 'wholesaler').length;
     const patients = usersList.filter(u => u.role === 'patient').length;
     const secretaries = usersList.filter(u => u.role === 'secretary').length;
 
-    return { total, pending, approved, suspended, doctors, radiology, laboratories, pharmacies, patients, secretaries };
+    return { total, pending, approved, suspended, doctors, radiology, laboratories, pharmacies, wholesalers, patients, secretaries };
   }, [usersList]);
 
   // Filtered Users List
@@ -678,6 +679,8 @@ export const SuperAdminPortalWorkspace: React.FC<SuperAdminPortalWorkspaceProps>
         return { labelAr: 'مختبر تحليلات', labelEn: 'Laboratory', color: 'bg-emerald-100 text-emerald-900 border-emerald-200' };
       case 'pharmacy':
         return { labelAr: 'صيدلية', labelEn: 'Pharmacy', color: 'bg-purple-100 text-purple-900 border-purple-200' };
+      case 'wholesaler':
+        return { labelAr: 'مذخر / مكتب علمي', labelEn: 'Drug Warehouse', color: 'bg-teal-100 text-teal-900 border-teal-200' };
       case 'patient':
         return { labelAr: 'مريض', labelEn: 'Patient', color: 'bg-cyan-100 text-cyan-900 border-cyan-200' };
       case 'secretary':
@@ -927,7 +930,7 @@ export const SuperAdminPortalWorkspace: React.FC<SuperAdminPortalWorkspaceProps>
               {/* Role filter */}
               <div className="flex flex-wrap items-center gap-1.5 text-xs">
                 <span className="font-bold text-slate-400 me-1">{language === 'ar' ? 'الدور:' : 'Role:'}</span>
-                {(['all', 'doctor', 'radiology_center', 'laboratory', 'pharmacy', 'patient', 'secretary'] as const).map((r) => (
+                {(['all', 'doctor', 'radiology_center', 'laboratory', 'pharmacy', 'wholesaler', 'patient', 'secretary'] as const).map((r) => (
                   <button
                     key={r}
                     onClick={() => setRoleFilter(r)}
@@ -947,6 +950,8 @@ export const SuperAdminPortalWorkspace: React.FC<SuperAdminPortalWorkspaceProps>
                       ? (language === 'ar' ? 'مختبرات' : 'Labs')
                       : r === 'pharmacy'
                       ? (language === 'ar' ? 'صيدليات' : 'Pharmacies')
+                      : r === 'wholesaler'
+                      ? (language === 'ar' ? 'مذاخر وأدوية' : 'Wholesalers')
                       : r === 'patient'
                       ? (language === 'ar' ? 'مرضى' : 'Patients')
                       : (language === 'ar' ? 'سكرتارية' : 'Secretaries')}
@@ -1798,7 +1803,8 @@ export const SuperAdminPortalWorkspace: React.FC<SuperAdminPortalWorkspaceProps>
                     <option value="doctor">{language === 'ar' ? 'أطباء وعيادات' : 'Doctors'}</option>
                     <option value="radiology_center">{language === 'ar' ? 'مراكز أشعة وسونار' : 'Radiology Centers'}</option>
                     <option value="laboratory">{language === 'ar' ? 'مختبرات سريرية' : 'Laboratories'}</option>
-                    <option value="pharmacy">{language === 'ar' ? 'صيدليات ومذاخر' : 'Pharmacies'}</option>
+                    <option value="pharmacy">{language === 'ar' ? 'صيدليات' : 'Pharmacies'}</option>
+                    <option value="wholesaler">{language === 'ar' ? 'مذاخر ومكاتب أدوية' : 'Drug Wholesalers'}</option>
                   </select>
                 </div>
 

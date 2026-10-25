@@ -5,24 +5,23 @@
 
 import React, { useState, useEffect } from 'react';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider } from './context/AuthContext';
 import { Header } from './components/Header';
-import { HeroSection } from './components/HeroSection';
-import { PortalCardsSection } from './components/PortalCardsSection';
+import { HomePageView } from './components/HomePageView';
+import { PortalsSelectionPage } from './components/PortalsSelectionPage';
+import { AboutUsPage } from './components/AboutUsPage';
+import { SupportContactPage } from './components/SupportContactPage';
 import { PortalShellView } from './components/PortalShellView';
-import { ServicesSection } from './components/ServicesSection';
-import { AboutSection } from './components/AboutSection';
-import { ContactSection } from './components/ContactSection';
 import { Footer } from './components/Footer';
 import { LegalModal } from './components/LegalModals';
 import { OnboardingModal } from './components/OnboardingModal';
 import { AuthDomainGuideModal } from './components/AuthDomainGuideModal';
 import { PortalId } from './types';
+import { parseCurrentRoute, navigateTo, RouteState } from './utils/navigation';
 
 const MainAppContent: React.FC = () => {
   const { language } = useLanguage();
-  const [activeSection, setActiveSection] = useState<string>('home');
-  const [selectedPortalId, setSelectedPortalId] = useState<PortalId | null>(null);
+  const [routeState, setRouteState] = useState<RouteState>(() => parseCurrentRoute());
   const [legalModal, setLegalModal] = useState<{
     isOpen: boolean;
     type: 'privacy' | 'terms' | null;
@@ -31,83 +30,36 @@ const MainAppContent: React.FC = () => {
     type: null,
   });
 
-  // Handle Hash Navigation on Initial Load & Browser History
+  // Handle URL Synchronization, Browser Back/Forward buttons and direct navigation
   useEffect(() => {
-    const handleHashChange = () => {
-      let hash = window.location.hash.replace('#', '');
-      if (hash === 'radiology_center') hash = 'radiology';
-
-      const validPortals: PortalId[] = [
-        'doctor',
-        'radiology',
-        'laboratory',
-        'pharmacy',
-        'patient',
-        'super_admin',
-        'secretary',
-      ];
-
-      if (validPortals.includes(hash as PortalId)) {
-        setSelectedPortalId(hash as PortalId);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      } else if (['home', 'portals', 'services', 'about', 'support', 'contact'].includes(hash)) {
-        setSelectedPortalId(null);
-        setActiveSection(hash);
-        const element = document.getElementById(hash);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth' });
-        }
-      } else if (!hash) {
-        setSelectedPortalId(null);
-      }
+    const handleLocationChange = () => {
+      const parsed = parseCurrentRoute();
+      setRouteState(parsed);
     };
 
-    handleHashChange();
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
+    handleLocationChange();
+    window.addEventListener('popstate', handleLocationChange);
+    window.addEventListener('hashchange', handleLocationChange);
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange);
+      window.removeEventListener('hashchange', handleLocationChange);
+    };
   }, []);
 
-  const handleNavigate = (sectionId: string) => {
-    const validPortals: PortalId[] = [
-      'doctor',
-      'radiology',
-      'laboratory',
-      'pharmacy',
-      'patient',
-      'super_admin',
-      'secretary',
-    ];
-
-    if (validPortals.includes(sectionId as PortalId)) {
-      handleSelectPortal(sectionId as PortalId);
-      return;
-    }
-
-    setSelectedPortalId(null);
-    setActiveSection(sectionId);
-    window.location.hash = sectionId;
-
-    if (sectionId === 'home') {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
-
-    const element = document.getElementById(sectionId);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-    }
+  const handleNavigate = (target: string) => {
+    navigateTo(target);
   };
 
   const handleSelectPortal = (portalId: PortalId) => {
-    setSelectedPortalId(portalId);
-    window.location.hash = portalId;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    navigateTo(portalId);
   };
 
   const handleResetToHome = () => {
-    setSelectedPortalId(null);
-    window.location.hash = 'home';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    navigateTo('home');
+  };
+
+  const handleNavigateToPortals = () => {
+    navigateTo('portals');
   };
 
   const handleOpenLegal = (type: 'privacy' | 'terms') => {
@@ -118,45 +70,73 @@ const MainAppContent: React.FC = () => {
     setLegalModal({ isOpen: false, type: null });
   };
 
+  // Render appropriate view based on routeState
+  const renderCurrentView = () => {
+    // 1. Dedicated Portal Page
+    if (routeState.portalId) {
+      return (
+        <PortalShellView
+          portalId={routeState.portalId}
+          onBackToHome={handleResetToHome}
+          onBackToPortals={handleNavigateToPortals}
+          onSelectPortal={handleSelectPortal}
+        />
+      );
+    }
+
+    // 2. Dedicated Portal Selection Page (Triggered by START button or /portals)
+    if (routeState.route === 'portals') {
+      return (
+        <PortalsSelectionPage
+          onNavigateHome={handleResetToHome}
+          onSelectPortal={handleSelectPortal}
+        />
+      );
+    }
+
+    // 3. Dedicated About Us Page (/about)
+    if (routeState.route === 'about') {
+      return (
+        <AboutUsPage
+          onNavigateHome={handleResetToHome}
+          onNavigatePortals={handleNavigateToPortals}
+          onNavigateSupport={() => handleNavigate('support')}
+        />
+      );
+    }
+
+    // 4. Dedicated Support & Contact Page (/support)
+    if (routeState.route === 'support') {
+      return (
+        <SupportContactPage
+          onNavigateHome={handleResetToHome}
+          onNavigatePortals={handleNavigateToPortals}
+        />
+      );
+    }
+
+    // 5. Dedicated Welcome Landing Page (Default: / or /home)
+    return (
+      <HomePageView
+        onNavigate={handleNavigate}
+        onSelectPortal={handleSelectPortal}
+      />
+    );
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900 transition-colors duration-200">
       {/* Global Responsive Navigation Header */}
       <Header
-        activeSection={activeSection}
+        activeSection={routeState.route}
         onNavigate={handleNavigate}
-        selectedPortalId={selectedPortalId}
+        selectedPortalId={routeState.portalId}
         onResetToHome={handleResetToHome}
       />
 
-      {/* Conditional View: Either Dedicated Portal Shell or Full Landing Page */}
+      {/* Main Routed Content */}
       <main className="flex-1">
-        {selectedPortalId ? (
-          <PortalShellView
-            portalId={selectedPortalId}
-            onBackToHome={handleResetToHome}
-            onSelectPortal={handleSelectPortal}
-          />
-        ) : (
-          <>
-            {/* Hero Section */}
-            <HeroSection
-              onExplorePortals={() => handleNavigate('portals')}
-              onNavigate={handleNavigate}
-            />
-
-            {/* Seven Independent Portals Showcase */}
-            <PortalCardsSection onSelectPortal={handleSelectPortal} />
-
-            {/* Services Section */}
-            <ServicesSection onSelectPortal={handleSelectPortal} />
-
-            {/* About Us Section */}
-            <AboutSection />
-
-            {/* Support and Contact Section */}
-            <ContactSection />
-          </>
-        )}
+        {renderCurrentView()}
       </main>
 
       {/* Comprehensive Footer */}

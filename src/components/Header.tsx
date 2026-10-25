@@ -41,11 +41,9 @@ export const Header: React.FC<HeaderProps> = ({
 
   const navItems = [
     { id: 'home', label: t.nav.home },
-    { id: 'portals', label: t.nav.portals },
-    { id: 'services', label: t.nav.services },
+    { id: 'portals', label: language === 'ar' ? 'بوابات المنصة' : 'Portals' },
     { id: 'about', label: t.nav.about },
-    { id: 'support', label: t.nav.support },
-    { id: 'contact', label: t.nav.contact },
+    { id: 'support', label: language === 'ar' ? 'الدعم والتواصل' : 'Support' },
   ];
 
   const handleLinkClick = (id: string) => {

@@ -48,6 +48,9 @@ const LaboratoryPortalWorkspace = React.lazy(() =>
 const PharmacyPortalWorkspace = React.lazy(() =>
   import('./PharmacyPortalWorkspace').then((m) => ({ default: m.PharmacyPortalWorkspace }))
 );
+const WholesalerPortalWorkspace = React.lazy(() =>
+  import('./WholesalerPortalWorkspace').then((m) => ({ default: m.WholesalerPortalWorkspace }))
+);
 const PatientPortalWorkspace = React.lazy(() =>
   import('./PatientPortalWorkspace').then((m) => ({ default: m.PatientPortalWorkspace }))
 );
@@ -62,12 +65,14 @@ interface PortalShellViewProps {
   portalId: PortalId;
   onBackToHome: () => void;
   onSelectPortal: (id: PortalId) => void;
+  onBackToPortals?: () => void;
 }
 
 export const PortalShellView: React.FC<PortalShellViewProps> = ({
   portalId,
   onBackToHome,
   onSelectPortal,
+  onBackToPortals,
 }) => {
   const { 
     user, 
@@ -99,6 +104,8 @@ export const PortalShellView: React.FC<PortalShellViewProps> = ({
         return <FlaskConical size={size} />;
       case 'pharmacy':
         return <Pill size={size} />;
+      case 'wholesaler':
+        return <Building2 size={size} />;
       case 'patient':
         return <User size={size} />;
       case 'super_admin':
@@ -130,17 +137,28 @@ export const PortalShellView: React.FC<PortalShellViewProps> = ({
       {/* Top Banner Navigation / Breadcrumb */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
         <div className="flex flex-wrap items-center justify-between gap-4 py-3 border-b border-slate-200">
-          <button
-            onClick={onBackToHome}
-            className="inline-flex items-center gap-2 text-sm font-bold text-slate-700 hover:text-[#003366] transition-colors cursor-pointer group"
-          >
-            {isRTL ? (
-              <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
-            ) : (
-              <ArrowLeft size={18} className="transition-transform group-hover:-translate-x-1" />
-            )}
-            <span>{t.portalShell.backToHome}</span>
-          </button>
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <button
+              onClick={onBackToPortals || onBackToHome}
+              className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-700 hover:text-[#003366] transition-colors cursor-pointer group"
+            >
+              {isRTL ? (
+                <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
+              ) : (
+                <ArrowLeft size={16} className="transition-transform group-hover:-translate-x-1" />
+              )}
+              <span>{language === 'ar' ? 'العودة لقائمة البوابات' : 'Back to Portals'}</span>
+            </button>
+
+            <span className="text-slate-300">|</span>
+
+            <button
+              onClick={onBackToHome}
+              className="text-xs sm:text-sm font-semibold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+            >
+              {language === 'ar' ? 'الصفحة الرئيسية' : 'Home'}
+            </button>
+          </div>
 
           <div className="flex items-center gap-3">
             {isAuthenticated && (
@@ -268,6 +286,7 @@ export const PortalShellView: React.FC<PortalShellViewProps> = ({
                 radiology: 'radiology_center',
                 laboratory: 'laboratory',
                 pharmacy: 'pharmacy',
+                wholesaler: 'wholesaler',
                 patient: 'patient',
                 super_admin: 'super_admin',
                 secretary: 'secretary',
@@ -381,6 +400,7 @@ export const PortalShellView: React.FC<PortalShellViewProps> = ({
                 radiology: 'radiology_center',
                 laboratory: 'laboratory',
                 pharmacy: 'pharmacy',
+                wholesaler: 'wholesaler',
                 patient: 'patient',
                 super_admin: 'super_admin',
                 secretary: 'secretary',
@@ -574,6 +594,8 @@ export const PortalShellView: React.FC<PortalShellViewProps> = ({
                 <LaboratoryPortalWorkspace onBackToHome={onBackToHome} />
               ) : portal.id === 'pharmacy' ? (
                 <PharmacyPortalWorkspace onBackToHome={onBackToHome} />
+              ) : portal.id === 'wholesaler' ? (
+                <WholesalerPortalWorkspace onBackToHome={onBackToHome} />
               ) : portal.id === 'patient' ? (
                 <PatientPortalWorkspace onBackToHome={onBackToHome} />
               ) : portal.id === 'secretary' ? (

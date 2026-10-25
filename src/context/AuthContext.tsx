@@ -170,6 +170,20 @@ const getPresetDemoProfile = (role: UserRole, customName?: string): UserProfile 
         createdAt: now,
         updatedAt: now,
       };
+    case 'wholesaler':
+      return {
+        uid: 'demo_wholesaler_samarra',
+        email: 'wholesaler.samarra@m737.iq',
+        displayName: customName || 'مذخر سامراء العلمي الحديث لتجارة الأدوية والمستلزمات الطبية',
+        role: 'wholesaler',
+        status: 'approved',
+        licenseNumber: 'IQ-WHOLE-88301',
+        facilityName: 'مذخر سامراء العلمي للأدوية والمستلزمات',
+        governorate: 'بغداد (Baghdad)',
+        phone: '07709988776',
+        createdAt: now,
+        updatedAt: now,
+      };
     case 'secretary':
       return {
         uid: 'demo_secretary_ansam',
@@ -551,6 +565,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           getPresetDemoProfile('laboratory'),
           getPresetDemoProfile('radiology_center'),
           getPresetDemoProfile('pharmacy'),
+          getPresetDemoProfile('wholesaler'),
         ];
       }
       handleFirestoreError(err, OperationType.LIST, 'users');

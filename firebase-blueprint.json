@@ -23,7 +23,7 @@
         "role": {
           "type": "string",
           "description": "Platform role assigned to the user",
-          "enum": ["doctor", "radiology_center", "laboratory", "pharmacy", "patient", "super_admin", "secretary"]
+          "enum": ["doctor", "radiology_center", "laboratory", "pharmacy", "patient", "super_admin", "secretary", "wholesaler"]
         },
         "status": {
           "type": "string",
@@ -1090,6 +1090,84 @@
         "updatedAt": { "type": "string" }
       },
       "required": ["patientId", "fullName", "medicalId", "phone", "governorate", "address", "createdAt", "updatedAt"]
+    },
+    "WholesalerProfile": {
+      "title": "WholesalerProfile",
+      "description": "Licensed pharmaceutical drug warehouse or scientific bureau profile and operational parameters",
+      "type": "object",
+      "properties": {
+        "wholesalerId": { "type": "string", "maxLength": 128 },
+        "companyName": { "type": "string", "maxLength": 128 },
+        "ownerName": { "type": "string", "maxLength": 128 },
+        "licenseNumber": { "type": "string", "maxLength": 64 },
+        "phone": { "type": "string", "maxLength": 32 },
+        "whatsapp": { "type": "string", "maxLength": 32 },
+        "address": { "type": "string", "maxLength": 256 },
+        "governorate": { "type": "string", "maxLength": 64 },
+        "coveredGovernorates": { "type": "array" },
+        "minOrderValue": { "type": "number" },
+        "deliveryDays": { "type": "string", "maxLength": 128 },
+        "isVerified": { "type": "boolean" },
+        "logoUrl": { "type": "string" },
+        "bio": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["wholesalerId", "companyName", "ownerName", "licenseNumber", "phone", "address", "governorate", "minOrderValue", "createdAt", "updatedAt"]
+    },
+    "WholesaleMedicineItem": {
+      "title": "WholesaleMedicineItem",
+      "description": "B2B bulk pharmaceutical medicine batch available for retail pharmacies",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "wholesalerId": { "type": "string", "maxLength": 128 },
+        "wholesalerName": { "type": "string", "maxLength": 128 },
+        "brandName": { "type": "string", "maxLength": 128 },
+        "activeIngredient": { "type": "string", "maxLength": 128 },
+        "manufacturer": { "type": "string", "maxLength": 128 },
+        "countryOfOrigin": { "type": "string", "maxLength": 64 },
+        "dosageForm": { "type": "string", "maxLength": 64 },
+        "strength": { "type": "string", "maxLength": 64 },
+        "batchNumber": { "type": "string", "maxLength": 64 },
+        "expiryDate": { "type": "string" },
+        "packPriceIQD": { "type": "number" },
+        "cartonPriceIQD": { "type": "number" },
+        "packsPerCarton": { "type": "number" },
+        "minOrderQuantityPacks": { "type": "number" },
+        "availablePacks": { "type": "number" },
+        "isAvailable": { "type": "boolean" },
+        "requiresSpecialStorage": { "type": "boolean" },
+        "storageInstructions": { "type": "string", "maxLength": 256 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["wholesalerId", "wholesalerName", "brandName", "activeIngredient", "batchNumber", "expiryDate", "packPriceIQD", "minOrderQuantityPacks", "availablePacks", "isAvailable", "createdAt", "updatedAt"]
+    },
+    "WholesaleOrder": {
+      "title": "WholesaleOrder",
+      "description": "B2B pharmaceutical order placed by an accredited pharmacy to a warehouse or scientific bureau",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "wholesalerId": { "type": "string", "maxLength": 128 },
+        "wholesalerName": { "type": "string", "maxLength": 128 },
+        "pharmacyId": { "type": "string", "maxLength": 128 },
+        "pharmacyName": { "type": "string", "maxLength": 128 },
+        "pharmacyPhone": { "type": "string", "maxLength": 32 },
+        "deliveryAddress": { "type": "string", "maxLength": 256 },
+        "governorate": { "type": "string", "maxLength": 64 },
+        "items": { "type": "array" },
+        "totalAmountIQD": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "approved", "preparing", "dispatched", "delivered", "cancelled"] },
+        "notes": { "type": "string", "maxLength": 500 },
+        "cancellationReason": { "type": "string", "maxLength": 500 },
+        "dispatchDate": { "type": "string" },
+        "deliveredAt": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["wholesalerId", "wholesalerName", "pharmacyId", "pharmacyName", "deliveryAddress", "governorate", "items", "totalAmountIQD", "status", "createdAt", "updatedAt"]
     }
   },
   "firestore": {
@@ -1176,6 +1254,18 @@
     "/clinic_audit_logs/{logId}": {
       "schema": "ClinicAuditLog",
       "description": "Front-desk audit trail of secretary appointment modifications"
+    },
+    "/wholesaler_profiles/{wholesalerId}": {
+      "schema": "WholesalerProfile",
+      "description": "Licensed pharmaceutical drug warehouse or scientific bureau profile and operational parameters"
+    },
+    "/wholesale_medicines/{medicineId}": {
+      "schema": "WholesaleMedicineItem",
+      "description": "B2B bulk pharmaceutical medicine batches available for retail pharmacies"
+    },
+    "/wholesale_orders/{orderId}": {
+      "schema": "WholesaleOrder",
+      "description": "B2B wholesale purchase orders from retail pharmacies to warehouses"
     }
   }
 }

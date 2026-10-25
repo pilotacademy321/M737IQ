@@ -200,6 +200,7 @@ export const OnboardingModal: React.FC = () => {
                   { role: 'radiology_center' as UserRole, labelAr: 'مركز أشعة وسونار', labelEn: 'Radiology Center', icon: Scan, color: 'text-cyan-600' },
                   { role: 'laboratory' as UserRole, labelAr: 'مختبر تحاليل', labelEn: 'Clinical Laboratory', icon: FlaskConical, color: 'text-orange-600' },
                   { role: 'pharmacy' as UserRole, labelAr: 'صيدلية أهلية', labelEn: 'Pharmacy', icon: Pill, color: 'text-emerald-600' },
+                  { role: 'wholesaler' as UserRole, labelAr: 'مذخر / مكتب علمي', labelEn: 'Drug Warehouse', icon: Building2, color: 'text-teal-600' },
                   { role: 'secretary' as UserRole, labelAr: 'سكرتير / استقبال', labelEn: 'Clinic Secretary', icon: Users, color: 'text-blue-600' },
                 ].map((item) => {
                   const Icon = item.icon;

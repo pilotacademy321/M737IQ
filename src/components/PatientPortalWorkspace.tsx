@@ -78,6 +78,7 @@ import {
   MessageSquare,
   Info
 } from 'lucide-react';
+import { SmartMedicineSearch, SearchMedicineResult } from './SmartMedicineSearch';
 
 interface PatientPortalWorkspaceProps {
   onBackToHome: () => void;
@@ -2104,6 +2105,25 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
               <div className="text-xs font-bold px-3 py-1.5 rounded-xl bg-teal-50 text-teal-800 border border-teal-200">
                 {filteredMedicines.length} {language === 'ar' ? 'صنف مسجل' : 'products found'}
               </div>
+            </div>
+
+            {/* Smart Real-time Iraq Pharmaceutical Search */}
+            <div className="bg-gradient-to-r from-teal-50/80 via-emerald-50/50 to-sky-50/80 rounded-2xl p-4 border border-teal-200/80 shadow-xs">
+              <div className="flex items-center gap-2 mb-2 text-xs font-bold text-teal-900">
+                <Sparkles size={14} className="text-teal-600" />
+                <span>{language === 'ar' ? 'محرك البحث الذكي الفوري عن الأدوية والمواد الفعالة في العراق' : 'Instant Iraqi Drug & Generic Molecule Finder'}</span>
+              </div>
+              <SmartMedicineSearch
+                placeholder={language === 'ar' ? 'ابحث فوراً بالاسم التجاري أو العلمي (مثلاً: Panadol, Augmentin, Metformin, Ventolin...)' : 'Instant search by brand, active ingredient, or batch...'}
+                sourceType="all"
+                onSelectMedicine={(selected) => {
+                  setMedicineSearch(selected.name.split(' ')[0] || selected.name);
+                  const matched = medicinesList.find(m => m.id === selected.id || m.name.toLowerCase().includes(selected.name.toLowerCase()));
+                  if (matched) {
+                    setSelectedMedicineForOrder(matched);
+                  }
+                }}
+              />
             </div>
 
             {/* Multi-Criteria Filters */}

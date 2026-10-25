@@ -10,6 +10,7 @@ import {
   User, 
   ShieldCheck, 
   Users, 
+  Building2,
   ArrowLeft, 
   ArrowRight,
   Sparkles,
@@ -36,6 +37,8 @@ export const PortalCardsSection: React.FC<PortalCardsSectionProps> = ({
         return <FlaskConical size={size} />;
       case 'pharmacy':
         return <Pill size={size} />;
+      case 'wholesaler':
+        return <Building2 size={size} />;
       case 'patient':
         return <User size={size} />;
       case 'super_admin':
@@ -59,7 +62,7 @@ export const PortalCardsSection: React.FC<PortalCardsSectionProps> = ({
           </div>
 
           {/* Quick-Access Row (Scrollable on small mobile, flex grid on desktop) */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-4">
             {PORTALS_DATA.map((portal) => (
               <button
                 key={portal.id}

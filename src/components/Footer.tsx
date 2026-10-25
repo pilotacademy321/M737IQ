@@ -64,10 +64,10 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenLegal }) => {
               </li>
               <li>
                 <button
-                  onClick={() => onNavigate('services')}
+                  onClick={() => onNavigate('support')}
                   className="hover:text-white transition-colors cursor-pointer text-start"
                 >
-                  {t.nav.services}
+                  {language === 'ar' ? 'الدعم الفني والتواصل' : 'Support & Contact'}
                 </button>
               </li>
               <li>

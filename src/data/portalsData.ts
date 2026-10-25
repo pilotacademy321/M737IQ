@@ -110,9 +110,36 @@ export const PORTALS_DATA: PortalInfo[] = [
     ]
   },
   {
+    id: 'wholesaler',
+    role: 'wholesaler',
+    order: 5,
+    titleAr: 'بوابة المذاخر والمكاتب العلمية',
+    titleEn: 'Pharmaceutical Wholesaler Portal',
+    subtitleAr: 'مستودعات الأدوية، التوريد بالجملة والطلبيات',
+    subtitleEn: 'Drug warehouses, B2B wholesale catalog & pharmacy replenishment',
+    descAr: 'منظومة توريد الأدوية والمستلزمات الطبية للمذاخر والمكاتب العلمية في العراق لربطها بالصيدليات والمستشفيات مع إدارة الوجبات والأسعار الرسمية.',
+    descEn: 'B2B supply chain connecting licensed Iraqi drug warehouses and scientific bureaus directly to retail pharmacies with batch management, carton pricing, and automated dispatch.',
+    accentColor: '#0d9488', // Teal
+    bgLight: 'bg-teal-50 text-teal-600',
+    borderColor: 'border-teal-200 hover:border-teal-400',
+    iconName: 'wholesaler',
+    plannedModulesAr: [
+      'كتالوج الأدوية والمستلزمات بالجملة مع إدارة الوجبات',
+      'استقبال وتدقيق طلبيات الشراء من الصيدليات',
+      'إدارة أسعار الباكيت والكارتون والحد الأدنى للطلب (MOQ)',
+      'تتبع إرسال الشحنات اللوجستية والفواتير الرسمية'
+    ],
+    plannedModulesEn: [
+      'Wholesale Pharmaceutical Catalog & Batch Ledger',
+      'Incoming Pharmacy Purchase Order Dispatch Desk',
+      'Carton & Pack Pricing with MOQ Enforcement',
+      'Logistics Dispatch Tracking & Certified B2B Invoicing'
+    ]
+  },
+  {
     id: 'patient',
     role: 'patient',
-    order: 5,
+    order: 6,
     titleAr: 'بوابة المريض',
     titleEn: 'Patient Portal',
     subtitleAr: 'حجز المواعيد، البحث عن الأدوية والمتابعة الصحية',
@@ -139,7 +166,7 @@ export const PORTALS_DATA: PortalInfo[] = [
   {
     id: 'super_admin',
     role: 'super_admin',
-    order: 6,
+    order: 7,
     titleAr: 'بوابة المشرف العام',
     titleEn: 'Super Admin Portal',
     subtitleAr: 'إدارة المستخدمين والاشتراكات',
@@ -166,7 +193,7 @@ export const PORTALS_DATA: PortalInfo[] = [
   {
     id: 'secretary',
     role: 'secretary',
-    order: 7,
+    order: 8,
     titleAr: 'بوابة السكرتير',
     titleEn: 'Secretary Portal',
     subtitleAr: 'الربط بين المراكز وإدارة الصلاحيات',

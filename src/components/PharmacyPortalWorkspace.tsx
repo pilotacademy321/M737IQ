@@ -6,7 +6,9 @@ import {
   PharmacyProfile, 
   MedicineItem, 
   PharmacyOrder, 
-  PharmacyOrderStatus 
+  PharmacyOrderStatus,
+  WholesaleOrder,
+  WholesaleOrderItem
 } from '../types';
 import { 
   collection, 
@@ -39,28 +41,30 @@ import {
   Upload, 
   MessageSquare, 
   Eye, 
-  Send,
-  Layers,
-  ChevronRight,
-  ChevronLeft,
-  Users,
-  Printer,
-  X,
-  ExternalLink,
-  AlertTriangle,
-  FileCheck2,
-  Package,
-  Calendar,
-  Clock,
-  Truck,
-  ShieldAlert,
-  FileText,
-  BadgeAlert,
-  Sparkles,
-  ShoppingBag,
-  HeartPulse,
-  Settings
+  Send, 
+  Layers, 
+  ChevronRight, 
+  ChevronLeft, 
+  Users, 
+  Printer, 
+  X, 
+  ExternalLink, 
+  AlertTriangle, 
+  FileCheck2, 
+  Package, 
+  Calendar, 
+  Clock, 
+  Truck, 
+  ShieldAlert, 
+  FileText, 
+  BadgeAlert, 
+  Sparkles, 
+  ShoppingBag, 
+  HeartPulse, 
+  Settings,
+  Building2
 } from 'lucide-react';
+import { SmartMedicineSearch, SearchMedicineResult } from './SmartMedicineSearch';
 
 interface PharmacyPortalWorkspaceProps {
   onBackToHome: () => void;
@@ -70,7 +74,7 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
   const { user, userProfile, isAdmin, refreshProfile } = useAuth();
   const { language, isRTL } = useLanguage();
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'catalog' | 'inventory' | 'orders' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'catalog' | 'inventory' | 'orders' | 'wholesale_b2b' | 'settings'>('dashboard');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -113,6 +117,14 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
   const [cancellingOrder, setCancellingOrder] = useState<PharmacyOrder | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [selectedOrderDetails, setSelectedOrderDetails] = useState<PharmacyOrder | null>(null);
+
+  // Wholesale B2B Procurement State
+  const [b2bOrders, setB2bOrders] = useState<WholesaleOrder[]>([]);
+  const [b2bCart, setB2bCart] = useState<Array<{ medicine: SearchMedicineResult; packQuantity: number; unitPrice: number; cartonPrice?: number }>>([]);
+  const [showB2bCartModal, setShowB2bCartModal] = useState(false);
+  const [b2bNotes, setB2bNotes] = useState('');
+  const [selectedB2bOrderDetails, setSelectedB2bOrderDetails] = useState<WholesaleOrder | null>(null);
+  const [b2bSubmitting, setB2bSubmitting] = useState(false);
 
   // New Order Form State
   const [newOrderData, setNewOrderData] = useState({
@@ -378,6 +390,20 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
       const ordList = ordSnap.docs.map(d => ({ id: d.id, ...d.data() } as PharmacyOrder));
       ordList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setOrders(ordList);
+
+      // 4. Fetch Wholesale B2B Orders Placed to Warehouses
+      try {
+        const b2bQuery = query(
+          collection(db, 'wholesale_orders'),
+          where('pharmacyId', '==', user.uid)
+        );
+        const b2bSnap = await getDocs(b2bQuery);
+        const b2bList = b2bSnap.docs.map(d => ({ id: d.id, ...d.data() } as WholesaleOrder));
+        b2bList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setB2bOrders(b2bList);
+      } catch {
+        setB2bOrders([]);
+      }
 
     } catch (err: unknown) {
       console.error('Error loading pharmacy data:', err);
@@ -708,6 +734,156 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
     }
   };
 
+  // Wholesale B2B Procurement Handlers
+  const handleAddToB2bCart = (med: SearchMedicineResult, requestedPacks: number) => {
+    const minQty = med.minOrderQuantity || 1;
+    const finalQty = Math.max(minQty, requestedPacks);
+
+    setB2bCart((prev) => {
+      const existingIdx = prev.findIndex((item) => item.medicine.id === med.id);
+      if (existingIdx >= 0) {
+        const copy = [...prev];
+        copy[existingIdx].packQuantity += finalQty;
+        return copy;
+      }
+      return [
+        ...prev,
+        {
+          medicine: med,
+          packQuantity: finalQty,
+          unitPrice: med.priceIqd,
+          cartonPrice: med.cartonPriceIqd,
+        },
+      ];
+    });
+
+    showToast(
+      language === 'ar'
+        ? `تمت إضافة (${med.name}) إلى سلة طلبيات الجملة (${finalQty} باكيت)`
+        : `Added ${med.name} (${finalQty} packs) to wholesale cart`
+    );
+  };
+
+  const handleRemoveFromB2bCart = (index: number) => {
+    setB2bCart((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
+  const handleSubmitB2bOrder = async () => {
+    if (!user || b2bCart.length === 0) return;
+    setB2bSubmitting(true);
+
+    try {
+      const now = new Date().toISOString();
+      const primaryWholesaler = b2bCart[0].medicine;
+      const orderId = `word_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+      const totalAmount = b2bCart.reduce((sum, it) => sum + it.unitPrice * it.packQuantity, 0);
+
+      const items: WholesaleOrderItem[] = b2bCart.map((it) => ({
+        medicineId: it.medicine.id,
+        name: it.medicine.name,
+        activeIngredient: it.medicine.activeIngredient,
+        strength: it.medicine.strength,
+        batchNumber: `BAT-${Date.now().toString().slice(-6)}`,
+        packQuantity: it.packQuantity,
+        unitWholesalePriceIqd: it.unitPrice,
+        totalPriceIqd: it.unitPrice * it.packQuantity,
+      }));
+
+      const wholesaleOrderPayload: WholesaleOrder = {
+        id: orderId,
+        wholesalerId: primaryWholesaler.facilityId || 'demo_wholesaler_samarra',
+        wholesalerName: primaryWholesaler.facilityName || 'مذخر سامراء العلمي الحديث',
+        pharmacyId: user.uid,
+        pharmacyName: pharmacyProfile?.pharmacyName || userProfile?.facilityName || 'صيدليتنا المعتمدة',
+        pharmacyPhone: pharmacyProfile?.phone || userProfile?.phone || '07XXXXXXXXX',
+        pharmacyAddress: pharmacyProfile?.address || 'العراق، بغداد',
+        pharmacyGovernorate: pharmacyProfile?.governorate || 'بغداد (Baghdad)',
+        items,
+        totalAmountIqd: totalAmount,
+        status: 'pending',
+        paymentMethod: 'cash_on_delivery',
+        pharmacyNotes: b2bNotes,
+        invoiceNumber: `INV-B2B-${Date.now().toString().slice(-6)}`,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      try {
+        await setDoc(doc(db, 'wholesale_orders', orderId), sanitizeForFirestore(wholesaleOrderPayload));
+      } catch (err: unknown) {
+        handleFirestoreError(err, OperationType.CREATE, `wholesale_orders/${orderId}`);
+      }
+
+      setB2bOrders((prev) => [wholesaleOrderPayload, ...prev]);
+      setB2bCart([]);
+      setB2bNotes('');
+      setShowB2bCartModal(false);
+      showToast(
+        language === 'ar'
+          ? 'تم إرسال طلبية الشراء بالجملة إلى المذخر بنجاح'
+          : 'Wholesale B2B order dispatched to warehouse'
+      );
+    } catch (err: unknown) {
+      console.error('Error submitting B2B order:', err);
+      showToast(language === 'ar' ? 'فشل إرسال طلبية الجملة' : 'Failed to submit order', 'error');
+    } finally {
+      setB2bSubmitting(false);
+    }
+  };
+
+  const handleImportDeliveredOrderToStock = async (order: WholesaleOrder) => {
+    if (!user) return;
+    try {
+      const now = new Date().toISOString();
+      for (const item of order.items) {
+        const existing = medicines.find(
+          (m) => m.name.toLowerCase().includes(item.name.toLowerCase()) || m.activeIngredient.toLowerCase() === item.activeIngredient.toLowerCase()
+        );
+
+        if (existing) {
+          await updateDoc(doc(db, 'medicines', existing.id), {
+            quantity: existing.quantity + item.packQuantity,
+            isAvailable: true,
+            updatedAt: now,
+          });
+        } else {
+          const newMedId = `med_${user.uid.slice(0, 5)}_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`;
+          const retailPrice = Math.round(item.unitWholesalePriceIqd * 1.15 / 250) * 250;
+          const newMedicine: MedicineItem = {
+            id: newMedId,
+            pharmacyId: user.uid,
+            pharmacyName: pharmacyProfile?.pharmacyName || userProfile?.facilityName || 'صيدليتنا',
+            name: item.name,
+            activeIngredient: item.activeIngredient,
+            brand: item.name.split(' ')[0],
+            manufacturer: 'معتمد (وزارة الصحة)',
+            strength: item.strength,
+            dosageForm: 'Tablets (أقراص)',
+            packageSize: 'علبة أصلية',
+            price: retailPrice,
+            quantity: item.packQuantity,
+            minStockAlert: 10,
+            expiryDate: new Date(Date.now() + 700 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            requiresPrescription: false,
+            isAvailable: true,
+            createdAt: now,
+            updatedAt: now,
+          };
+          await setDoc(doc(db, 'medicines', newMedId), sanitizeForFirestore(newMedicine));
+        }
+      }
+
+      showToast(
+        language === 'ar'
+          ? 'تم استلام الشحنة وتوريد كافة الأصناف للمخزون بنجاح!'
+          : 'Delivered batch ingested into local inventory!'
+      );
+      await loadPharmacyData();
+    } catch (err: unknown) {
+      console.error('Error importing order to stock:', err);
+    }
+  };
+
   // Save Pharmacy Settings
   const handleSavePharmacySettings = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -949,6 +1125,7 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
           { id: 'catalog', labelAr: `دليل ومحرك بحث الأدوية (${medicines.length})`, labelEn: `Medicine Catalog (${medicines.length})`, icon: Pill },
           { id: 'inventory', labelAr: 'إدارة المخزون والصلاحية', labelEn: 'Inventory & Expiry', icon: Package },
           { id: 'orders', labelAr: `طلبات وتجهيز الوصفات (${orders.length})`, labelEn: `Medicine Orders (${orders.length})`, icon: ShoppingBag },
+          { id: 'wholesale_b2b', labelAr: `سوق الجملة والمذاخر (${b2bOrders.length})`, labelEn: `Wholesale Market (${b2bOrders.length})`, icon: Building2 },
           { id: 'settings', labelAr: 'إعدادات الصيدلية والترخيص', labelEn: 'Pharmacy Profile & Hours', icon: Settings },
         ].map((tab) => {
           const Icon = tab.icon;
@@ -1687,6 +1864,433 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* TAB: WHOLESALE B2B PROCUREMENT MARKET */}
+      {activeTab === 'wholesale_b2b' && (
+        <div className="space-y-6">
+          {/* Top B2B Header & Cart Trigger Banner */}
+          <div className="bg-gradient-to-r from-teal-900 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-500/20 text-teal-300 border border-teal-400/30 text-xs font-bold">
+                <Building2 size={14} />
+                <span>{language === 'ar' ? 'سوق توريد الأدوية B2B الرسمي للصيدليات' : 'Official B2B Pharmacy Supply Market'}</span>
+              </div>
+              <h2 className="text-2xl font-black">
+                {language === 'ar' ? 'شراء الأدوية والمستلزمات بالجملة من المذاخر' : 'Wholesale Procurement from Drug Warehouses'}
+              </h2>
+              <p className="text-xs sm:text-sm text-teal-200 max-w-2xl leading-relaxed">
+                {language === 'ar'
+                  ? 'طلب مباشر بالكرتون والباكيت من المكاتب العلمية ومستودعات الأدوية المعتمدة في بغداد والمحافظات بأسعار الجملة الرسمية.'
+                  : 'Direct replenishment from licensed scientific bureaus & drug warehouses across Iraq with MOQ & carton pricing.'}
+              </p>
+            </div>
+
+            {/* Cart Button */}
+            <div className="shrink-0 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setShowB2bCartModal(true)}
+                className="relative px-5 py-3 rounded-2xl bg-teal-500 hover:bg-teal-400 text-slate-950 font-black text-xs sm:text-sm flex items-center gap-2.5 shadow-md transition-all cursor-pointer"
+              >
+                <Package size={18} />
+                <span>{language === 'ar' ? 'سلة طلبيات الجملة' : 'Wholesale Cart'}</span>
+                {b2bCart.length > 0 && (
+                  <span className="w-5 h-5 rounded-full bg-slate-950 text-white text-[11px] font-bold flex items-center justify-center">
+                    {b2bCart.length}
+                  </span>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Smart Medicine Autocomplete for Wholesale */}
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4">
+            <div>
+              <h3 className="font-bold text-base text-slate-900">
+                {language === 'ar' ? 'البحث الذكي في كتالوجات المذاخر المعتمدة' : 'Search Wholesale Drug Catalogs'}
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                {language === 'ar'
+                  ? 'اكتب 3 أحرف فأكثر للبحث التلقائي بالاسم التجاري أو المادة الفعالة أو الشركة المصنعة.'
+                  : 'Type 3+ characters to search across verified Iraqi drug warehouses.'}
+              </p>
+            </div>
+
+            <div className="max-w-3xl">
+              <SmartMedicineSearch
+                sourceType="wholesale"
+                placeholder={
+                  language === 'ar'
+                    ? 'ابحث عن أوجمنتين، بنادول، كونكور، نيكسيوم، أنسولين أو غيرها...'
+                    : 'Search Augmentin, Panadol, Concor, Nexium, Ceftriaxone...'
+                }
+                onSelectMedicine={(med) => {
+                  handleAddToB2bCart(med, med.minOrderQuantity || 10);
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Featured Verified Drug Warehouses Strip */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
+            <h3 className="font-bold text-base text-slate-900">
+              {language === 'ar' ? 'المذاخر والمكاتب العلمية المعتمدة في الشبكة' : 'Verified Partner Warehouses & Scientific Bureaus'}
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 rounded-2xl border border-teal-200 bg-teal-50/40 flex items-start gap-3.5">
+                <div className="w-12 h-12 rounded-xl bg-teal-700 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <Building2 size={24} />
+                </div>
+                <div className="flex-1 min-w-0 text-xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className="font-bold text-sm text-slate-900">مذخر سامراء العلمي الحديث للأدوية</h4>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-800">معتمد</span>
+                  </div>
+                  <p className="text-slate-500 mt-1">تجهيز كافة أدوية الالتهابات والمسكنات وأدوية الأمراض المزمنة والمستلزمات.</p>
+                  <div className="mt-2 text-slate-600 flex items-center gap-3 flex-wrap">
+                    <span>الترخيص: <strong>IQ-WHOLE-88301</strong></span>
+                    <span>·</span>
+                    <span>بغداد، شارع فلسطين</span>
+                    <span>·</span>
+                    <span>هاتف: <strong>07709988776</strong></span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 flex items-start gap-3.5">
+                <div className="w-12 h-12 rounded-xl bg-slate-800 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <Building2 size={24} />
+                </div>
+                <div className="flex-1 min-w-0 text-xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className="font-bold text-sm text-slate-900">مذخر الرشيد التخصصي للأدوية والمحاليل</h4>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">مرخص نقابياً</span>
+                  </div>
+                  <p className="text-slate-500 mt-1">وكيل معتمد للأدوية الأوروبية والوطنية ومحاليل الغسيل الكلوي وسلسلة التبريد.</p>
+                  <div className="mt-2 text-slate-600 flex items-center gap-3 flex-wrap">
+                    <span>الترخيص: <strong>IQ-WHOLE-5021</strong></span>
+                    <span>·</span>
+                    <span>بغداد، السعدون</span>
+                    <span>·</span>
+                    <span>هاتف: <strong>07712349988</strong></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Pharmacy's Placed B2B Orders & Shipments Tracker */}
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div>
+                <h3 className="font-bold text-base text-slate-900">
+                  {language === 'ar' ? 'سجل طلبيات الشحنات المحجوزة لدى المذاخر' : 'Placed Wholesale Orders & Shipments'}
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {language === 'ar'
+                    ? 'متابعة مراحل التجهيز والتوصيل، واستلام الشحنات لإضافتها إلى المخزون المحلي بضغطة واحدة.'
+                    : 'Track batch fulfillment and easily import delivered orders into local pharmacy stock.'}
+                </p>
+              </div>
+              <span className="text-xs font-bold text-slate-500">
+                {b2bOrders.length} {language === 'ar' ? 'طلبية مسجلة' : 'orders'}
+              </span>
+            </div>
+
+            {b2bOrders.length === 0 ? (
+              <div className="py-12 text-center text-slate-400">
+                <Truck size={40} className="mx-auto mb-2 opacity-30" />
+                <h4 className="font-bold text-sm text-slate-700">
+                  {language === 'ar' ? 'لم تقم الصيدلية بطلب شحنات جملة حتى الآن' : 'No wholesale orders placed yet'}
+                </h4>
+                <p className="text-xs text-slate-500 mt-1">
+                  {language === 'ar'
+                    ? 'استخدم محرك البحث أعلاه لإضافة الأدوية إلى سلة الجملة وإرسال الطلبية لمذخر الأدوية'
+                    : 'Use the smart search to add medications to your wholesale cart and submit to warehouses'}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {b2bOrders.map((ord) => (
+                  <div
+                    key={ord.id}
+                    className="p-5 rounded-2xl border border-slate-200 hover:border-teal-300 hover:shadow-xs transition-all flex flex-col md:flex-row md:items-center justify-between gap-4"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2.5 flex-wrap">
+                        <span className="font-bold text-base text-slate-900">{ord.wholesalerName}</span>
+                        <span className="font-mono text-xs text-slate-400">#{ord.invoiceNumber || ord.id.slice(-6)}</span>
+                        <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
+                          ord.status === 'delivered'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : ord.status === 'dispatched'
+                            ? 'bg-blue-100 text-blue-800'
+                            : ord.status === 'preparing'
+                            ? 'bg-purple-100 text-purple-800'
+                            : ord.status === 'approved'
+                            ? 'bg-teal-100 text-teal-800'
+                            : ord.status === 'cancelled'
+                            ? 'bg-red-100 text-red-800'
+                            : 'bg-amber-100 text-amber-800'
+                        }`}>
+                          {ord.status === 'pending' && (language === 'ar' ? 'قيد مراجعة المذخر' : 'Pending Review')}
+                          {ord.status === 'approved' && (language === 'ar' ? 'تمت موافقة المذخر' : 'Approved')}
+                          {ord.status === 'preparing' && (language === 'ar' ? 'جاري تعبئة الصناديق' : 'Packing')}
+                          {ord.status === 'dispatched' && (language === 'ar' ? 'خرجت مع مندوب التوصيل' : 'In Transit')}
+                          {ord.status === 'delivered' && (language === 'ar' ? 'تم التسليم للصيدلية' : 'Delivered')}
+                          {ord.status === 'cancelled' && (language === 'ar' ? 'ملغاة' : 'Cancelled')}
+                        </span>
+                      </div>
+
+                      <div className="text-xs text-slate-500 mt-1 flex items-center gap-3 flex-wrap">
+                        <span>{ord.items.length} {language === 'ar' ? 'أصناف دوائية' : 'items'}</span>
+                        <span>·</span>
+                        <span className="font-mono text-slate-400">{ord.createdAt.split('T')[0]}</span>
+                        {ord.pharmacyNotes && (
+                          <>
+                            <span>·</span>
+                            <span className="text-slate-600 italic">"{ord.pharmacyNotes}"</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 shrink-0 justify-between md:justify-end border-t md:border-t-0 pt-3 md:pt-0">
+                      <div className="text-start md:text-end">
+                        <div className="text-base font-black text-slate-900 font-mono">
+                          {ord.totalAmountIqd.toLocaleString()} <span className="text-xs font-sans font-normal text-slate-500">{language === 'ar' ? 'د.ع' : 'IQD'}</span>
+                        </div>
+                        <span className="text-[11px] text-slate-400">{language === 'ar' ? 'دفع عند الاستلام' : 'Cash on delivery'}</span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedB2bOrderDetails(ord)}
+                          className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer"
+                        >
+                          {language === 'ar' ? 'عرض الفاتورة' : 'View Invoice'}
+                        </button>
+
+                        {/* Import into local inventory action */}
+                        {ord.status === 'delivered' && (
+                          <button
+                            type="button"
+                            onClick={() => handleImportDeliveredOrderToStock(ord)}
+                            className="px-3.5 py-1.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                          >
+                            <Package size={13} />
+                            <span>{language === 'ar' ? 'استلام وتوريد للمخزون' : 'Import to Stock'}</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: B2B WHOLESALE CART & CHECKOUT */}
+      {showB2bCartModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-xl w-full max-h-[90vh] overflow-y-auto p-6 sm:p-8 border border-slate-200 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div>
+                <h3 className="font-bold text-lg text-slate-900">
+                  {language === 'ar' ? 'سلة طلبيات الجملة للصيدلية' : 'Wholesale Procurement Cart'}
+                </h3>
+                <span className="text-xs text-slate-500">
+                  {b2bCart.length} {language === 'ar' ? 'أصناف محددة للتوريد' : 'items selected'}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowB2bCartModal(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100"
+              >
+                ✕
+              </button>
+            </div>
+
+            {b2bCart.length === 0 ? (
+              <div className="py-8 text-center text-slate-400">
+                <Package size={40} className="mx-auto mb-2 opacity-30" />
+                <p className="text-sm font-bold text-slate-700">{language === 'ar' ? 'السلة فارغة حالياً' : 'Cart is empty'}</p>
+                <p className="text-xs text-slate-500 mt-1">
+                  {language === 'ar' ? 'ابحث عن الأدوية وأضفها إلى السلة لإرسال الطلبية للمذخر' : 'Search and add medications to order'}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="divide-y divide-slate-100 rounded-2xl border border-slate-200 overflow-hidden">
+                  {b2bCart.map((it, idx) => (
+                    <div key={idx} className="p-3.5 flex items-center justify-between gap-3 text-xs">
+                      <div>
+                        <div className="font-bold text-sm text-slate-900">{it.medicine.name}</div>
+                        <div className="text-[11px] text-slate-500">{it.medicine.strength} · {it.medicine.facilityName}</div>
+                        <div className="text-[11px] text-teal-700 font-mono mt-0.5">
+                          {it.unitPrice.toLocaleString()} د.ع / باكيت
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newQty = Math.max(it.medicine.minOrderQuantity || 1, it.packQuantity - 5);
+                              setB2bCart((prev) =>
+                                prev.map((item, i) => (i === idx ? { ...item, packQuantity: newQty } : item))
+                              );
+                            }}
+                            className="px-2.5 py-1 text-slate-600 hover:bg-slate-100 font-bold"
+                          >
+                            -
+                          </button>
+                          <span className="px-3 py-1 font-mono font-bold text-slate-900">{it.packQuantity}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setB2bCart((prev) =>
+                                prev.map((item, i) => (i === idx ? { ...item, packQuantity: item.packQuantity + 5 } : item))
+                              );
+                            }}
+                            className="px-2.5 py-1 text-slate-600 hover:bg-slate-100 font-bold"
+                          >
+                            +
+                          </button>
+                        </div>
+
+                        <div className="text-end font-mono font-bold text-slate-900 min-w-[70px]">
+                          {(it.unitPrice * it.packQuantity).toLocaleString()} د.ع
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFromB2bCart(idx)}
+                          className="p-1 rounded-lg text-slate-400 hover:text-red-600"
+                        >
+                          <X size={15} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    {language === 'ar' ? 'ملاحظات وتوجيهات لمندوب المذخر:' : 'Order Notes for Wholesaler:'}
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={b2bNotes}
+                    onChange={(e) => setB2bNotes(e.target.value)}
+                    placeholder={language === 'ar' ? 'وقت الاستلام المفضل، طلب فاتورة رسمية، إلخ...' : 'Delivery time, invoices...'}
+                    className="w-full p-2.5 rounded-xl border border-slate-300 text-xs"
+                  />
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between font-bold text-sm">
+                  <span>{language === 'ar' ? 'المجموع الإجمالي للطلبية:' : 'Total Amount:'}</span>
+                  <span className="text-teal-800 text-base font-mono">
+                    {b2bCart.reduce((sum, it) => sum + it.unitPrice * it.packQuantity, 0).toLocaleString()} د.ع
+                  </span>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowB2bCartModal(false)}
+                    className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 font-bold text-xs"
+                  >
+                    {language === 'ar' ? 'متابعة التسوق' : 'Continue Shopping'}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={b2bSubmitting}
+                    onClick={handleSubmitB2bOrder}
+                    className="px-6 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-md"
+                  >
+                    {b2bSubmitting ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
+                    <span>{language === 'ar' ? 'تأكيد وإرسال الطلبية للمذخر' : 'Submit Wholesale Order'}</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: B2B ORDER DETAILS */}
+      {selectedB2bOrderDetails && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 sm:p-8 border border-slate-200 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div>
+                <h3 className="font-bold text-base text-slate-900">
+                  {language === 'ar' ? 'تفاصيل طلبية الجملة' : 'Wholesale Order Invoice'}
+                </h3>
+                <span className="text-xs font-mono text-slate-400">
+                  {selectedB2bOrderDetails.invoiceNumber || selectedB2bOrderDetails.id}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedB2bOrderDetails(null)}
+                className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex justify-between items-center">
+                <div>
+                  <span className="text-slate-400 block">{language === 'ar' ? 'المذخر المورد:' : 'Supplying Warehouse:'}</span>
+                  <strong className="text-slate-900">{selectedB2bOrderDetails.wholesalerName}</strong>
+                </div>
+                <div className="text-end">
+                  <span className="text-slate-400 block">{language === 'ar' ? 'الحالة:' : 'Status:'}</span>
+                  <span className="font-bold text-teal-700">{selectedB2bOrderDetails.status}</span>
+                </div>
+              </div>
+
+              <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
+                {selectedB2bOrderDetails.items.map((it, idx) => (
+                  <div key={idx} className="p-2.5 flex justify-between items-center">
+                    <div>
+                      <div className="font-bold text-slate-900">{it.name}</div>
+                      <div className="text-[11px] text-slate-400 font-mono">الكمية: {it.packQuantity} باكيت</div>
+                    </div>
+                    <div className="text-end font-mono font-bold text-slate-900">
+                      {it.totalPriceIqd.toLocaleString()} د.ع
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="pt-2 flex justify-between items-center font-bold text-sm">
+                <span>{language === 'ar' ? 'المجموع الصافي:' : 'Total:'}</span>
+                <span className="font-mono text-teal-800 text-base">{selectedB2bOrderDetails.totalAmountIqd.toLocaleString()} د.ع</span>
+              </div>
+
+              <div className="pt-3 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setSelectedB2bOrderDetails(null)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold"
+                >
+                  {language === 'ar' ? 'إغلاق' : 'Close'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

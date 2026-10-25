@@ -42,7 +42,7 @@ service cloud.firestore {
     }
 
     function isValidRole(role) {
-      return role in ['doctor', 'radiology_center', 'laboratory', 'pharmacy', 'patient', 'super_admin', 'secretary'];
+      return role in ['doctor', 'radiology_center', 'laboratory', 'pharmacy', 'patient', 'super_admin', 'secretary', 'wholesaler'];
     }
 
     function isValidStatus(status) {
@@ -75,7 +75,7 @@ service cloud.firestore {
           ||
           (incoming().role == 'patient' && incoming().status == 'approved')
           ||
-          (incoming().role in ['doctor', 'radiology_center', 'laboratory', 'pharmacy', 'secretary'] 
+          (incoming().role in ['doctor', 'radiology_center', 'laboratory', 'pharmacy', 'secretary', 'wholesaler'] 
            && incoming().status in ['incomplete', 'pending'])
         );
 
@@ -515,5 +515,55 @@ service cloud.firestore {
       allow get, list: if isSignedIn();
       allow create, update, delete: if isAdmin();
     }
+
+    // Wholesaler Profiles: /wholesaler_profiles/{wholesalerId}
+    match /wholesaler_profiles/{wholesalerId} {
+      allow get, list: if isSignedIn();
+      allow create: if (isOwner(wholesalerId) || isAdmin()) 
+        && incoming().wholesalerId == wholesalerId
+        && incoming().wholesalerId == request.auth.uid;
+      allow update: if (isOwner(wholesalerId) || isAdmin())
+        && incoming().wholesalerId == existing().wholesalerId;
+      allow delete: if isAdmin();
+    }
+
+    // Wholesale Medicines: /wholesale_medicines/{medicineId}
+    match /wholesale_medicines/{medicineId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && (
+        incoming().wholesalerId == request.auth.uid || isAdmin()
+      );
+      allow update: if isSignedIn() && (
+        existing().wholesalerId == request.auth.uid || isAdmin()
+      ) && incoming().wholesalerId == existing().wholesalerId;
+      allow delete: if isSignedIn() && (
+        existing().wholesalerId == request.auth.uid || isAdmin()
+      );
+    }
+
+    // Wholesale Orders: /wholesale_orders/{orderId}
+    match /wholesale_orders/{orderId} {
+      allow get: if isSignedIn() && (
+        resource.data.wholesalerId == request.auth.uid || 
+        resource.data.pharmacyId == request.auth.uid || 
+        isAdmin()
+      );
+      allow list: if isSignedIn();
+
+      allow create: if isSignedIn() && (
+        incoming().wholesalerId == request.auth.uid || 
+        incoming().pharmacyId == request.auth.uid || 
+        isAdmin()
+      );
+
+      allow update: if isSignedIn() && (
+        existing().wholesalerId == request.auth.uid || 
+        existing().pharmacyId == request.auth.uid || 
+        isAdmin()
+      );
+
+      allow delete: if isAdmin();
+    }
   }
 }
+

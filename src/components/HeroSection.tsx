@@ -71,7 +71,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
         </p>
 
         {/* Primary CTA Button: Get Started */}
-        <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto">
+        <div className="mt-8 sm:mt-10 flex flex-wrap items-center justify-center gap-3 sm:gap-4 w-full sm:w-auto">
           <button
             onClick={onExplorePortals}
             className="w-full sm:w-auto px-8 py-3.5 rounded-xl text-base sm:text-lg font-bold text-white brand-gradient-btn shadow-xl hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 cursor-pointer group"
@@ -83,10 +83,17 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           </button>
 
           <button
-            onClick={() => onNavigate('services')}
+            onClick={() => onNavigate('about')}
             className="w-full sm:w-auto px-6 py-3.5 rounded-xl text-sm sm:text-base font-semibold text-white bg-white/15 hover:bg-white/25 backdrop-blur-md border border-white/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
-            <span>{t.hero.learnMoreBtn}</span>
+            <span>{language === 'ar' ? 'من نحن' : 'About Us'}</span>
+          </button>
+
+          <button
+            onClick={() => onNavigate('support')}
+            className="w-full sm:w-auto px-6 py-3.5 rounded-xl text-sm sm:text-base font-semibold text-white bg-white/15 hover:bg-white/25 backdrop-blur-md border border-white/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <span>{language === 'ar' ? 'الدعم والتواصل' : 'Support'}</span>
           </button>
         </div>
 

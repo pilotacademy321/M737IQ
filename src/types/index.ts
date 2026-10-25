@@ -5,6 +5,7 @@ export type UserRole =
   | 'radiology_center'
   | 'laboratory'
   | 'pharmacy'
+  | 'wholesaler'
   | 'patient'
   | 'super_admin'
   | 'secretary';
@@ -35,6 +36,7 @@ export type PortalId =
   | 'radiology'
   | 'laboratory'
   | 'pharmacy'
+  | 'wholesaler'
   | 'patient'
   | 'super_admin'
   | 'secretary';
@@ -52,7 +54,7 @@ export interface PortalInfo {
   accentColor: string;
   bgLight: string;
   borderColor: string;
-  iconName: 'doctor' | 'radiology' | 'laboratory' | 'pharmacy' | 'patient' | 'super_admin' | 'secretary';
+  iconName: 'doctor' | 'radiology' | 'laboratory' | 'pharmacy' | 'wholesaler' | 'patient' | 'super_admin' | 'secretary';
   plannedModulesAr: string[];
   plannedModulesEn: string[];
 }
@@ -532,4 +534,95 @@ export interface UserSubscription {
   notes?: string;
   updatedAt: string;
   updatedBy?: string;
+}
+
+export interface WholesalerProfile {
+  wholesalerId: string;
+  warehouseName: string;
+  ownerName: string;
+  licenseNumber: string;
+  commercialRegNumber?: string;
+  phone: string;
+  whatsapp?: string;
+  address: string;
+  governorate: string;
+  deliveryCoverageGovernorates: string[];
+  minimumOrderValueIqd?: number;
+  workingHours: string;
+  logoUrl?: string;
+  bio?: string;
+  isVerified: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WholesaleMedicineItem {
+  id: string;
+  wholesalerId: string;
+  wholesalerName: string;
+  wholesalerPhone?: string;
+  name: string;
+  nameAr?: string;
+  activeIngredient: string;
+  manufacturer: string;
+  originCountry: string;
+  strength: string;
+  dosageForm: string;
+  packSize: string;
+  cartonCapacity: number;
+  batchNumber: string;
+  productionDate: string;
+  expiryDate: string;
+  wholesalePriceIqd: number;
+  wholesalePriceUsd?: number;
+  cartonPriceIqd?: number;
+  stockPacks: number;
+  minOrderQuantity: number;
+  isAvailable: boolean;
+  category: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type WholesaleOrderStatus = 
+  | 'pending' 
+  | 'approved' 
+  | 'preparing' 
+  | 'dispatched' 
+  | 'delivered' 
+  | 'cancelled';
+
+export interface WholesaleOrderItem {
+  medicineId: string;
+  name: string;
+  activeIngredient: string;
+  strength: string;
+  batchNumber: string;
+  packQuantity: number;
+  unitWholesalePriceIqd: number;
+  totalPriceIqd: number;
+}
+
+export interface WholesaleOrder {
+  id: string;
+  wholesalerId: string;
+  wholesalerName: string;
+  pharmacyId: string;
+  pharmacyName: string;
+  pharmacyPhone: string;
+  pharmacyAddress: string;
+  pharmacyGovernorate: string;
+  items: WholesaleOrderItem[];
+  totalAmountIqd: number;
+  status: WholesaleOrderStatus;
+  paymentMethod: 'cash_on_delivery' | 'credit_terms' | 'bank_transfer';
+  wholesalerNotes?: string;
+  pharmacyNotes?: string;
+  invoiceNumber?: string;
+  dispatchedAt?: string;
+  deliveredAt?: string;
+  cancellationReason?: string;
+  createdAt: string;
+  updatedAt: string;
 }
