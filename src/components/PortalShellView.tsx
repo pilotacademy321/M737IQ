@@ -317,7 +317,7 @@ export const PortalShellView: React.FC<PortalShellViewProps> = ({
               return (
                 <>
                   {/* Detailed Domain Error & Guide Banner */}
-                  {(authError || unauthorizedDomainDetected) && (
+                  {unauthorizedDomainDetected && (
                     <div className="mt-5 p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-900 text-xs sm:text-sm text-start max-w-xl mx-auto space-y-2.5">
                       <div className="flex items-center gap-2 font-bold text-amber-800">
                         <ShieldAlert size={18} className="shrink-0" />
@@ -342,6 +342,14 @@ export const PortalShellView: React.FC<PortalShellViewProps> = ({
                           <span>{language === 'ar' ? 'عرض خطوات إضافة النطاق' : 'View Domain Fix Guide'}</span>
                         </button>
                       </div>
+                    </div>
+                  )}
+
+                  {/* General Auth Error Banner */}
+                  {authError && !unauthorizedDomainDetected && (
+                    <div className="mt-5 p-4 rounded-2xl bg-red-50 border border-red-200 text-red-900 text-xs sm:text-sm text-start max-w-xl mx-auto space-y-2 flex items-start gap-2.5">
+                      <AlertTriangle size={18} className="shrink-0 text-red-600 mt-0.5" />
+                      <div className="flex-1 leading-relaxed">{authError}</div>
                     </div>
                   )}
 

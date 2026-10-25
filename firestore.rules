@@ -587,7 +587,11 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/doctor_profiles/$(request.auth.uid)) ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['doctor', 'secretary', 'super_admin'])
       );
-      allow list: if isSignedIn();
+      allow list: if isSignedIn() && (
+        isAdmin() ||
+        exists(/databases/$(database)/documents/doctor_profiles/$(request.auth.uid)) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['doctor', 'secretary', 'super_admin'])
+      );
       allow create: if (isOwner(patientId) || isAdmin()) 
         && incoming().patientId == patientId
         && incoming().patientId == request.auth.uid;

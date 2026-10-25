@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { db, handleFirestoreError, OperationType, sanitizeForFirestore } from '../lib/firebase';
 import { recordRealMetricEvent } from '../lib/platformMetrics';
+import { generateUniqueMedicalId } from '../utils/medicalId';
 import { 
   UserProfile,
   PatientProfile, 
@@ -257,10 +258,9 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
     setTimeout(() => setFeedbackMsg(null), 4000);
   };
 
-  // Generate deterministic or random medical ID
+  // Generate deterministic unique medical ID
   const generateMedicalId = (uid: string) => {
-    const hash = uid.slice(0, 6).toUpperCase();
-    return `M737-PAT-${hash}`;
+    return generateUniqueMedicalId(uid);
   };
 
   // Helper: check medicine expiration

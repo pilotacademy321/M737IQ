@@ -68,9 +68,11 @@ import {
   ShoppingBag, 
   HeartPulse, 
   Settings,
-  Building2
+  Building2,
+  Copy
 } from 'lucide-react';
 import { SmartMedicineSearch, SearchMedicineResult } from './SmartMedicineSearch';
+import { generateFacilityOrUserId, normalizeMedicalIdInput, isValidMedicalIdQuery } from '../utils/medicalId';
 
 interface PharmacyPortalWorkspaceProps {
   onBackToHome: () => void;
@@ -572,31 +574,66 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
     }
   };
 
-  const handleLookupPrescription = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const code = rxLookupCode.trim().toUpperCase();
-    if (!code) return;
+  const handleLookupPrescription = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const raw = rxLookupCode.trim();
+    if (!raw) return;
 
     try {
-      const q = query(
+      const code = raw.toUpperCase();
+      const normalizedMedicalId = normalizeMedicalIdInput(raw);
+
+      // 1. Query prescriptions by patient's unified medical ID
+      const qPat = query(
         collection(db, 'electronic_prescriptions'),
-        where('prescriptionNumber', '==', code)
+        where('patientMedicalId', '==', normalizedMedicalId)
       );
-      const snap = await getDocs(q);
+      let snap = await getDocs(qPat);
+
+      // 2. Query prescriptions by direct patientId
       if (snap.empty) {
-        showToast(language === 'ar' ? `لم يتم العثور على وصفة برقم ${code}` : `Rx ${code} not found`, 'error');
+        const qPatDirect = query(
+          collection(db, 'electronic_prescriptions'),
+          where('patientId', '==', raw)
+        );
+        snap = await getDocs(qPatDirect);
+      }
+
+      // 3. Query prescriptions by prescriptionNumber (e.g. RX-2026-...)
+      if (snap.empty) {
+        const qRx = query(
+          collection(db, 'electronic_prescriptions'),
+          where('prescriptionNumber', '==', code)
+        );
+        snap = await getDocs(qRx);
+      }
+
+      if (snap.empty) {
+        showToast(
+          language === 'ar' 
+            ? `لم يتم العثور على أي وصفة مسجلة للمعرف أو الرقم "${raw}". يرجى التأكد من صحة الـ ID.` 
+            : `No prescriptions found for ID "${raw}". Please check and try again.`, 
+          'error'
+        );
         return;
       }
 
-      const foundRx = { id: snap.docs[0].id, ...snap.docs[0].data() } as ElectronicPrescription;
+      const foundList = snap.docs.map(d => ({ id: d.id, ...d.data() } as ElectronicPrescription));
       setIncomingPrescriptions(prev => {
-        const exists = prev.some(p => p.id === foundRx.id);
-        if (exists) return prev.map(p => p.id === foundRx.id ? foundRx : p);
-        return [foundRx, ...prev];
+        const existingIds = new Set(prev.map(p => p.id));
+        const newOnes = foundList.filter(p => !existingIds.has(p.id));
+        return [...newOnes, ...prev];
       });
+
+      setActiveTab('prescriptions');
       setPrescriptionFilter('all');
-      showToast(language === 'ar' ? `تم جلب الوصفة ${code} بنجاح للمعاينة والصرف` : `Rx ${code} loaded!`);
-    } catch {
+      showToast(
+        language === 'ar' 
+          ? `تم استرجاع (${foundList.length}) وصفة طبية بنجاح للمريض` 
+          : `Loaded (${foundList.length}) prescription(s) successfully`
+      );
+    } catch (err) {
+      console.warn('Prescription lookup error:', err);
       showToast(language === 'ar' ? 'تعذر البحث عن الوصفة' : 'Lookup failed', 'error');
     }
   };
@@ -1247,6 +1284,20 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
                 {pharmacyProfile?.pharmacyName || userProfile?.facilityName || 'صيدلية النور'}
               </h1>
               <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-slate-200 mt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const pharmId = generateFacilityOrUserId('pharmacy', pharmacyProfile?.pharmacyId || user?.uid || 'pharm');
+                    navigator.clipboard.writeText(pharmId);
+                    showToast(language === 'ar' ? `تم نسخ معرف الصيدلية (${pharmId})` : `Pharmacy ID copied (${pharmId})`);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 font-mono text-xs font-bold text-white transition-colors cursor-pointer"
+                  title={language === 'ar' ? 'انقر لنسخ المعرف' : 'Click to copy ID'}
+                >
+                  <Copy size={12} className="text-teal-300" />
+                  <span>ID: {generateFacilityOrUserId('pharmacy', pharmacyProfile?.pharmacyId || user?.uid || 'pharm')}</span>
+                </button>
+                <span className="opacity-40">·</span>
                 <span>{language === 'ar' ? 'الصيدلي المسؤول:' : 'Pharmacist:'} {pharmacyProfile?.ownerName}</span>
                 <span className="opacity-40">·</span>
                 <span>{language === 'ar' ? 'رقم الإجازة:' : 'License:'} {pharmacyProfile?.licenseNumber || userProfile?.licenseNumber || 'PHARM-IQ'}</span>
@@ -1374,6 +1425,43 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
       {/* TAB 1: DASHBOARD OVERVIEW */}
       {activeTab === 'dashboard' && (
         <div className="space-y-8">
+          {/* Quick ID Search Widget (Patient Medical ID or Rx ID) */}
+          <div className="p-5 rounded-3xl bg-gradient-to-r from-[#00332c] via-[#004d40] to-[#00796b] text-white shadow-md flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center shrink-0">
+                <FileCheck2 size={24} className="text-teal-300" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-white">
+                  {language === 'ar' ? 'البحث عن مريض بالمعرف الطبي (ID) أو رقم الوصفة' : 'Search by Patient Medical ID or Rx Number'}
+                </h3>
+                <p className="text-xs text-teal-100">
+                  {language === 'ar' ? 'استعلام فوري عن وصفات المريض الإلكترونية المعتمدة والصرف الرقمي السريع' : 'Instant lookup of authorized patient prescriptions and fast dispensing'}
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleLookupPrescription} className="w-full md:w-auto flex items-center gap-2">
+              <div className="relative flex-1 md:w-80">
+                <Search size={16} className="absolute start-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={rxLookupCode}
+                  onChange={(e) => setRxLookupCode(e.target.value)}
+                  placeholder={language === 'ar' ? 'أدخل الـ ID (مثال: M737-PAT-XXXXXX)...' : 'Enter ID (e.g. M737-PAT-XXXXXX)...'}
+                  className="w-full ps-9 pe-3 py-2.5 rounded-xl bg-white text-slate-900 placeholder:text-slate-400 text-xs font-mono uppercase focus:ring-2 focus:ring-teal-400 outline-none"
+                />
+              </div>
+              <button
+                type="submit"
+                className="px-5 py-2.5 rounded-xl bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-xs shrink-0 transition-colors shadow-sm cursor-pointer flex items-center gap-1.5"
+              >
+                <Search size={14} />
+                <span>{language === 'ar' ? 'استعلام' : 'Search'}</span>
+              </button>
+            </form>
+          </div>
+
           {/* Metrics Counters */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs">
@@ -2818,7 +2906,7 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
                   type="text"
                   value={rxLookupCode}
                   onChange={(e) => setRxLookupCode(e.target.value)}
-                  placeholder={language === 'ar' ? 'أدخل رقم الوصفة للتحقق الفوري والاستلام (مثال: RX-2026-4891)' : 'Enter Rx number to lookup and dispense'}
+                  placeholder={language === 'ar' ? 'أدخل المعرف الطبي للمريض (M737-PAT-XXXXXX) أو رقم الوصفة (RX-XXXX)...' : 'Enter Patient ID (M737-PAT-XXXXXX) or Rx number...'}
                   className="w-full ps-10 pe-4 py-2.5 rounded-xl border border-slate-300 text-xs font-mono uppercase focus:ring-2 focus:ring-[#00796b]"
                 />
               </div>
@@ -2827,7 +2915,7 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
                 className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#00796b] hover:bg-teal-800 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               >
                 <FileCheck2 size={15} />
-                <span>{language === 'ar' ? 'استعلام وتحضير الوصفة' : 'Lookup Rx'}</span>
+                <span>{language === 'ar' ? 'استعلام بالـ ID / رقم الوصفة' : 'Lookup by ID / Rx'}</span>
               </button>
             </form>
           </div>

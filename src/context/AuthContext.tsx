@@ -19,7 +19,8 @@ import {
   getDocs 
 } from 'firebase/firestore';
 import { auth, db, googleProvider, validateFirestoreConnection, handleFirestoreError, OperationType } from '../lib/firebase';
-import { UserProfile, UserRole, AccountStatus } from '../types';
+import { UserProfile, UserRole, AccountStatus, PatientProfile } from '../types';
+import { generateUniqueMedicalId } from '../utils/medicalId';
 import firebaseConfig from '@/firebase-applet-config.json';
 import { recordRealMetricEvent } from '../lib/platformMetrics';
 
@@ -219,6 +220,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ? String((err as { code: unknown }).code) 
         : '';
 
+      // 1. User intentionally closed popup or cancelled popup request - this is normal dismissal, not an error
+      if (
+        errorCode === 'auth/popup-closed-by-user' ||
+        errorCode === 'auth/cancelled-popup-request' ||
+        rawError.includes('auth/popup-closed-by-user') ||
+        rawError.includes('auth/cancelled-popup-request')
+      ) {
+        // Clear any prior auth error; do not display error banner or log console.error
+        setAuthError(null);
+        return;
+      }
+
+      // 2. Browser blocked popup window
+      if (errorCode === 'auth/popup-blocked' || rawError.includes('auth/popup-blocked')) {
+        const popupMsg = 'تم حظر النافذة المنبثقة من قبل متصفحك. يرجى السماح بالنوافذ المنبثقة لموقع المنصة لإتمام تسجيل الدخول عبر Google.';
+        console.warn('Firebase Auth: Popup blocked by browser');
+        setAuthError(popupMsg);
+        return;
+      }
+
+      // 3. Unauthorized domain
       const isDomainUnauthorized = 
         errorCode === 'auth/unauthorized-domain' || 
         rawError.includes('auth/unauthorized-domain');
@@ -229,10 +251,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const detailedMsg = `Firebase: Error (auth/unauthorized-domain). نطاق المعاينة السحابي (${window.location.hostname}) غير مضاف في قائمة النطاقات المصرح بها في Firebase Console. يمكنك نسخه وإضافته لتفعيل تسجيل الدخول.`;
         console.warn('Firebase Auth Unauthorized Domain detected:', detailedMsg);
         setAuthError(detailedMsg);
-      } else {
-        console.error('Authentication Error:', rawError);
-        setAuthError(rawError);
+        return;
       }
+
+      // 4. Network error
+      if (errorCode === 'auth/network-request-failed' || rawError.includes('auth/network-request-failed')) {
+        const netMsg = 'تعذر الاتصال بخوادم المصادقة. يرجى التحقق من اتصال الإنترنت والمحاولة لاحقاً.';
+        console.warn('Firebase Auth Network Issue:', netMsg);
+        setAuthError(netMsg);
+        return;
+      }
+
+      // 5. General fallback error
+      console.warn('Firebase Authentication Notice:', rawError);
+      setAuthError(rawError);
     } finally {
       setLoading(false);
     }
@@ -425,6 +457,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAuthError(null);
     try {
       const now = new Date().toISOString();
+      const medicalId = generateUniqueMedicalId(user.uid);
       const profile: UserProfile = {
         uid: user.uid,
         email: user.email || '',
@@ -437,6 +470,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
 
       await setDoc(doc(db, 'users', user.uid), profile);
+
+      // Ensure persistent patient_profiles document exists with medicalId
+      try {
+        const pRef = doc(db, 'patient_profiles', user.uid);
+        const pSnap = await getDoc(pRef);
+        if (!pSnap.exists()) {
+          const initialPatientDoc: PatientProfile = {
+            patientId: user.uid,
+            fullName: profile.displayName,
+            medicalId,
+            email: profile.email,
+            phone: profile.phone || '',
+            governorate: 'بغداد (Baghdad)',
+            address: 'العراق',
+            bloodType: 'O+',
+            chronicDiseases: [],
+            allergies: [],
+            currentMedications: [],
+            createdAt: now,
+            updatedAt: now,
+          };
+          await setDoc(pRef, initialPatientDoc);
+        } else if (!pSnap.data().medicalId) {
+          await updateDoc(pRef, { medicalId, updatedAt: now });
+        }
+      } catch (e) {
+        console.warn('Patient profile record initialization notice:', e);
+      }
+
       setUserProfile(profile);
       setNeedsOnboarding(false);
       recordRealMetricEvent('user');

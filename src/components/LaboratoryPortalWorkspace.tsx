@@ -69,8 +69,12 @@ import {
   CheckCircle,
   Truck,
   Pipette,
-  TestTube
+  TestTube,
+  Copy,
+  HeartPulse
 } from 'lucide-react';
+import { generateFacilityOrUserId, searchPatientProfileAcrossSystem, normalizeMedicalIdInput, isValidMedicalIdQuery } from '../utils/medicalId';
+import { PatientProfile } from '../types';
 
 interface LaboratoryPortalWorkspaceProps {
   onBackToHome: () => void;
@@ -173,6 +177,53 @@ export const LaboratoryPortalWorkspace: React.FC<LaboratoryPortalWorkspaceProps>
 
   // Patient Search & Directory
   const [patientSearchTerm, setPatientSearchTerm] = useState('');
+
+  // Patient Medical ID Search State
+  const [patientIdQuery, setPatientIdQuery] = useState('');
+  const [searchedPatientProfile, setSearchedPatientProfile] = useState<PatientProfile | null>(null);
+  const [isSearchingPatientId, setIsSearchingPatientId] = useState(false);
+  const [patientIdSearchFeedback, setPatientIdSearchFeedback] = useState<string | null>(null);
+
+  const handleSearchPatientById = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const raw = patientIdQuery.trim();
+    if (!raw) return;
+
+    if (!isValidMedicalIdQuery(raw)) {
+      setPatientIdSearchFeedback(
+        language === 'ar'
+          ? 'صيغة المعرف الطبي غير صالحة. يرجى إدخال حروف إنجليزية وأرقام وعلامة الشرطة فقط (مثال: M737-PAT-XXXXXX).'
+          : 'Invalid ID format. Use alphanumeric characters and hyphens only.'
+      );
+      return;
+    }
+
+    setIsSearchingPatientId(true);
+    setPatientIdSearchFeedback(null);
+    try {
+      const found = await searchPatientProfileAcrossSystem(db, raw);
+      if (found) {
+        setSearchedPatientProfile(found);
+        setPatientIdSearchFeedback(null);
+        showToast(
+          language === 'ar'
+            ? `تم العثور على المريض: ${found.fullName} (${found.medicalId})`
+            : `Patient found: ${found.fullName} (${found.medicalId})`
+        );
+      } else {
+        setSearchedPatientProfile(null);
+        setPatientIdSearchFeedback(
+          language === 'ar'
+            ? `لم يتم العثور على أي مريض مسجل بالمعرف الطبي "${raw}".`
+            : `No registered patient found with ID "${raw}".`
+        );
+      }
+    } catch {
+      setPatientIdSearchFeedback(language === 'ar' ? 'تعذر إتمام البحث' : 'Lookup failed');
+    } finally {
+      setIsSearchingPatientId(false);
+    }
+  };
 
   // Lab Settings Form State
   const [editProfileForm, setEditProfileForm] = useState({
@@ -1426,6 +1477,20 @@ export const LaboratoryPortalWorkspace: React.FC<LaboratoryPortalWorkspaceProps>
                 {labProfile?.labName || userProfile?.facilityName || 'المختبر التخصصي'}
               </h1>
               <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-slate-200 mt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const labId = generateFacilityOrUserId('laboratory', labProfile?.labId || user?.uid || 'lab');
+                    navigator.clipboard.writeText(labId);
+                    showToast(language === 'ar' ? `تم نسخ معرف المختبر (${labId})` : `Laboratory ID copied (${labId})`);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 font-mono text-xs font-bold text-white transition-colors cursor-pointer"
+                  title={language === 'ar' ? 'انقر لنسخ المعرف' : 'Click to copy ID'}
+                >
+                  <Copy size={12} className="text-emerald-300" />
+                  <span>ID: {generateFacilityOrUserId('laboratory', labProfile?.labId || user?.uid || 'lab')}</span>
+                </button>
+                <span className="opacity-40">·</span>
                 <span>{language === 'ar' ? 'إشراف:' : 'Director:'} {labProfile?.directorName}</span>
                 <span className="opacity-40">·</span>
                 <span>{language === 'ar' ? 'ترخيص النقابة:' : 'License:'} {labProfile?.licenseNumber || userProfile?.licenseNumber || 'LAB-IQ'}</span>
@@ -1528,6 +1593,128 @@ export const LaboratoryPortalWorkspace: React.FC<LaboratoryPortalWorkspaceProps>
       {/* TAB 1: DASHBOARD OVERVIEW */}
       {activeTab === 'dashboard' && (
         <div className="space-y-8">
+          {/* Quick Patient Medical ID Search Widget */}
+          <div className="p-5 rounded-3xl bg-gradient-to-r from-[#002244] via-[#02457a] to-[#057a55] text-white shadow-md flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center shrink-0">
+                <FlaskConical size={24} className="text-emerald-300" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-white">
+                  {language === 'ar' ? 'البحث عن مريض بالمعرف الطبي (ID) في المختبر' : 'Search Patient by Medical ID'}
+                </h3>
+                <p className="text-xs text-emerald-100">
+                  {language === 'ar' ? 'استعلام فوري عن السجل الصحي للمريض وتسجيل طلب تحليل مخبري' : 'Instant intake and diagnostic history lookup'}
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleSearchPatientById} className="w-full md:w-auto flex items-center gap-2">
+              <div className="relative flex-1 md:w-80">
+                <Search size={16} className="absolute start-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={patientIdQuery}
+                  onChange={(e) => {
+                    setPatientIdQuery(e.target.value);
+                    if (patientIdSearchFeedback) setPatientIdSearchFeedback(null);
+                  }}
+                  placeholder={language === 'ar' ? 'أدخل الـ ID (مثال: M737-PAT-XXXXXX)...' : 'Enter ID (e.g. M737-PAT-XXXXXX)...'}
+                  className="w-full ps-9 pe-3 py-2.5 rounded-xl bg-white text-slate-900 placeholder:text-slate-400 text-xs font-mono uppercase focus:ring-2 focus:ring-emerald-400 outline-none"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={isSearchingPatientId || !patientIdQuery.trim()}
+                className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-bold text-xs shrink-0 transition-colors shadow-sm cursor-pointer flex items-center gap-1.5"
+              >
+                {isSearchingPatientId ? <RefreshCw size={14} className="animate-spin" /> : <Search size={14} />}
+                <span>{language === 'ar' ? 'استعلام' : 'Search'}</span>
+              </button>
+            </form>
+          </div>
+
+          {/* Searched Patient Result Card / Feedback */}
+          {patientIdSearchFeedback && (
+            <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs flex items-center gap-2">
+              <AlertCircle size={16} className="text-amber-700 shrink-0" />
+              <span>{patientIdSearchFeedback}</span>
+            </div>
+          )}
+
+          {searchedPatientProfile && (
+            <div className="p-5 rounded-2xl bg-white border border-emerald-300 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4 animate-in fade-in">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-800 font-bold text-lg flex items-center justify-center font-mono">
+                  {searchedPatientProfile.fullName.charAt(0)}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-bold text-base text-slate-900">{searchedPatientProfile.fullName}</h4>
+                    <span className="font-mono text-xs font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                      {searchedPatientProfile.medicalId}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 mt-1">
+                    <span>{searchedPatientProfile.phone}</span>
+                    <span>·</span>
+                    <span>{searchedPatientProfile.governorate}</span>
+                    <span>·</span>
+                    <span className="text-red-700 font-bold flex items-center gap-1">
+                      <HeartPulse size={12} />
+                      فصيلة: {searchedPatientProfile.bloodType || 'O+'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 w-full md:w-auto">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedBookingForIntake({
+                      id: `quick_${Date.now()}`,
+                      patientId: searchedPatientProfile.patientId,
+                      patientName: searchedPatientProfile.fullName,
+                      patientPhone: searchedPatientProfile.phone,
+                      patientGovernorate: searchedPatientProfile.governorate,
+                      patientAddress: searchedPatientProfile.address,
+                      patientMedicalId: searchedPatientProfile.medicalId,
+                      testId: availableTests[0]?.id || 'cbc',
+                      testName: availableTests[0]?.name || 'CBC Complete Blood Count',
+                      testCode: availableTests[0]?.code || 'CBC',
+                      bookingType: 'center_visit',
+                      bookingDate: new Date().toISOString().split('T')[0],
+                      timeSlot: '09:00 AM',
+                      status: 'accepted',
+                      sampleStatus: 'collected',
+                      price: availableTests[0]?.price || 15000,
+                      homeCollectionFee: 0,
+                      totalPrice: availableTests[0]?.price || 15000,
+                      paymentStatus: 'paid',
+                      requiresFasting: false,
+                      resultReady: false,
+                      createdAt: new Date().toISOString(),
+                      updatedAt: new Date().toISOString(),
+                    });
+                    setShowIntakeModal(true);
+                  }}
+                  className="w-full md:w-auto px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Plus size={14} />
+                  <span>{language === 'ar' ? 'تسجيل تحليل للمريض' : 'New Test for Patient'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSearchedPatientProfile(null)}
+                  className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Metrics Counters */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs">

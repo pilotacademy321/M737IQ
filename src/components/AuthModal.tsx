@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { 
@@ -28,6 +28,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   initialMode = 'signin',
 }) => {
   const { 
+    user,
     signInWithEmail, 
     signInWithGoogle, 
     sendPasswordReset, 
@@ -44,6 +45,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [formError, setFormError] = useState<string | null>(null);
   const [resetSuccessEmail, setResetSuccessEmail] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Auto-close modal when user signs in successfully
+  useEffect(() => {
+    if (user && isOpen) {
+      handleClose();
+    }
+  }, [user, isOpen]);
 
   if (!isOpen) return null;
 
@@ -127,7 +135,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const handleGoogleSignIn = async () => {
     try {
       await signInWithGoogle();
-      handleClose();
     } catch {
       // Handled in context
     }
