@@ -21,13 +21,13 @@ import {
 
 interface PrescriptionPdfModalProps {
   prescription: ElectronicPrescription | null;
-  isOpen: boolean;
+  isOpen?: boolean;
   onClose: () => void;
 }
 
 export const PrescriptionPdfModal: React.FC<PrescriptionPdfModalProps> = ({
   prescription,
-  isOpen,
+  isOpen = true,
   onClose,
 }) => {
   const { user, userProfile, isAdmin } = useAuth();

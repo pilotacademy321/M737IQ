@@ -144,13 +144,16 @@ export type PrescriptionStatus =
 
 export interface PrescriptionMedicineItem {
   medicineId?: string;
-  name: string;
+  name?: string;
+  medicineName?: string;
   activeIngredient?: string;
   strength: string;
   dosageForm: string;
+  packageSize?: string;
   dosage: string; // e.g. "حبة واحدة" / "1 tablet"
   frequency: string; // e.g. "مرتين يومياً بعد الطعام" / "Twice daily after meals"
   duration: string; // e.g. "5 أيام" / "5 days"
+  quantity?: number | string; // e.g. 1 or "علبة واحدة"
   instructions?: string; // e.g. "مع كوب ماء كامل"
   warnings?: string; // e.g. "يمنع القيادة بعد الاستخدام"
 }
@@ -162,6 +165,7 @@ export interface ElectronicPrescription {
   doctorName: string;
   doctorSpecialty?: string;
   doctorLicense?: string;
+  doctorLicenseNumber?: string;
   doctorPhone?: string;
   clinicName?: string;
   clinicAddress?: string;
@@ -170,13 +174,16 @@ export interface ElectronicPrescription {
   patientPhone?: string;
   patientGender?: 'male' | 'female';
   patientAgeOrDob?: string;
+  patientAge?: number | string;
   appointmentId?: string;
   diagnosis?: string;
   targetPharmacyId?: string;
   targetPharmacyName?: string;
   items: PrescriptionMedicineItem[];
+  medicines?: PrescriptionMedicineItem[];
   patientAllergies?: string[];
   generalInstructions?: string;
+  doctorNotes?: string;
   status: PrescriptionStatus;
   rejectionReason?: string;
   cancellationReason?: string;
@@ -201,6 +208,7 @@ export interface ElectronicPrescription {
 export type LabOrderStatus = 
   | 'new' 
   | 'received' 
+  | 'scheduled'
   | 'in_progress' 
   | 'completed' 
   | 'rejected' 
@@ -211,6 +219,7 @@ export interface LabOrderItem {
   testName: string;
   category?: string;
   instructions?: string;
+  sampleType?: string;
 }
 
 export interface LabOrder {
@@ -230,7 +239,10 @@ export interface LabOrder {
   priority: 'normal' | 'urgent';
   clinicalIndication?: string;
   preparationInstructions?: string;
+  fastingInstructions?: string;
   status: LabOrderStatus;
+  scheduledDate?: string;
+  scheduledAt?: string;
   rejectionReason?: string;
   resultId?: string;
   resultSummary?: string;
@@ -242,6 +254,7 @@ export interface LabOrder {
 export type RadiologyOrderStatus = 
   | 'new' 
   | 'received' 
+  | 'scheduled'
   | 'in_progress' 
   | 'completed' 
   | 'rejected' 
@@ -266,6 +279,8 @@ export interface RadiologyOrder {
   clinicalIndication: string;
   preparationInstructions?: string;
   status: RadiologyOrderStatus;
+  scheduledDate?: string;
+  scheduledAt?: string;
   rejectionReason?: string;
   reportId?: string;
   reportSummary?: string;
@@ -641,6 +656,7 @@ export interface PatientProfile {
   dateOfBirth?: string;
   gender?: 'male' | 'female';
   photoURL?: string;
+  whatsapp?: string;
   createdAt: string;
   updatedAt: string;
 }

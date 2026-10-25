@@ -21,6 +21,8 @@ import {
 } from '../types';
 import { SmartMedicineSearch, SearchMedicineResult } from './SmartMedicineSearch';
 import { PrescriptionPdfModal } from './PrescriptionPdfModal';
+import { logAuditEvent } from '../lib/auditLogger';
+import { validateAndCompressImage, formatWhatsAppUrl } from '../utils/mediaUtils';
 import { 
   collection, 
   query, 
@@ -199,6 +201,7 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
   // Profile Form State for Settings Tab
   const [editProfileForm, setEditProfileForm] = useState({
     fullName: '',
+    photoURL: '',
     specialty: '',
     subspecialty: '',
     qualifications: '',
@@ -250,6 +253,7 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
         setDoctorProfile(data);
         setEditProfileForm({
           fullName: data.fullName || userProfile?.displayName || '',
+          photoURL: data.photoURL || '',
           specialty: data.specialty || 'أمراض باطنية وقلبية',
           subspecialty: data.subspecialty || '',
           qualifications: data.qualifications || 'بورد عراقي / عربي',
@@ -625,11 +629,87 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
         // Fallback
       }
 
+      // 8. Fetch Registered Accredited Facilities from Firestore
+      try {
+        const pharmaSnap = await getDocs(collection(db, 'pharmacy_profiles'));
+        if (!pharmaSnap.empty) {
+          const livePharmacies = pharmaSnap.docs.map(d => {
+            const data = d.data();
+            return {
+              id: d.id,
+              name: data.pharmacyName || 'صيدلية معتمدة',
+              governorate: data.governorate || 'العراق',
+              phone: data.phone || '',
+            };
+          });
+          setFacilitiesPharmacies(prev => {
+            const ids = new Set(livePharmacies.map(p => p.id));
+            return [...livePharmacies, ...prev.filter(p => !ids.has(p.id))];
+          });
+        }
+      } catch {}
+
+      try {
+        const labSnap = await getDocs(collection(db, 'lab_profiles'));
+        if (!labSnap.empty) {
+          const liveLabs = labSnap.docs.map(d => {
+            const data = d.data();
+            return {
+              id: d.id,
+              name: data.labName || 'مختبر معتمد',
+              governorate: data.governorate || 'العراق',
+              phone: data.phone || '',
+            };
+          });
+          setFacilitiesLabs(prev => {
+            const ids = new Set(liveLabs.map(l => l.id));
+            return [...liveLabs, ...prev.filter(l => !ids.has(l.id))];
+          });
+        }
+      } catch {}
+
+      try {
+        const radSnap = await getDocs(collection(db, 'radiology_profiles'));
+        if (!radSnap.empty) {
+          const liveRad = radSnap.docs.map(d => {
+            const data = d.data();
+            return {
+              id: d.id,
+              name: data.centerName || 'مركز أشعة معتمد',
+              governorate: data.governorate || 'العراق',
+              phone: data.phone || '',
+            };
+          });
+          setFacilitiesRadCenters(prev => {
+            const ids = new Set(liveRad.map(r => r.id));
+            return [...liveRad, ...prev.filter(r => !ids.has(r.id))];
+          });
+        }
+      } catch {}
+
     } catch (err: unknown) {
       console.error('Error loading doctor workspace:', err);
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  };
+
+  const sendInAppNotification = async (recipientUid: string, title: string, message: string, type: string) => {
+    if (!recipientUid) return;
+    try {
+      const notifId = `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+      await setDoc(doc(db, 'notifications', notifId), {
+        id: notifId,
+        recipientUid,
+        title,
+        message,
+        type,
+        read: false,
+        createdAt: new Date().toISOString(),
+      });
+    } catch (e) {
+      console.warn('Failed to send in-app notification:', e);
     }
   };
 
@@ -898,6 +978,18 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
     }
   };
 
+  const handleDoctorPhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const res = await validateAndCompressImage(file, 400, 0.85);
+    if (!res.valid || !res.dataUrl) {
+      showToast(res.error || 'فشل معالجة الصورة', 'error');
+      return;
+    }
+    setEditProfileForm(prev => ({ ...prev, photoURL: res.dataUrl! }));
+    showToast(language === 'ar' ? 'تم اختيار الصورة وضغطها بنجاح' : 'Photo compressed and ready to save');
+  };
+
   // Save Schedule & Clinic Settings
   const handleSaveProfileSettings = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -908,6 +1000,7 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
       const updatedProfile: DoctorProfile = {
         doctorId: user.uid,
         fullName: editProfileForm.fullName,
+        photoURL: editProfileForm.photoURL || undefined,
         specialty: editProfileForm.specialty,
         subspecialty: editProfileForm.subspecialty,
         qualifications: editProfileForm.qualifications,
@@ -934,6 +1027,17 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
         governorate: editProfileForm.governorate,
         phone: editProfileForm.phone,
         updatedAt: now,
+      });
+
+      await logAuditEvent({
+        action: 'profile_contact_updated',
+        category: 'accreditation',
+        actorUid: user.uid,
+        actorName: editProfileForm.fullName,
+        actorRole: 'doctor',
+        resourceId: user.uid,
+        status: 'updated',
+        details: `تحديث بيانات الطبيب والعيادة وأرقام التواصل وأوقات الدوام.`
       });
 
       showToast(
@@ -1043,6 +1147,40 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
         showToast(language === 'ar' ? `تم إصدار الوصفة الإلكترونية برقم ${rxNum} بنجاح` : `Prescription ${rxNum} created`);
       }
 
+      // Record System Audit Log
+      await logAuditEvent({
+        action: 'prescription_created',
+        category: 'prescriptions',
+        actorUid: user.uid,
+        actorName: newRx.doctorName,
+        actorRole: 'doctor',
+        targetUid: newRx.targetPharmacyId || newRx.patientId,
+        targetName: newRx.targetPharmacyName || newRx.patientName,
+        targetRole: newRx.targetPharmacyId ? 'pharmacy' : 'patient',
+        resourceId: rxId,
+        resourceNumber: rxNum,
+        status: newRx.status,
+        details: `إصدار وتوثيق وصفة طبية إلكترونية رقم ${rxNum} للمريض (${newRx.patientName}) تحتوي على ${newRx.items.length} أدوية.`
+      });
+
+      // Notify Pharmacy and Patient
+      if (newRx.targetPharmacyId) {
+        await sendInAppNotification(
+          newRx.targetPharmacyId,
+          'وصفة طبية إلكترونية جديدة (New Rx)',
+          `أحال الطبيب ${newRx.doctorName} وصفة إلكترونية رقم ${rxNum} للمريض ${newRx.patientName}.`,
+          'prescription'
+        );
+      }
+      if (newRx.patientId) {
+        await sendInAppNotification(
+          newRx.patientId,
+          'صدرت وصفتك الطبية الإلكترونية',
+          `أصدر لك الدكتور ${newRx.doctorName} وصفة علاجية برقم ${rxNum} موجهة إلى ${newRx.targetPharmacyName || 'الصيدلية المعتمدة'}.`,
+          'prescription'
+        );
+      }
+
       setShowNewPrescriptionModal(false);
       setNewRxPatientName('');
       setNewRxPatientPhone('');
@@ -1061,23 +1199,52 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
   const handleCancelPrescription = async (prescriptionId: string) => {
     try {
       const rx = prescriptions.find(p => p.id === prescriptionId);
-      if (rx && rx.status === 'dispensed') {
-        showToast(language === 'ar' ? 'لا يمكن إلغاء وصفة تم صرفها مسبقاً' : 'Cannot cancel dispensed Rx', 'error');
+      if (rx && (rx.status === 'dispensed' || rx.dispensedAt)) {
+        showToast(language === 'ar' ? 'تنبيه أمني: لا يمكن إلغاء وصفة تم صرفها وتوثيقها بالفعل من الصيدلية!' : 'Cannot cancel dispensed Rx', 'error');
         return;
       }
 
-      if (isDemoMode) {
-        setPrescriptions(prev => prev.map(p => p.id === prescriptionId ? { ...p, status: 'cancelled', updatedAt: new Date().toISOString() } : p));
-        showToast(language === 'ar' ? 'تم إلغاء الوصفة الطبية' : 'Prescription cancelled');
-        return;
+      const now = new Date().toISOString();
+      if (!isDemoMode) {
+        await updateDoc(doc(db, 'electronic_prescriptions', prescriptionId), {
+          status: 'cancelled',
+          updatedAt: now
+        });
       }
+      setPrescriptions(prev => prev.map(p => p.id === prescriptionId ? { ...p, status: 'cancelled', updatedAt: now } : p));
+      showToast(language === 'ar' ? 'تم إلغاء الوصفة بنجاح وتوثيق ذلك' : 'Prescription cancelled');
 
-      await updateDoc(doc(db, 'electronic_prescriptions', prescriptionId), {
+      // Audit Log
+      await logAuditEvent({
+        action: 'prescription_cancelled',
+        category: 'prescriptions',
+        actorUid: user.uid,
+        actorName: doctorProfile?.fullName || userProfile?.displayName || 'الطبيب',
+        actorRole: 'doctor',
+        targetUid: rx?.targetPharmacyId || rx?.patientId,
+        targetName: rx?.targetPharmacyName || rx?.patientName,
+        resourceId: prescriptionId,
+        resourceNumber: rx?.prescriptionNumber,
         status: 'cancelled',
-        updatedAt: new Date().toISOString()
+        details: `إلغاء الوصفة الطبية رقم ${rx?.prescriptionNumber || prescriptionId}.`
       });
-      setPrescriptions(prev => prev.map(p => p.id === prescriptionId ? { ...p, status: 'cancelled', updatedAt: new Date().toISOString() } : p));
-      showToast(language === 'ar' ? 'تم إلغاء الوصفة بنجاح' : 'Prescription cancelled');
+
+      if (rx?.targetPharmacyId) {
+        await sendInAppNotification(
+          rx.targetPharmacyId,
+          'إلغاء وصفة طبية',
+          `قام الطبيب ${rx.doctorName} بإلغاء الوصفة رقم ${rx.prescriptionNumber}.`,
+          'prescription'
+        );
+      }
+      if (rx?.patientId) {
+        await sendInAppNotification(
+          rx.patientId,
+          'تم إلغاء الوصفة الطبية',
+          `تم إلغاء الوصفة رقم ${rx.prescriptionNumber} من قبل الطبيب المعالج.`,
+          'prescription'
+        );
+      }
     } catch (err: unknown) {
       handleFirestoreError(err, OperationType.UPDATE, `electronic_prescriptions/${prescriptionId}`);
     }
@@ -1132,6 +1299,39 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
         showToast(language === 'ar' ? `تم إرسال طلب التحاليل بنجاح برقم ${orderNumber}` : `Lab order ${orderNumber} created`);
       }
 
+      // Record Audit Log
+      await logAuditEvent({
+        action: 'lab_order_created',
+        category: 'lab_diagnostics',
+        actorUid: user.uid,
+        actorName: newOrder.doctorName,
+        actorRole: 'doctor',
+        targetUid: newOrder.targetLabId,
+        targetName: newOrder.targetLabName,
+        targetRole: 'laboratory',
+        resourceId: orderId,
+        resourceNumber: orderNumber,
+        status: 'new',
+        details: `إرسال طلب تحاليل مخبرية رقم ${orderNumber} للمريض ${newOrder.patientName} (${newOrder.tests.length} تحاليل).`
+      });
+
+      if (newOrder.targetLabId) {
+        await sendInAppNotification(
+          newOrder.targetLabId,
+          'طلب تحاليل مخبرية جديد',
+          `أحال الطبيب ${newOrder.doctorName} المريض ${newOrder.patientName} لإجراء تحاليل بالطلب رقم ${orderNumber}.`,
+          'lab_order'
+        );
+      }
+      if (newOrder.patientId) {
+        await sendInAppNotification(
+          newOrder.patientId,
+          'إحالة مخبرية جديدة',
+          `أصدر لك الدكتور ${newOrder.doctorName} طلب تحاليل مخبرية برقم ${orderNumber}.`,
+          'lab_order'
+        );
+      }
+
       setShowNewLabOrderModal(false);
       setNewLabPatientName('');
       setNewLabPatientPhone('');
@@ -1146,17 +1346,33 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
 
   const handleCancelLabOrder = async (orderId: string) => {
     try {
+      const ord = labOrders.find(o => o.id === orderId);
+      const now = new Date().toISOString();
       if (isDemoMode) {
-        setLabOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled', updatedAt: new Date().toISOString() } : o));
+        setLabOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled', updatedAt: now } : o));
         showToast(language === 'ar' ? 'تم إلغاء طلب التحليل' : 'Lab order cancelled');
-        return;
+      } else {
+        await updateDoc(doc(db, 'lab_orders', orderId), {
+          status: 'cancelled',
+          updatedAt: now
+        });
+        setLabOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled', updatedAt: now } : o));
+        showToast(language === 'ar' ? 'تم إلغاء الطلب' : 'Order cancelled');
       }
-      await updateDoc(doc(db, 'lab_orders', orderId), {
+
+      await logAuditEvent({
+        action: 'lab_order_cancelled',
+        category: 'lab_diagnostics',
+        actorUid: user.uid,
+        actorName: doctorProfile?.fullName || 'الطبيب',
+        actorRole: 'doctor',
+        targetUid: ord?.targetLabId,
+        targetName: ord?.targetLabName,
+        resourceId: orderId,
+        resourceNumber: ord?.orderNumber,
         status: 'cancelled',
-        updatedAt: new Date().toISOString()
+        details: `إلغاء طلب التحاليل المخبرية رقم ${ord?.orderNumber || orderId}.`
       });
-      setLabOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled', updatedAt: new Date().toISOString() } : o));
-      showToast(language === 'ar' ? 'تم إلغاء الطلب' : 'Order cancelled');
     } catch (err: unknown) {
       handleFirestoreError(err, OperationType.UPDATE, `lab_orders/${orderId}`);
     }
@@ -1206,6 +1422,39 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
         showToast(language === 'ar' ? `تم إرسال طلب الأشعة بنجاح برقم ${orderNumber}` : `Radiology order ${orderNumber} created`);
       }
 
+      // Record Audit Log
+      await logAuditEvent({
+        action: 'radiology_order_created',
+        category: 'radiology',
+        actorUid: user.uid,
+        actorName: newOrder.doctorName,
+        actorRole: 'doctor',
+        targetUid: newOrder.targetCenterId,
+        targetName: newOrder.targetCenterName,
+        targetRole: 'radiology_center',
+        resourceId: orderId,
+        resourceNumber: orderNumber,
+        status: 'new',
+        details: `إرسال طلب فحص تصويري (${newOrder.modality}) برقم ${orderNumber} للمريض ${newOrder.patientName}.`
+      });
+
+      if (newOrder.targetCenterId) {
+        await sendInAppNotification(
+          newOrder.targetCenterId,
+          'طلب فحص أشعة وسونار جديد',
+          `أحال الطبيب ${newOrder.doctorName} المريض ${newOrder.patientName} للفحص برقم ${orderNumber}.`,
+          'radiology_order'
+        );
+      }
+      if (newOrder.patientId) {
+        await sendInAppNotification(
+          newOrder.patientId,
+          'طلب فحص أشعة وسونار',
+          `أصدر لك الدكتور ${newOrder.doctorName} إحالة فحص شعاعي برقم ${orderNumber}.`,
+          'radiology_order'
+        );
+      }
+
       setShowNewRadOrderModal(false);
       setNewRadPatientName('');
       setNewRadPatientPhone('');
@@ -1219,17 +1468,33 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
 
   const handleCancelRadiologyOrder = async (orderId: string) => {
     try {
+      const ord = radiologyOrders.find(o => o.id === orderId);
+      const now = new Date().toISOString();
       if (isDemoMode) {
-        setRadiologyOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled', updatedAt: new Date().toISOString() } : o));
+        setRadiologyOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled', updatedAt: now } : o));
         showToast(language === 'ar' ? 'تم إلغاء طلب الأشعة' : 'Radiology order cancelled');
-        return;
+      } else {
+        await updateDoc(doc(db, 'radiology_orders', orderId), {
+          status: 'cancelled',
+          updatedAt: now
+        });
+        setRadiologyOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled', updatedAt: now } : o));
+        showToast(language === 'ar' ? 'تم إلغاء طلب الأشعة' : 'Order cancelled');
       }
-      await updateDoc(doc(db, 'radiology_orders', orderId), {
+
+      await logAuditEvent({
+        action: 'radiology_order_cancelled',
+        category: 'radiology',
+        actorUid: user.uid,
+        actorName: doctorProfile?.fullName || 'الطبيب',
+        actorRole: 'doctor',
+        targetUid: ord?.targetCenterId,
+        targetName: ord?.targetCenterName,
+        resourceId: orderId,
+        resourceNumber: ord?.orderNumber,
         status: 'cancelled',
-        updatedAt: new Date().toISOString()
+        details: `إلغاء طلب الأشعة رقم ${ord?.orderNumber || orderId}.`
       });
-      setRadiologyOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled', updatedAt: new Date().toISOString() } : o));
-      showToast(language === 'ar' ? 'تم إلغاء طلب الأشعة' : 'Order cancelled');
     } catch (err: unknown) {
       handleFirestoreError(err, OperationType.UPDATE, `radiology_orders/${orderId}`);
     }
@@ -1857,6 +2122,54 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
             </p>
           </div>
 
+          {/* Doctor Profile Picture Upload */}
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row items-center gap-4">
+            <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-slate-200 border-2 border-[#003366]/20 flex items-center justify-center shrink-0">
+              {editProfileForm.photoURL ? (
+                <img
+                  src={editProfileForm.photoURL}
+                  alt="Doctor"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <Stethoscope size={32} className="text-slate-400" />
+              )}
+            </div>
+
+            <div className="flex-1 text-center sm:text-start">
+              <h4 className="font-bold text-sm text-slate-800">
+                {language === 'ar' ? 'الصورة الشخصية والمهنية للطبيب' : 'Doctor Professional Profile Photo'}
+              </h4>
+              <p className="text-xs text-slate-500 mt-0.5">
+                {language === 'ar'
+                  ? 'تدعم صيغ JPG، PNG، WebP بحجم أقصى 5 ميغابايت (يتم ضغطها وتأمينها تلقائياً).'
+                  : 'Supports JPG, PNG, WebP up to 5MB (auto-compressed securely).'}
+              </p>
+
+              <div className="mt-2.5 flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                <label className="px-3 py-1.5 rounded-xl bg-[#003366] hover:bg-[#002244] text-white text-xs font-bold cursor-pointer transition-colors flex items-center gap-1.5">
+                  <span>{language === 'ar' ? 'رفع صورة جديدة' : 'Upload Photo'}</span>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={handleDoctorPhotoChange}
+                    className="hidden"
+                  />
+                </label>
+
+                {editProfileForm.photoURL && (
+                  <button
+                    type="button"
+                    onClick={() => setEditProfileForm(prev => ({ ...prev, photoURL: '' }))}
+                    className="px-3 py-1.5 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 text-xs font-bold transition-colors"
+                  >
+                    {language === 'ar' ? 'إزالة الصورة' : 'Remove Photo'}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
@@ -1971,14 +2284,27 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                {language === 'ar' ? 'رقم الواتساب للاستفسارات' : 'WhatsApp Line'}
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-bold text-slate-700">
+                  {language === 'ar' ? 'رقم الواتساب للاستفسارات' : 'WhatsApp Line'}
+                </label>
+                {editProfileForm.whatsapp && formatWhatsAppUrl(editProfileForm.whatsapp) && (
+                  <a
+                    href={formatWhatsAppUrl(editProfileForm.whatsapp)!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
+                  >
+                    <span>{language === 'ar' ? 'تجربة الرابط ↗' : 'Test Chat ↗'}</span>
+                  </a>
+                )}
+              </div>
               <input
                 type="tel"
                 value={editProfileForm.whatsapp}
                 onChange={(e) => setEditProfileForm({ ...editProfileForm, whatsapp: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#003366]"
+                placeholder="07XXXXXXXXX"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#003366] font-mono"
               />
             </div>
 

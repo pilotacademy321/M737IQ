@@ -1088,9 +1088,10 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
             targetPharmacyName: 'صيدلية النور النموذجية',
             diagnosis: 'Essential Hypertension Grade 1 with mild tension headaches',
             patientAllergies: ['البنسلين (Penicillin Allergy)'],
-            medicines: [
+            items: [
               {
                 medicineId: 'demo_med_4',
+                name: 'Concor (كونكور)',
                 medicineName: 'Concor (كونكور)',
                 activeIngredient: 'Bisoprolol Fumarate',
                 dosageForm: 'أقراص (Tablets)',
@@ -1103,6 +1104,35 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
               },
               {
                 medicineId: 'demo_med_1',
+                name: 'Panadol Extra (بانادول إكسترا)',
+                medicineName: 'Panadol Extra (بانادول إكسترا)',
+                activeIngredient: 'Paracetamol 500mg + Caffeine 65mg',
+                dosageForm: 'أقراص (Tablets)',
+                strength: '500mg/65mg',
+                dosage: 'قرص إلى قرصين',
+                frequency: 'عند اللزوم كل 8 ساعات',
+                duration: 'عند الحاجة للصداع',
+                quantity: 1,
+                instructions: 'لا تتجاوز 6 أقراص خلال 24 ساعة'
+              }
+            ],
+            medicines: [
+              {
+                medicineId: 'demo_med_4',
+                name: 'Concor (كونكور)',
+                medicineName: 'Concor (كونكور)',
+                activeIngredient: 'Bisoprolol Fumarate',
+                dosageForm: 'أقراص (Tablets)',
+                strength: '5mg',
+                dosage: 'قرص واحد',
+                frequency: 'مرة واحدة يومياً صباحاً بعد الإفطار',
+                duration: '30 يوماً',
+                quantity: 1,
+                instructions: 'الاستمرار بالجرعة بانتظام دون توقف مفاجئ ومراقبة النبض دورياً'
+              },
+              {
+                medicineId: 'demo_med_1',
+                name: 'Panadol Extra (بانادول إكسترا)',
                 medicineName: 'Panadol Extra (بانادول إكسترا)',
                 activeIngredient: 'Paracetamol 500mg + Caffeine 65mg',
                 dosageForm: 'أقراص (Tablets)',
@@ -2377,10 +2407,10 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
                       {/* Medicines List */}
                       <div className="space-y-2 pt-2">
                         <span className="text-xs font-bold text-slate-800 block">
-                          {language === 'ar' ? `الأدوية الموصوفة (${rx.medicines.length}):` : `Prescribed Medications (${rx.medicines.length}):`}
+                          {language === 'ar' ? `الأدوية الموصوفة (${(rx.medicines || rx.items || []).length}):` : `Prescribed Medications (${(rx.medicines || rx.items || []).length}):`}
                         </span>
                         <div className="grid grid-cols-1 gap-2">
-                          {rx.medicines.map((m, idx) => (
+                          {(rx.medicines || rx.items || []).map((m: any, idx: number) => (
                             <div key={idx} className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
                               <div>
                                 <div className="font-bold text-slate-900 text-sm">

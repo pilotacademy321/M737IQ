@@ -637,6 +637,13 @@ service cloud.firestore {
 
       allow delete: if isAdmin();
     }
+
+    // System Audit Logs: /system_audit_logs/{logId}
+    match /system_audit_logs/{logId} {
+      allow get, list: if isAdmin();
+      allow create: if isSignedIn();
+      allow update, delete: if false; // Immutable audit log
+    }
   }
 }
 

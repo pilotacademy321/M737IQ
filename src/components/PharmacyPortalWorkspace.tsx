@@ -13,6 +13,8 @@ import {
   PrescriptionStatus
 } from '../types';
 import { PrescriptionPdfModal } from './PrescriptionPdfModal';
+import { logAuditEvent } from '../lib/auditLogger';
+import { validateAndCompressImage, formatWhatsAppUrl } from '../utils/mediaUtils';
 import { 
   collection, 
   query, 
@@ -597,21 +599,54 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
     }
 
     try {
+      const now = new Date().toISOString();
       await updateDoc(doc(db, 'electronic_prescriptions', rejectingRx.id), {
         status: 'rejected',
         rejectionReason: rejectReason.trim(),
-        updatedAt: new Date().toISOString(),
+        updatedAt: now,
       });
       setIncomingPrescriptions(prev => prev.map(p => p.id === rejectingRx.id ? { 
         ...p, 
         status: 'rejected', 
         rejectionReason: rejectReason.trim(),
-        updatedAt: new Date().toISOString() 
+        updatedAt: now 
       } : p));
       showToast(language === 'ar' ? 'تم رفض الوصفة وتسجيل السبب وإبلاغ الطبيب والمريض' : 'Prescription rejected');
+      
+      // Notify Patient
       if (rejectingRx.patientId) {
-        sendPatientNotification(rejectingRx.patientId, 'تعذر صرف الوصفة', `اعتذرت الصيدلية عن صرف الوصفة ${rejectingRx.prescriptionNumber} لسبب: ${rejectReason.trim()}`, 'general');
+        sendPatientNotification(
+          rejectingRx.patientId,
+          'تعذر صرف الوصفة',
+          `اعتذرت الصيدلية عن صرف الوصفة ${rejectingRx.prescriptionNumber} لسبب: ${rejectReason.trim()}`,
+          'general'
+        );
       }
+      // Notify Doctor
+      if (rejectingRx.doctorId) {
+        sendPatientNotification(
+          rejectingRx.doctorId,
+          'اعتذار عن صرف الوصفة',
+          `اعتذرت ${pharmacyProfile?.pharmacyName || 'الصيدلية'} عن صرف الوصفة ${rejectingRx.prescriptionNumber} للمريض ${rejectingRx.patientName}. السبب: ${rejectReason.trim()}`,
+          'general'
+        );
+      }
+
+      await logAuditEvent({
+        action: 'prescription_rejected',
+        category: 'prescriptions',
+        actorUid: user?.uid || 'pharma',
+        actorName: pharmacyProfile?.pharmacyName || userProfile?.facilityName || 'الصيدلية',
+        actorRole: 'pharmacy',
+        targetUid: rejectingRx.doctorId,
+        targetName: rejectingRx.doctorName,
+        targetRole: 'doctor',
+        resourceId: rejectingRx.id,
+        resourceNumber: rejectingRx.prescriptionNumber,
+        status: 'rejected',
+        details: `اعتذار عن صرف الوصفة رقم ${rejectingRx.prescriptionNumber}. السبب: ${rejectReason.trim()}`
+      });
+
       setRejectingRx(null);
       setRejectReason('');
     } catch {
@@ -650,9 +685,41 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
       setIncomingPrescriptions(prev => prev.map(p => p.id === rx.id ? { ...p, ...dispensedData } : p));
       showToast(language === 'ar' ? `تم توثيق صرف الوصفة ${rx.prescriptionNumber} بنجاح وختمها إلكترونياً` : `Prescription ${rx.prescriptionNumber} certified and dispensed!`);
 
+      // Notify Patient
       if (rx.patientId) {
-        sendPatientNotification(rx.patientId, 'تم صرف الوصفة بنجاح', `تم صرف وتسليم أدويتك بنجاح من قبل ${dispensedData.dispensedPharmacyName}. عافاك الله!`, 'general');
+        sendPatientNotification(
+          rx.patientId,
+          'تم صرف الوصفة بنجاح',
+          `تم صرف وتسليم أدويتك بنجاح من قبل ${dispensedData.dispensedPharmacyName}. عافاك الله!`,
+          'general'
+        );
       }
+
+      // Notify Doctor
+      if (rx.doctorId) {
+        sendPatientNotification(
+          rx.doctorId,
+          'تأكيد صرف الوصفة الطبية',
+          `تم صرف الوصفة رقم ${rx.prescriptionNumber} للمريض ${rx.patientName} بنجاح لدى ${dispensedData.dispensedPharmacyName}.`,
+          'general'
+        );
+      }
+
+      // Record System Audit Log
+      await logAuditEvent({
+        action: 'prescription_dispensed',
+        category: 'prescriptions',
+        actorUid: user.uid,
+        actorName: dispensedData.dispensedPharmacyName,
+        actorRole: 'pharmacy',
+        targetUid: rx.patientId,
+        targetName: rx.patientName,
+        targetRole: 'patient',
+        resourceId: rx.id,
+        resourceNumber: rx.prescriptionNumber,
+        status: 'dispensed',
+        details: `صرف وتوثيق خروج الأدوية للوصفة رقم ${rx.prescriptionNumber} بواسطة الصيدلي ${dispensedData.dispensedByName}.`
+      });
     } catch {
       const now = new Date().toISOString();
       const dispensedData = {
@@ -665,7 +732,7 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
         updatedAt: now,
       };
       setIncomingPrescriptions(prev => prev.map(p => p.id === rx.id ? { ...p, ...dispensedData } : p));
-      showToast(language === 'ar' ? `تم توثيق صرف الوصفة ${rx.prescriptionNumber}` : 'Prescription dispensed');
+      showToast(language === 'ar' ? 'تم توثيق صرف الوصفة' : 'Prescription dispensed');
     }
   };
 
@@ -1008,7 +1075,7 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
         {
           medicine: med,
           packQuantity: finalQty,
-          unitPrice: med.priceIqd,
+          unitPrice: med.priceIqd ?? 0,
           cartonPrice: med.cartonPriceIqd,
         },
       ];
@@ -1071,13 +1138,39 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
         handleFirestoreError(err, OperationType.CREATE, `wholesale_orders/${orderId}`);
       }
 
+      // Record System Audit Log
+      await logAuditEvent({
+        action: 'wholesale_order_created',
+        category: 'wholesale_b2b',
+        actorUid: user.uid,
+        actorName: wholesaleOrderPayload.pharmacyName,
+        actorRole: 'pharmacy',
+        targetUid: wholesaleOrderPayload.wholesalerId,
+        targetName: wholesaleOrderPayload.wholesalerName,
+        targetRole: 'wholesaler',
+        resourceId: orderId,
+        resourceNumber: wholesaleOrderPayload.invoiceNumber,
+        status: 'pending',
+        details: `طلب شراء بالجملة رقم ${wholesaleOrderPayload.invoiceNumber} بقيمة ${totalAmount.toLocaleString()} د.ع يضم ${items.length} أصناف دوائية.`
+      });
+
+      // Send In-App Notification to Wholesaler
+      if (wholesaleOrderPayload.wholesalerId) {
+        sendPatientNotification(
+          wholesaleOrderPayload.wholesalerId,
+          'طلبية شراء جديدة بالجملة',
+          `أرسلت لك ${wholesaleOrderPayload.pharmacyName} طلبية شراء برقم ${wholesaleOrderPayload.invoiceNumber}.`,
+          'booking_update'
+        );
+      }
+
       setB2bOrders((prev) => [wholesaleOrderPayload, ...prev]);
       setB2bCart([]);
       setB2bNotes('');
       setShowB2bCartModal(false);
       showToast(
         language === 'ar'
-          ? 'تم إرسال طلبية الشراء بالجملة إلى المذخر بنجاح'
+          ? 'تم إرسال طلبية الشراء بالجملة إلى المذخر وتوثيقها بنجاح'
           : 'Wholesale B2B order dispatched to warehouse'
       );
     } catch (err: unknown) {
@@ -1141,6 +1234,23 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
     }
   };
 
+  // Handle Pharmacy Logo Compression & Upload
+  const handlePharmacyLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const res = await validateAndCompressImage(file, 400, 0.82);
+      if (res.success && res.dataUrl) {
+        setEditProfileForm(prev => ({ ...prev, logoUrl: res.dataUrl! }));
+        showToast(language === 'ar' ? 'تم تجهيز وضغط الشعار بنجاح' : 'Logo compressed and ready');
+      } else {
+        showToast(res.error || (language === 'ar' ? 'تعذر معالجة صورة الشعار' : 'Failed to compress logo'), 'error');
+      }
+    } catch {
+      showToast(language === 'ar' ? 'حدث خطأ أثناء معالجة الشعار' : 'Error processing logo', 'error');
+    }
+  };
+
   // Save Pharmacy Settings
   const handleSavePharmacySettings = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1177,6 +1287,19 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
         governorate: editProfileForm.governorate,
         phone: editProfileForm.phone,
         updatedAt: now,
+      });
+
+      // Log audit event
+      await logAuditEvent({
+        action: 'profile_updated',
+        category: 'profiles',
+        actorUid: user.uid,
+        actorName: editProfileForm.pharmacyName,
+        actorRole: 'pharmacy',
+        resourceId: user.uid,
+        resourceNumber: editProfileForm.licenseNumber || 'PHARM-IQ',
+        status: 'completed',
+        details: `تحديث بيانات ومعلومات صيدلية ${editProfileForm.pharmacyName}، العنوان: ${editProfileForm.address}`
       });
 
       showToast(language === 'ar' ? 'تم حفظ بيانات وإعدادات الصيدلية بنجاح' : 'Pharmacy profile saved');
@@ -2640,12 +2763,27 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
               <label className="block font-bold text-slate-700 mb-1">
                 {language === 'ar' ? 'رقم الواتساب لاستقبال الوصفات' : 'WhatsApp Line'}
               </label>
-              <input
-                type="tel"
-                value={editProfileForm.whatsapp}
-                onChange={(e) => setEditProfileForm({ ...editProfileForm, whatsapp: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-[#00796b]"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="tel"
+                  value={editProfileForm.whatsapp}
+                  onChange={(e) => setEditProfileForm({ ...editProfileForm, whatsapp: e.target.value })}
+                  placeholder="078XXXXXXXX"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-[#00796b]"
+                />
+                {editProfileForm.whatsapp && (
+                  <a
+                    href={formatWhatsAppUrl(editProfileForm.whatsapp, language === 'ar' ? 'مرحباً صيدلية M737، أود الاستفسار عن توفر دواء' : 'Hello Pharmacy, inquiry about prescription')}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 shrink-0 transition-colors shadow-sm"
+                    title={language === 'ar' ? 'اختبار رابط الواتساب' : 'Test WhatsApp'}
+                  >
+                    <MessageSquare size={14} />
+                    <span>{language === 'ar' ? 'مراسلة' : 'Chat'}</span>
+                  </a>
+                )}
+              </div>
             </div>
 
             <div className="md:col-span-2">
@@ -2678,15 +2816,40 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
 
             <div>
               <label className="block font-bold text-slate-700 mb-1">
-                {language === 'ar' ? 'رابط شعار الصيدلية (Logo URL)' : 'Pharmacy Logo URL'}
+                {language === 'ar' ? 'شعار الصيدلية (Logo)' : 'Pharmacy Logo'}
               </label>
-              <input
-                type="url"
-                value={editProfileForm.logoUrl}
-                onChange={(e) => setEditProfileForm({ ...editProfileForm, logoUrl: e.target.value })}
-                placeholder="https://.../pharmacy_logo.png"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-[#00796b]"
-              />
+              <div className="flex items-center gap-3">
+                {editProfileForm.logoUrl ? (
+                  <img
+                    src={editProfileForm.logoUrl}
+                    alt="Logo Preview"
+                    className="w-12 h-12 rounded-xl object-cover border border-slate-200 shrink-0"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 shrink-0">
+                    <Building2 size={20} />
+                  </div>
+                )}
+                <div className="flex-1 space-y-1.5">
+                  <label className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 text-xs font-bold border border-teal-200 cursor-pointer transition-colors">
+                    <Upload size={14} />
+                    <span>{language === 'ar' ? 'رفع وضغط شعار الصيدلية (PNG/JPG)' : 'Upload & Compress Logo'}</span>
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      className="hidden"
+                      onChange={handlePharmacyLogoChange}
+                    />
+                  </label>
+                  <input
+                    type="url"
+                    value={editProfileForm.logoUrl}
+                    onChange={(e) => setEditProfileForm({ ...editProfileForm, logoUrl: e.target.value })}
+                    placeholder="أو أدخل رابط الشعار https://..."
+                    className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-xs text-slate-600 font-mono focus:ring-1 focus:ring-[#00796b]"
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Delivery & Night Duty Options */}

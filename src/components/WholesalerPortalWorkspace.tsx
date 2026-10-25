@@ -49,9 +49,13 @@ import {
   ChevronRight,
   ChevronLeft,
   ArrowRight,
-  AlertTriangle
+  AlertTriangle,
+  MessageCircle,
+  Camera
 } from 'lucide-react';
 import { SmartMedicineSearch, SearchMedicineResult } from './SmartMedicineSearch';
+import { logAuditEvent } from '../lib/auditLogger';
+import { validateAndCompressImage, formatWhatsAppUrl } from '../utils/mediaUtils';
 
 interface WholesalerPortalWorkspaceProps {
   onBackToHome: () => void;
@@ -606,6 +610,25 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
     }
   };
 
+  // Logo Upload with Client Compression
+  const handleWholesalerLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const compressed = await validateAndCompressImage(file, { maxWidth: 500, maxHeight: 500, quality: 0.8, maxSizeBytes: 70000 });
+      setProfileForm((prev) => ({ ...prev, logoUrl: compressed }));
+      setFeedbackMsg({
+        type: 'success',
+        text: language === 'ar' ? 'تم تجهيز وضغط شعار المذخر بنجاح' : 'Logo uploaded & optimized',
+      });
+      setTimeout(() => setFeedbackMsg(null), 3000);
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'Error processing image';
+      setFeedbackMsg({ type: 'error', text: errorMsg });
+      setTimeout(() => setFeedbackMsg(null), 4000);
+    }
+  };
+
   // Handle Order Status Transition
   const handleUpdateOrderStatus = async (orderId: string, newStatus: WholesaleOrderStatus) => {
     try {
@@ -627,6 +650,8 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
         // sandbox fallback
       }
 
+      const order = orders.find((o) => o.id === orderId);
+
       setOrders((prev) =>
         prev.map((o) => (o.id === orderId ? { ...o, ...updates } : o))
       );
@@ -636,26 +661,62 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
       }
 
       // Deduct stock if order is approved
-      if (newStatus === 'approved') {
-        const order = orders.find((o) => o.id === orderId);
-        if (order) {
-          order.items.forEach(async (item) => {
-            const med = medicines.find((m) => m.id === item.medicineId);
-            if (med) {
-              const newStock = Math.max(0, med.stockPacks - item.packQuantity);
-              try {
-                await updateDoc(doc(db, 'wholesale_medicines', med.id), {
-                  stockPacks: newStock,
-                  updatedAt: now,
-                });
-              } catch {
-                // sandbox fallback
-              }
-              setMedicines((prev) =>
-                prev.map((m) => (m.id === med.id ? { ...m, stockPacks: newStock } : m))
-              );
+      if (newStatus === 'approved' && order) {
+        for (const item of order.items) {
+          const med = medicines.find((m) => m.id === item.medicineId);
+          if (med) {
+            const newStock = Math.max(0, med.stockPacks - item.packQuantity);
+            try {
+              await updateDoc(doc(db, 'wholesale_medicines', med.id), {
+                stockPacks: newStock,
+                updatedAt: now,
+              });
+            } catch {
+              // sandbox fallback
             }
+            setMedicines((prev) =>
+              prev.map((m) => (m.id === med.id ? { ...m, stockPacks: newStock } : m))
+            );
+          }
+        }
+
+        await logAuditEvent({
+          action: 'wholesale_order_approved',
+          category: 'wholesale_b2b',
+          actorUid: user?.uid || 'wholesaler',
+          actorName: wholesalerProfile?.warehouseName || userProfile?.facilityName || 'مذخر الأدوية',
+          actorRole: 'wholesaler',
+          targetUid: order.pharmacyId,
+          targetName: order.pharmacyName,
+          targetRole: 'pharmacist',
+          resourceId: orderId,
+          resourceNumber: order.invoiceNumber || orderId,
+          status: 'approved',
+          details: `الموافقة على طلبية أدوية بالجملة لصالح ${order.pharmacyName} بقيمة ${order.totalAmountIqd.toLocaleString()} د.ع وتخصيم المخزون`,
+        });
+      }
+
+      // Dual notifications to pharmacy
+      if (order?.pharmacyId) {
+        try {
+          const notifRef = doc(collection(db, 'notifications'));
+          const titles: Record<string, string> = {
+            approved: 'تمت الموافقة على طلبية الأدوية',
+            preparing: 'طلبية الأدوية قيد التجهيز بالمذخر',
+            dispatched: 'طلبية الأدوية خرجت مع مندوب التوصيل',
+            delivered: 'تم تسليم طلبية الأدوية بنجاح',
+          };
+          await setDoc(notifRef, {
+            id: notifRef.id,
+            userId: order.pharmacyId,
+            title: titles[newStatus] || 'تحديث حالة طلبية الأدوية',
+            message: `تم تحديث حالة طلبيتكم رقم ${order.invoiceNumber || order.id} إلى (${newStatus}).`,
+            type: 'b2b_order_status',
+            read: false,
+            createdAt: now,
           });
+        } catch {
+          // sandbox fallback
         }
       }
 
@@ -669,7 +730,7 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
     }
   };
 
-  // Handle Cancel Order with Reason
+  // Handle Cancel Order with Reason & Stock Restoration
   const handleConfirmCancelOrder = async () => {
     if (!cancellingOrder) return;
     try {
@@ -686,6 +747,60 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
         // sandbox fallback
       }
 
+      // Restore stock if previously approved, preparing, or dispatched
+      if (['approved', 'preparing', 'dispatched'].includes(cancellingOrder.status)) {
+        for (const item of cancellingOrder.items) {
+          const med = medicines.find((m) => m.id === item.medicineId);
+          if (med) {
+            const restoredStock = med.stockPacks + item.packQuantity;
+            try {
+              await updateDoc(doc(db, 'wholesale_medicines', med.id), {
+                stockPacks: restoredStock,
+                updatedAt: now,
+              });
+            } catch {
+              // sandbox fallback
+            }
+            setMedicines((prev) =>
+              prev.map((m) => (m.id === med.id ? { ...m, stockPacks: restoredStock } : m))
+            );
+          }
+        }
+      }
+
+      // Notify pharmacy
+      if (cancellingOrder.pharmacyId) {
+        try {
+          const notifRef = doc(collection(db, 'notifications'));
+          await setDoc(notifRef, {
+            id: notifRef.id,
+            userId: cancellingOrder.pharmacyId,
+            title: 'إلغاء طلبية الأدوية بالجملة',
+            message: `تم إلغاء طلبيتكم رقم ${cancellingOrder.invoiceNumber || cancellingOrder.id} من قبل المذخر. السبب: ${updates.cancellationReason}`,
+            type: 'b2b_order_status',
+            read: false,
+            createdAt: now,
+          });
+        } catch {
+          // sandbox fallback
+        }
+      }
+
+      await logAuditEvent({
+        action: 'wholesale_order_cancelled',
+        category: 'wholesale_b2b',
+        actorUid: user?.uid || 'wholesaler',
+        actorName: wholesalerProfile?.warehouseName || userProfile?.facilityName || 'مذخر الأدوية',
+        actorRole: 'wholesaler',
+        targetUid: cancellingOrder.pharmacyId,
+        targetName: cancellingOrder.pharmacyName,
+        targetRole: 'pharmacist',
+        resourceId: cancellingOrder.id,
+        resourceNumber: cancellingOrder.invoiceNumber || cancellingOrder.id,
+        status: 'cancelled',
+        details: `إلغاء طلبية أدوية الجملة واسترجاع المخزون: ${updates.cancellationReason}`,
+      });
+
       setOrders((prev) =>
         prev.map((o) => (o.id === cancellingOrder.id ? { ...o, ...updates } : o))
       );
@@ -694,7 +809,7 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
       setCancelReason('');
       setFeedbackMsg({
         type: 'success',
-        text: language === 'ar' ? 'تم إلغاء الطلبية وتوثيق السبب' : 'Order cancelled',
+        text: language === 'ar' ? 'تم إلغاء الطلبية، استرجاع المخزون، وتوثيق السبب' : 'Order cancelled and stock restored',
       });
       setTimeout(() => setFeedbackMsg(null), 3000);
     } catch (err: unknown) {
@@ -734,6 +849,18 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
       } catch (err: unknown) {
         handleFirestoreError(err, OperationType.WRITE, `wholesaler_profiles/${user.uid}`);
       }
+
+      await logAuditEvent({
+        action: 'wholesaler_profile_updated',
+        category: 'profiles',
+        actorUid: user.uid,
+        actorName: profileForm.warehouseName,
+        actorRole: 'wholesaler',
+        resourceId: user.uid,
+        resourceNumber: profileForm.licenseNumber || 'IQ-WHOLE-88301',
+        status: 'updated',
+        details: `تحديث بيانات مذخر الأدوية وتغطية التوصيل في ${profileForm.governorate}`,
+      });
 
       setWholesalerProfile(updatedProfile);
       setFeedbackMsg({
