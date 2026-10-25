@@ -21,7 +21,7 @@ export const translations = {
       learnMoreBtn: 'استكشف البوابات',
       slogan: 'معاً... لمستقبل صحي أفضل',
       stats: {
-        portalsCount: '٧ بوابات مستقلة',
+        portalsCount: '٨ بوابات مستقلة',
         portalsDesc: 'تغطي كافة الاحتياجات الصحية',
         iraqCoverage: 'تغطية المحافظات',
         iraqCoverageDesc: 'بغداد وكافة المدن العراقية',
@@ -31,7 +31,7 @@ export const translations = {
     },
     portalsSection: {
       kicker: 'البوابات التشغيلية المستقلة',
-      title: 'منظومة البوابات الطبية السبع',
+      title: 'منظومة البوابات الطبية الثمانية',
       description: 'تم تصميم كل بوابة كمركز تشغيلي مستقل يلبي الاحتياجات المحددة لشركاء المنظومة الطبية مع الحفاظ على الربط المتكامل والتنسيق الفوري.',
       openPortal: 'دخول البوابة',
       shellNotice: 'مرحلة التهيئة الأولية للمظهر ونقاط الدخول',
@@ -173,7 +173,7 @@ export const translations = {
       learnMoreBtn: 'Explore Portals',
       slogan: 'Together... for a better health future.',
       stats: {
-        portalsCount: '7 Dedicated Portals',
+        portalsCount: '8 Dedicated Portals',
         portalsDesc: 'Covering every clinical necessity',
         iraqCoverage: 'National Reach',
         iraqCoverageDesc: 'Baghdad and all Iraqi governorates',
@@ -183,7 +183,7 @@ export const translations = {
     },
     portalsSection: {
       kicker: 'Independent Operating Gateways',
-      title: 'The Seven Medical Portals',
+      title: 'The Eight Medical Portals',
       description: 'Each portal is built as an independent operational workstation addressing the exact workflows of healthcare partners while keeping clinical data synchronized.',
       openPortal: 'Access Portal',
       shellNotice: 'Phase 1 UI Shell & Entry Points',

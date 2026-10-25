@@ -126,7 +126,9 @@ export const PortalShellView: React.FC<PortalShellViewProps> = ({
   // Determine Access State
   const isAuthenticated = !!user;
   const isSuperAdminPortal = portal.id === 'super_admin';
-  const roleMatches = userProfile && (userProfile.role === portal.role || isAdmin);
+  const roleMatches = isSuperAdminPortal
+    ? isAdmin
+    : Boolean(userProfile && (userProfile.role === portal.role || isAdmin));
   const isApproved = userProfile?.status === 'approved';
   const isPending = userProfile?.status === 'pending';
   const isRejected = userProfile?.status === 'rejected';

@@ -150,13 +150,14 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   onClick={() => {
                     const roleToPortalMap: Record<string, string> = {
-                      doctor: 'doctor',
-                      radiology_center: 'radiology',
-                      laboratory: 'laboratory',
-                      pharmacy: 'pharmacy',
                       patient: 'patient',
-                      super_admin: 'super_admin',
+                      doctor: 'doctor',
+                      pharmacy: 'pharmacy',
+                      laboratory: 'laboratory',
+                      radiology_center: 'radiology',
+                      wholesaler: 'wholesaler',
                       secretary: 'secretary',
+                      super_admin: 'super_admin',
                     };
                     const portalTarget = (userProfile?.role && roleToPortalMap[userProfile.role]) || 'portals';
                     handleLinkClick(portalTarget);

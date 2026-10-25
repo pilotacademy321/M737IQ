@@ -22,7 +22,10 @@ import {
   PharmacyProfile,
   MedicineItem,
   PharmacyOrder,
-  PatientNotification
+  PatientNotification,
+  ElectronicPrescription,
+  LabOrder,
+  RadiologyOrder
 } from '../types';
 import { 
   collection, 
@@ -79,6 +82,7 @@ import {
   Info
 } from 'lucide-react';
 import { SmartMedicineSearch, SearchMedicineResult } from './SmartMedicineSearch';
+import { PrescriptionPdfModal } from './PrescriptionPdfModal';
 
 interface PatientPortalWorkspaceProps {
   onBackToHome: () => void;
@@ -90,12 +94,21 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
 
   // Navigation tab
   const [activeTab, setActiveTab] = useState<
-    'dashboard' | 'doctors' | 'pharmacy' | 'labs' | 'radiology' | 'records' | 'notifications' | 'profile'
+    'dashboard' | 'doctors' | 'prescriptions' | 'referrals' | 'pharmacy' | 'labs' | 'radiology' | 'records' | 'notifications' | 'profile'
   >('dashboard');
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Electronic Prescriptions State
+  const [patientPrescriptions, setPatientPrescriptions] = useState<ElectronicPrescription[]>([]);
+  const [selectedPrescriptionForPdf, setSelectedPrescriptionForPdf] = useState<ElectronicPrescription | null>(null);
+
+  // Medical Referrals (Lab & Radiology) State
+  const [patientLabOrders, setPatientLabOrders] = useState<LabOrder[]>([]);
+  const [patientRadiologyOrders, setPatientRadiologyOrders] = useState<RadiologyOrder[]>([]);
+  const [referralFilterType, setReferralFilterType] = useState<'all' | 'lab' | 'radiology'>('all');
 
   // 1. Patient Profile State
   const [patientProfile, setPatientProfile] = useState<PatientProfile | null>(null);
@@ -1042,6 +1055,168 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
       notifList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setNotifications(notifList);
 
+      // 8. Fetch Electronic Prescriptions
+      let rxList: ElectronicPrescription[] = [];
+      try {
+        const rxQuery = query(
+          collection(db, 'electronic_prescriptions'),
+          where('patientId', '==', user.uid)
+        );
+        const rxSnap = await getDocs(rxQuery);
+        rxList = rxSnap.docs.map(d => ({ id: d.id, ...d.data() } as ElectronicPrescription));
+      } catch (e) {
+        console.warn('Prescriptions fetch fallback:', e);
+      }
+      if (rxList.length === 0) {
+        rxList = [
+          {
+            id: 'demo_rx_sara_1',
+            prescriptionNumber: 'RX-IQ-2026-8814',
+            doctorId: 'demo_doc_ahmed',
+            doctorName: 'د. أحمد الرافدين',
+            doctorSpecialty: 'استشاري أمراض باطنية وقلبية',
+            doctorLicenseNumber: 'DOC-IQ-19844',
+            doctorPhone: '07801234567',
+            clinicName: 'عيادة الرافدين الاستشارية التخصصية',
+            clinicAddress: 'بغداد، ساحة الواثق، مجمع الأطباء الاستشاري',
+            patientId: user.uid,
+            patientName: patientProfile?.fullName || userProfile?.displayName || 'سارة حيدر العراقي',
+            patientGender: 'female',
+            patientAge: 29,
+            patientPhone: userProfile?.phone || '07809988776',
+            targetPharmacyId: 'demo_pharmacy_alnoor',
+            targetPharmacyName: 'صيدلية النور النموذجية',
+            diagnosis: 'Essential Hypertension Grade 1 with mild tension headaches',
+            patientAllergies: ['البنسلين (Penicillin Allergy)'],
+            medicines: [
+              {
+                medicineId: 'demo_med_4',
+                medicineName: 'Concor (كونكور)',
+                activeIngredient: 'Bisoprolol Fumarate',
+                dosageForm: 'أقراص (Tablets)',
+                strength: '5mg',
+                dosage: 'قرص واحد',
+                frequency: 'مرة واحدة يومياً صباحاً بعد الإفطار',
+                duration: '30 يوماً',
+                quantity: 1,
+                instructions: 'الاستمرار بالجرعة بانتظام دون توقف مفاجئ ومراقبة النبض دورياً'
+              },
+              {
+                medicineId: 'demo_med_1',
+                medicineName: 'Panadol Extra (بانادول إكسترا)',
+                activeIngredient: 'Paracetamol 500mg + Caffeine 65mg',
+                dosageForm: 'أقراص (Tablets)',
+                strength: '500mg/65mg',
+                dosage: 'قرص إلى قرصين',
+                frequency: 'عند اللزوم كل 8 ساعات',
+                duration: 'عند الحاجة للصداع',
+                quantity: 1,
+                instructions: 'لا تتجاوز 6 أقراص خلال 24 ساعة'
+              }
+            ],
+            doctorNotes: 'مراجعة قياس ضغط الدم بعد أسبوعين والالتزام بتقليل الأملاح',
+            status: 'dispensed',
+            dispensedPharmacyId: 'demo_pharmacy_alnoor',
+            dispensedPharmacyName: 'صيدلية النور النموذجية',
+            dispensedAt: new Date(Date.now() - 3600000 * 12).toISOString(),
+            dispensedByUid: 'pharma_uid_1',
+            dispensedByName: 'د. ليث العزاوي (صيدلي ممارس)',
+            dispensingNotes: 'تم صرف الدواء كاملاً وشرح أوقات الجرعات والتحذيرات للمريضة.',
+            createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
+            updatedAt: new Date(Date.now() - 3600000 * 12).toISOString(),
+          }
+        ];
+      }
+      rxList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setPatientPrescriptions(rxList);
+
+      // 9. Fetch Doctor Lab Orders
+      let labOrdersList: LabOrder[] = [];
+      try {
+        const labOrdQuery = query(
+          collection(db, 'lab_orders'),
+          where('patientId', '==', user.uid)
+        );
+        const labOrdSnap = await getDocs(labOrdQuery);
+        labOrdersList = labOrdSnap.docs.map(d => ({ id: d.id, ...d.data() } as LabOrder));
+      } catch (e) {
+        console.warn('Lab orders fetch fallback:', e);
+      }
+      if (labOrdersList.length === 0) {
+        labOrdersList = [
+          {
+            id: 'demo_lab_ref_sara',
+            orderNumber: 'LAB-ORD-9045',
+            doctorId: 'demo_doc_ahmed',
+            doctorName: 'د. أحمد الرافدين',
+            doctorSpecialty: 'استشاري أمراض باطنية وقلبية',
+            doctorPhone: '07801234567',
+            clinicName: 'عيادة الرافدين الاستشارية',
+            patientId: user.uid,
+            patientName: patientProfile?.fullName || userProfile?.displayName || 'سارة حيدر العراقي',
+            patientPhone: userProfile?.phone || '07809988776',
+            targetLabId: 'demo_lab_baghdad',
+            targetLabName: 'مختبر الرافدين المركزي التخصصي',
+            tests: [
+              { testId: 't1', testName: 'Lipid Profile (تحليل الدهون الشامل)', category: 'Biochemistry', sampleType: 'Serum' },
+              { testId: 't2', testName: 'Kidney Function Test (وظائف الكلى)', category: 'Biochemistry', sampleType: 'Serum' },
+              { testId: 't3', testName: 'Serum Electrolytes (Na, K)', category: 'Biochemistry', sampleType: 'Serum' }
+            ],
+            priority: 'normal',
+            clinicalIndication: 'Routine baseline evaluation for newly diagnosed hypertension.',
+            fastingInstructions: 'صيام 10-12 ساعة عن الطعام مع شرب الماء فقط.',
+            status: 'completed',
+            resultSummary: 'Total Cholesterol: 185 mg/dL (Normal), Triglycerides: 140 mg/dL (Normal), Creatinine: 0.8 mg/dL, Na: 140 mEq/L, K: 4.2 mEq/L. Normal baseline profile.',
+            completedAt: new Date(Date.now() - 3600000 * 20).toISOString(),
+            createdAt: new Date(Date.now() - 3600000 * 30).toISOString(),
+            updatedAt: new Date(Date.now() - 3600000 * 20).toISOString(),
+          }
+        ];
+      }
+      labOrdersList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setPatientLabOrders(labOrdersList);
+
+      // 10. Fetch Doctor Radiology Orders
+      let radOrdersList: RadiologyOrder[] = [];
+      try {
+        const radOrdQuery = query(
+          collection(db, 'radiology_orders'),
+          where('patientId', '==', user.uid)
+        );
+        const radOrdSnap = await getDocs(radOrdQuery);
+        radOrdersList = radOrdSnap.docs.map(d => ({ id: d.id, ...d.data() } as RadiologyOrder));
+      } catch (e) {
+        console.warn('Radiology orders fetch fallback:', e);
+      }
+      if (radOrdersList.length === 0) {
+        radOrdersList = [
+          {
+            id: 'demo_rad_ref_sara',
+            orderNumber: 'RAD-ORD-7712',
+            doctorId: 'demo_doc_ahmed',
+            doctorName: 'د. حيدر المعموري',
+            doctorSpecialty: 'استشاري جراحة الجملة العصبية والعمود الفقري',
+            doctorPhone: '07802233445',
+            clinicName: 'عيادة بغداد التخصصية',
+            patientId: user.uid,
+            patientName: patientProfile?.fullName || userProfile?.displayName || 'سارة حيدر العراقي',
+            patientPhone: userProfile?.phone || '07809988776',
+            targetCenterId: 'demo_rad_baghdad',
+            targetCenterName: 'مركز النور للأشعة التخصصي',
+            modality: 'mri',
+            bodyRegion: 'Lumbosacral Spine (الفقرات القطنية العجزية)',
+            priority: 'urgent',
+            clinicalIndication: 'Severe low back pain radiating to left leg (L5-S1 radiculopathy) with numbness since 3 weeks.',
+            preparationInstructions: 'خلع كافة المعادن والساعات والمجوهرات، الحضور قبل 20 دقيقة.',
+            status: 'received',
+            createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+            updatedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+          }
+        ];
+      }
+      radOrdersList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setPatientRadiologyOrders(radOrdersList);
+
     } catch (err: unknown) {
       console.warn('Patient workspace loader notice:', err);
     } finally {
@@ -1608,7 +1783,9 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
         {[
           { id: 'dashboard', labelAr: 'نظرة عامة والجواز', labelEn: 'Passport', icon: Activity },
           { id: 'doctors', labelAr: `الأطباء والمواعيد (${doctorAppointments.length})`, labelEn: `Doctors (${doctorAppointments.length})`, icon: Stethoscope },
-          { id: 'pharmacy', labelAr: `دليل الأدوية والطلبات (${patientPharmacyOrders.length})`, labelEn: `Medicines (${patientPharmacyOrders.length})`, icon: Pill },
+          { id: 'prescriptions', labelAr: `الوصفات الطبية (${patientPrescriptions.length})`, labelEn: `e-Prescriptions (${patientPrescriptions.length})`, icon: Pill },
+          { id: 'referrals', labelAr: `التحويلات والفحوصات (${patientLabOrders.length + patientRadiologyOrders.length})`, labelEn: `Referrals (${patientLabOrders.length + patientRadiologyOrders.length})`, icon: FileText },
+          { id: 'pharmacy', labelAr: `دليل الأدوية والطلبات (${patientPharmacyOrders.length})`, labelEn: `Medicines (${patientPharmacyOrders.length})`, icon: ShoppingBag },
           { id: 'labs', labelAr: `التحاليل والمختبرات (${patientLabBookings.length})`, labelEn: `Lab Tests (${patientLabBookings.length})`, icon: FlaskConical },
           { id: 'radiology', labelAr: `الأشعة والسونار (${patientRadiologyBookings.length})`, labelEn: `Radiology (${patientRadiologyBookings.length})`, icon: Scan },
           { id: 'records', labelAr: `سجلي الطبي والتقارير (${personalRecords.length + patientRadiologyReports.length + patientLabResults.length})`, labelEn: `My Records (${personalRecords.length + patientRadiologyReports.length + patientLabResults.length})`, icon: FileCheck2 },
@@ -2076,6 +2253,371 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
                         </button>
                       )}
                     </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ==================================================== */}
+      {/* TAB: ELECTRONIC PRESCRIPTIONS (e-Prescriptions) */}
+      {/* ==================================================== */}
+      {activeTab === 'prescriptions' && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4">
+            <div className="pb-3 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-[#003366] border border-blue-200 text-xs font-bold mb-2">
+                  <Pill size={14} />
+                  <span>{language === 'ar' ? 'الوصفات الرقمية المشفرة - نقابة أطباء العراق' : 'Encrypted Digital e-Prescriptions'}</span>
+                </div>
+                <h2 className="text-xl font-bold text-slate-900">
+                  {language === 'ar' ? 'سجل الوصفات الطبية الإلكترونية' : 'Electronic Prescriptions (e-Rx)'}
+                </h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  {language === 'ar'
+                    ? 'الوصفات الطبية الصادرة من أطبائك المعالجين، موثقة بالباركود ومعتمدة للصرف في الصيدليات المرخصة.'
+                    : 'Authentic digital prescriptions issued by your licensed physicians, verifiable and dispatchable to authorized pharmacies.'}
+                </p>
+              </div>
+
+              <div className="text-xs font-bold px-3 py-1.5 rounded-xl bg-blue-50 text-blue-900 border border-blue-200">
+                {patientPrescriptions.length} {language === 'ar' ? 'وصفة مسجلة' : 'prescriptions'}
+              </div>
+            </div>
+
+            {patientPrescriptions.length === 0 ? (
+              <div className="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                <Pill size={36} className="mx-auto text-slate-300 mb-2" />
+                <p className="text-sm font-bold text-slate-600">
+                  {language === 'ar' ? 'لا توجد وصفات إلكترونية مسجلة بحسابك حتى الآن' : 'No electronic prescriptions found'}
+                </p>
+                <p className="text-xs text-slate-400 mt-1">
+                  {language === 'ar' ? 'عند قيام الطبيب بإصدار وصفة رقمية لك، ستظهر تفاصيلها وأدويتها هنا فوراً.' : 'Prescriptions issued by your doctor will be listed here instantly.'}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {patientPrescriptions.map(rx => {
+                  const statusColors: Record<string, { bg: string; text: string; border: string; label: string }> = {
+                    draft: { bg: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-200', label: 'مسودة' },
+                    sent: { bg: 'bg-amber-50', text: 'text-amber-800', border: 'border-amber-200', label: 'مرسلة للصيدلية' },
+                    received: { bg: 'bg-blue-50', text: 'text-blue-800', border: 'border-blue-200', label: 'تم الاستلام بالصيدلية' },
+                    accepted: { bg: 'bg-sky-50', text: 'text-sky-800', border: 'border-sky-200', label: 'تمت الموافقة بالصيدلية' },
+                    dispensing: { bg: 'bg-purple-50', text: 'text-purple-800', border: 'border-purple-200', label: 'قيد التجهيز والصرف' },
+                    dispensed: { bg: 'bg-emerald-50', text: 'text-emerald-800', border: 'border-emerald-200', label: 'تم الصرف بختم الصيدلية' },
+                    rejected: { bg: 'bg-red-50', text: 'text-red-800', border: 'border-red-200', label: 'مرفوضة / معتذر عنها' },
+                    cancelled: { bg: 'bg-slate-100', text: 'text-slate-600', border: 'border-slate-300', label: 'ملغاة' },
+                  };
+
+                  const cfg = statusColors[rx.status] || statusColors.sent;
+
+                  return (
+                    <div
+                      key={rx.id}
+                      className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200 hover:border-blue-300 transition-all shadow-xs space-y-4"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <span className="font-mono font-black text-sm px-3 py-1 rounded-lg bg-[#003366] text-white tracking-wider">
+                            {rx.prescriptionNumber}
+                          </span>
+                          <span className={`px-3 py-1 rounded-full text-xs font-bold border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
+                            {cfg.label}
+                          </span>
+                          {rx.status === 'dispensed' && (
+                            <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 text-[11px] font-bold flex items-center gap-1">
+                              <CheckCircle2 size={12} />
+                              <span>{language === 'ar' ? 'معتمدة ومصروفة' : 'Certified Dispensed'}</span>
+                            </span>
+                          )}
+                        </div>
+
+                        <button
+                          onClick={() => setSelectedPrescriptionForPdf(rx)}
+                          className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-blue-900 text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-xs self-start sm:self-auto"
+                        >
+                          <FileText size={14} />
+                          <span>{language === 'ar' ? 'عرض الوصفة وطباعتها (PDF)' : 'Official PDF Preview'}</span>
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                        <div className="space-y-1 bg-slate-50 p-3.5 rounded-xl border border-slate-100">
+                          <span className="text-[11px] font-bold text-slate-400 block">{language === 'ar' ? 'الطبيب والعيادة المصدرة' : 'Prescribing Doctor'}</span>
+                          <div className="text-sm font-black text-slate-900">{rx.doctorName}</div>
+                          {rx.doctorSpecialty && <div className="text-slate-600">{rx.doctorSpecialty}</div>}
+                          {rx.clinicName && <div className="text-slate-500 text-[11px]">{rx.clinicName}</div>}
+                          <div className="pt-2 text-slate-400 text-[11px]">
+                            {language === 'ar' ? 'تاريخ الإصدار: ' : 'Issued: '}
+                            <span className="font-mono text-slate-700">{new Date(rx.createdAt).toLocaleDateString(language === 'ar' ? 'ar-IQ' : 'en-US')}</span>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1 bg-slate-50 p-3.5 rounded-xl border border-slate-100">
+                          <span className="text-[11px] font-bold text-slate-400 block">{language === 'ar' ? 'الصيدلية المستهدفة للصرف' : 'Target Pharmacy'}</span>
+                          <div className="text-sm font-black text-[#003366]">{rx.targetPharmacyName || 'صيدلية معتمدة بالمنصة'}</div>
+                          {rx.status === 'dispensed' && rx.dispensedByName && (
+                            <div className="pt-1 text-emerald-800 font-bold text-[11px]">
+                              {language === 'ar' ? 'الصيدلي المنفذ: ' : 'Dispensed By: '}
+                              <span>{rx.dispensedByName}</span>
+                            </div>
+                          )}
+                          {rx.diagnosis && (
+                            <div className="pt-2 text-slate-700">
+                              <span className="font-bold text-slate-500">{language === 'ar' ? 'التشخيص: ' : 'Diagnosis: '}</span>
+                              <span>{rx.diagnosis}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Medicines List */}
+                      <div className="space-y-2 pt-2">
+                        <span className="text-xs font-bold text-slate-800 block">
+                          {language === 'ar' ? `الأدوية الموصوفة (${rx.medicines.length}):` : `Prescribed Medications (${rx.medicines.length}):`}
+                        </span>
+                        <div className="grid grid-cols-1 gap-2">
+                          {rx.medicines.map((m, idx) => (
+                            <div key={idx} className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                              <div>
+                                <div className="font-bold text-slate-900 text-sm">
+                                  {m.medicineName} <span className="font-mono text-xs text-blue-900 font-semibold">({m.strength})</span>
+                                </div>
+                                <div className="text-slate-500 text-[11px]">{m.activeIngredient} · {m.dosageForm}</div>
+                                {m.instructions && (
+                                  <div className="text-slate-700 text-xs mt-1 bg-white px-2 py-1 rounded-md border border-slate-200">
+                                    <strong className="text-slate-900">{language === 'ar' ? 'التعليمات: ' : 'Instructions: '}</strong>
+                                    <span>{m.instructions}</span>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="text-right sm:text-left font-mono font-bold text-slate-700 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shrink-0">
+                                <div>{m.dosage}</div>
+                                <div className="text-[10px] text-slate-500">{m.frequency}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Dispensing Stamp if dispensed */}
+                      {rx.status === 'dispensed' && (
+                        <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+                            <div>
+                              <strong className="block">{language === 'ar' ? 'تم تأكيد صرف الدواء بالكامل ومنع الصرف المزدوج' : 'Prescription Dispensed and Certified'}</strong>
+                              <span className="text-[11px] text-emerald-700">{rx.dispensingNotes || (language === 'ar' ? 'تم استلام وتوجيه الجرعات وفق الأصول المهنية.' : 'Dispensed.')}</span>
+                            </div>
+                          </div>
+                          {rx.dispensedAt && (
+                            <span className="font-mono text-[10px] text-emerald-800 shrink-0">
+                              {new Date(rx.dispensedAt).toLocaleString(language === 'ar' ? 'ar-IQ' : 'en-US')}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ==================================================== */}
+      {/* TAB: MEDICAL REFERRALS (LABS & RADIOLOGY ORDERS) */}
+      {/* ==================================================== */}
+      {activeTab === 'referrals' && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-5">
+            <div className="pb-3 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-50 text-cyan-800 border border-cyan-200 text-xs font-bold mb-2">
+                  <FileCheck2 size={14} />
+                  <span>{language === 'ar' ? 'التحويلات والفحوصات المحالة من الأطباء' : 'Doctor Medical Orders'}</span>
+                </div>
+                <h2 className="text-xl font-bold text-slate-900">
+                  {language === 'ar' ? 'طلبات التحاليل والأشعة التشخيصية' : 'Diagnostic Referrals & Orders'}
+                </h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  {language === 'ar'
+                    ? 'متابعة طلبات الفحص الصادرة من عيادات الأطباء، وحالتها، وخلاصة النتائج والتقارير المعتمدة.'
+                    : 'Track diagnostic laboratory and imaging referrals with status updates and released findings.'}
+                </p>
+              </div>
+
+              {/* Referral Type Filter */}
+              <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-xl text-xs font-bold">
+                {[
+                  { id: 'all', labelAr: `الكل (${patientLabOrders.length + patientRadiologyOrders.length})`, labelEn: 'All' },
+                  { id: 'lab', labelAr: `المختبر (${patientLabOrders.length})`, labelEn: 'Labs' },
+                  { id: 'radiology', labelAr: `الأشعة (${patientRadiologyOrders.length})`, labelEn: 'Radiology' },
+                ].map(f => (
+                  <button
+                    key={f.id}
+                    onClick={() => setReferralFilterType(f.id as any)}
+                    className={`px-3 py-1.5 rounded-lg cursor-pointer transition-all ${
+                      referralFilterType === f.id
+                        ? 'bg-white text-slate-900 shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    {language === 'ar' ? f.labelAr : f.labelEn}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Content List */}
+            {((referralFilterType === 'all' || referralFilterType === 'lab') ? patientLabOrders : []).length === 0 &&
+             ((referralFilterType === 'all' || referralFilterType === 'radiology') ? patientRadiologyOrders : []).length === 0 ? (
+              <div className="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                <FileCheck2 size={36} className="mx-auto text-slate-300 mb-2" />
+                <p className="text-sm font-bold text-slate-600">
+                  {language === 'ar' ? 'لا توجد طلبات تحويل مطابقة للتصفية الحالية' : 'No medical orders found'}
+                </p>
+                <p className="text-xs text-slate-400 mt-1">
+                  {language === 'ar' ? 'عند قيام الطبيب بإحالتك لمختبر أو مركز أشعة، ستظهر تفاصيل التحويل هنا.' : 'Diagnostic orders from doctors will appear here in real-time.'}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Lab Orders */}
+                {(referralFilterType === 'all' || referralFilterType === 'lab') && patientLabOrders.map(ord => (
+                  <div key={ord.id} className="p-5 rounded-2xl bg-white border border-slate-200 hover:border-orange-300 transition-all shadow-xs space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-black text-sm px-3 py-1 rounded-lg bg-orange-600 text-white tracking-wider">
+                          {ord.orderNumber}
+                        </span>
+                        <span className="px-2.5 py-0.5 rounded-md bg-orange-50 text-orange-800 font-bold text-xs border border-orange-200">
+                          {language === 'ar' ? 'تحاليل مخبرية' : 'Lab Order'}
+                        </span>
+                        {ord.priority === 'urgent' && (
+                          <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-black border border-red-200 animate-pulse">
+                            {language === 'ar' ? 'عاجل' : 'Urgent'}
+                          </span>
+                        )}
+                      </div>
+
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold border self-start sm:self-auto ${
+                        ord.status === 'completed'
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                          : ord.status === 'rejected'
+                          ? 'bg-red-50 text-red-800 border-red-200'
+                          : 'bg-amber-50 text-amber-800 border-amber-200'
+                      }`}>
+                        {ord.status === 'completed' ? (language === 'ar' ? 'النتائج معتمدة وجاهزة' : 'Results Ready') : ord.status}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                      <div className="space-y-1 bg-slate-50 p-3 rounded-xl">
+                        <span className="text-[11px] font-bold text-slate-400 block">{language === 'ar' ? 'الطبيب المحيل' : 'Doctor'}</span>
+                        <div className="font-black text-slate-900">{ord.doctorName}</div>
+                        {ord.doctorSpecialty && <div className="text-slate-600">{ord.doctorSpecialty}</div>}
+                      </div>
+                      <div className="space-y-1 bg-slate-50 p-3 rounded-xl">
+                        <span className="text-[11px] font-bold text-slate-400 block">{language === 'ar' ? 'المختبر المستهدف' : 'Target Lab'}</span>
+                        <div className="font-black text-orange-900">{ord.targetLabName || 'مختبر معتمد بالمنصة'}</div>
+                        {ord.fastingInstructions && (
+                          <div className="text-amber-800 text-[11px] pt-1">
+                            <strong>{language === 'ar' ? 'شروط الصيام: ' : 'Fasting: '}</strong>
+                            <span>{ord.fastingInstructions}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Tests List */}
+                    <div className="text-xs">
+                      <strong className="text-slate-800 block mb-1.5">{language === 'ar' ? 'الفحوصات والتحاليل المطلوبة:' : 'Requested Tests:'}</strong>
+                      <div className="flex flex-wrap gap-1.5">
+                        {ord.tests.map((t, idx) => (
+                          <span key={idx} className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 font-semibold border border-slate-200">
+                            {t.testName}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Released Result Summary */}
+                    {ord.resultSummary && (
+                      <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs space-y-1">
+                        <div className="flex items-center gap-1.5 font-black text-emerald-800">
+                          <CheckCircle2 size={14} />
+                          <span>{language === 'ar' ? 'خلاصة النتائج المخبرية الصادرة من المختبر:' : 'Released Lab Findings:'}</span>
+                        </div>
+                        <p className="text-slate-800 font-mono pl-5">{ord.resultSummary}</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                {/* Radiology Orders */}
+                {(referralFilterType === 'all' || referralFilterType === 'radiology') && patientRadiologyOrders.map(ord => (
+                  <div key={ord.id} className="p-5 rounded-2xl bg-white border border-slate-200 hover:border-cyan-300 transition-all shadow-xs space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-black text-sm px-3 py-1 rounded-lg bg-[#0891b2] text-white tracking-wider">
+                          {ord.orderNumber}
+                        </span>
+                        <span className="px-2.5 py-0.5 rounded-md bg-cyan-50 text-cyan-800 font-bold text-xs border border-cyan-200 uppercase">
+                          {ord.modality}
+                        </span>
+                        {ord.priority === 'urgent' && (
+                          <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-black border border-red-200 animate-pulse">
+                            {language === 'ar' ? 'عاجل' : 'Urgent'}
+                          </span>
+                        )}
+                      </div>
+
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold border self-start sm:self-auto ${
+                        ord.status === 'completed'
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                          : ord.status === 'rejected'
+                          ? 'bg-red-50 text-red-800 border-red-200'
+                          : 'bg-cyan-50 text-cyan-800 border-cyan-200'
+                      }`}>
+                        {ord.status === 'completed' ? (language === 'ar' ? 'التقرير جاهز ومعتمد' : 'Report Ready') : ord.status}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                      <div className="space-y-1 bg-slate-50 p-3 rounded-xl">
+                        <span className="text-[11px] font-bold text-slate-400 block">{language === 'ar' ? 'الطبيب المحيل' : 'Doctor'}</span>
+                        <div className="font-black text-slate-900">{ord.doctorName}</div>
+                        {ord.doctorSpecialty && <div className="text-slate-600">{ord.doctorSpecialty}</div>}
+                      </div>
+                      <div className="space-y-1 bg-slate-50 p-3 rounded-xl">
+                        <span className="text-[11px] font-bold text-slate-400 block">{language === 'ar' ? 'مركز الأشعة والمنطقة التشريحية' : 'Center & Anatomy'}</span>
+                        <div className="font-black text-[#0891b2]">{ord.bodyRegion}</div>
+                        <div className="text-slate-600 text-[11px]">{ord.targetCenterName || 'مركز أشعة معتمد بالمنصة'}</div>
+                      </div>
+                    </div>
+
+                    {ord.clinicalIndication && (
+                      <div className="bg-cyan-50/50 p-3 rounded-xl border border-cyan-100 text-xs">
+                        <strong className="text-slate-800 block mb-0.5">{language === 'ar' ? 'الدواعي والتشخيص المبدئي:' : 'Indication:'}</strong>
+                        <p className="text-slate-700 leading-relaxed font-sans">{ord.clinicalIndication}</p>
+                      </div>
+                    )}
+
+                    {/* Released Report Summary */}
+                    {ord.reportSummary && (
+                      <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs space-y-1">
+                        <div className="flex items-center gap-1.5 font-black text-emerald-800">
+                          <CheckCircle2 size={14} />
+                          <span>{language === 'ar' ? 'خلاصة التقرير الشعاعي الصادر من المركز:' : 'Certified Radiology Findings:'}</span>
+                        </div>
+                        <p className="text-slate-800 font-mono pl-5">{ord.reportSummary}</p>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -4173,6 +4715,16 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
             </div>
           </div>
         </div>
+      )}
+
+      {/* ==================================================== */}
+      {/* MODAL: OFFICIAL ELECTRONIC PRESCRIPTION PDF PREVIEW */}
+      {/* ==================================================== */}
+      {selectedPrescriptionForPdf && (
+        <PrescriptionPdfModal
+          prescription={selectedPrescriptionForPdf}
+          onClose={() => setSelectedPrescriptionForPdf(null)}
+        />
       )}
     </div>
   );

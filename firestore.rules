@@ -459,6 +459,79 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Electronic Prescriptions: /electronic_prescriptions/{prescriptionId}
+    match /electronic_prescriptions/{prescriptionId} {
+      allow get: if isSignedIn() && (
+        resource.data.doctorId == request.auth.uid || 
+        resource.data.patientId == request.auth.uid || 
+        (resource.data.targetPharmacyId != null && resource.data.targetPharmacyId == request.auth.uid) ||
+        (resource.data.dispensedPharmacyId != null && resource.data.dispensedPharmacyId == request.auth.uid) ||
+        isAdmin()
+      );
+      allow list: if isSignedIn();
+
+      allow create: if isSignedIn() && (
+        incoming().doctorId == request.auth.uid || 
+        isAdmin()
+      );
+
+      allow update: if isSignedIn() && (
+        (existing().doctorId == request.auth.uid && existing().status in ['draft', 'sent']) ||
+        (existing().targetPharmacyId == request.auth.uid || existing().dispensedPharmacyId == request.auth.uid) ||
+        isAdmin()
+      ) && incoming().doctorId == existing().doctorId;
+
+      allow delete: if isAdmin();
+    }
+
+    // Diagnostic Lab Orders: /lab_orders/{orderId}
+    match /lab_orders/{orderId} {
+      allow get: if isSignedIn() && (
+        resource.data.doctorId == request.auth.uid || 
+        resource.data.patientId == request.auth.uid || 
+        (resource.data.targetLabId != null && resource.data.targetLabId == request.auth.uid) ||
+        isAdmin()
+      );
+      allow list: if isSignedIn();
+
+      allow create: if isSignedIn() && (
+        incoming().doctorId == request.auth.uid || 
+        isAdmin()
+      );
+
+      allow update: if isSignedIn() && (
+        existing().doctorId == request.auth.uid || 
+        (existing().targetLabId != null && existing().targetLabId == request.auth.uid) ||
+        isAdmin()
+      ) && incoming().doctorId == existing().doctorId;
+
+      allow delete: if isAdmin();
+    }
+
+    // Diagnostic Radiology Orders: /radiology_orders/{orderId}
+    match /radiology_orders/{orderId} {
+      allow get: if isSignedIn() && (
+        resource.data.doctorId == request.auth.uid || 
+        resource.data.patientId == request.auth.uid || 
+        (resource.data.targetCenterId != null && resource.data.targetCenterId == request.auth.uid) ||
+        isAdmin()
+      );
+      allow list: if isSignedIn();
+
+      allow create: if isSignedIn() && (
+        incoming().doctorId == request.auth.uid || 
+        isAdmin()
+      );
+
+      allow update: if isSignedIn() && (
+        existing().doctorId == request.auth.uid || 
+        (existing().targetCenterId != null && existing().targetCenterId == request.auth.uid) ||
+        isAdmin()
+      ) && incoming().doctorId == existing().doctorId;
+
+      allow delete: if isAdmin();
+    }
+
     // Notifications: /notifications/{notificationId}
     match /notifications/{notificationId} {
       allow get: if isSignedIn() && (

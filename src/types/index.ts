@@ -32,14 +32,14 @@ export interface UserProfile {
 }
 
 export type PortalId = 
-  | 'doctor'
-  | 'radiology'
-  | 'laboratory'
-  | 'pharmacy'
-  | 'wholesaler'
   | 'patient'
-  | 'super_admin'
-  | 'secretary';
+  | 'doctor'
+  | 'pharmacy'
+  | 'laboratory'
+  | 'radiology'
+  | 'wholesaler'
+  | 'secretary'
+  | 'super_admin';
 
 export interface PortalInfo {
   id: PortalId;
@@ -124,6 +124,152 @@ export interface MedicalRecord {
   sourceFacility?: string;
   fileUrl?: string;
   doctorNotes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// -------------------------------------------------------------
+// BATCH 2: ELECTRONIC PRESCRIPTIONS, LAB & RADIOLOGY REFERRALS
+// -------------------------------------------------------------
+
+export type PrescriptionStatus = 
+  | 'draft' 
+  | 'sent' 
+  | 'received' 
+  | 'accepted' 
+  | 'rejected' 
+  | 'dispensing' 
+  | 'dispensed' 
+  | 'cancelled';
+
+export interface PrescriptionMedicineItem {
+  medicineId?: string;
+  name: string;
+  activeIngredient?: string;
+  strength: string;
+  dosageForm: string;
+  dosage: string; // e.g. "حبة واحدة" / "1 tablet"
+  frequency: string; // e.g. "مرتين يومياً بعد الطعام" / "Twice daily after meals"
+  duration: string; // e.g. "5 أيام" / "5 days"
+  instructions?: string; // e.g. "مع كوب ماء كامل"
+  warnings?: string; // e.g. "يمنع القيادة بعد الاستخدام"
+}
+
+export interface ElectronicPrescription {
+  id: string;
+  prescriptionNumber: string; // RX-YYYYMMDD-XXXX
+  doctorId: string;
+  doctorName: string;
+  doctorSpecialty?: string;
+  doctorLicense?: string;
+  doctorPhone?: string;
+  clinicName?: string;
+  clinicAddress?: string;
+  patientId: string;
+  patientName: string;
+  patientPhone?: string;
+  patientGender?: 'male' | 'female';
+  patientAgeOrDob?: string;
+  appointmentId?: string;
+  diagnosis?: string;
+  targetPharmacyId?: string;
+  targetPharmacyName?: string;
+  items: PrescriptionMedicineItem[];
+  patientAllergies?: string[];
+  generalInstructions?: string;
+  status: PrescriptionStatus;
+  rejectionReason?: string;
+  cancellationReason?: string;
+  // Dispensing metadata
+  dispensedAt?: string;
+  dispensedByUid?: string;
+  dispensedByName?: string;
+  dispensedPharmacyId?: string;
+  dispensedPharmacyName?: string;
+  dispensingNotes?: string;
+  // Authorized clinical corrections history
+  corrections?: Array<{
+    correctedAt: string;
+    correctedBy: string;
+    reason: string;
+    previousItemsSnapshot: PrescriptionMedicineItem[];
+  }>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type LabOrderStatus = 
+  | 'new' 
+  | 'received' 
+  | 'in_progress' 
+  | 'completed' 
+  | 'rejected' 
+  | 'cancelled';
+
+export interface LabOrderItem {
+  testId?: string;
+  testName: string;
+  category?: string;
+  instructions?: string;
+}
+
+export interface LabOrder {
+  id: string;
+  orderNumber: string; // LAB-ORD-XXXX
+  doctorId: string;
+  doctorName: string;
+  doctorSpecialty?: string;
+  doctorPhone?: string;
+  clinicName?: string;
+  patientId: string;
+  patientName: string;
+  patientPhone?: string;
+  targetLabId?: string;
+  targetLabName?: string;
+  tests: LabOrderItem[];
+  priority: 'normal' | 'urgent';
+  clinicalIndication?: string;
+  preparationInstructions?: string;
+  status: LabOrderStatus;
+  rejectionReason?: string;
+  resultId?: string;
+  resultSummary?: string;
+  completedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type RadiologyOrderStatus = 
+  | 'new' 
+  | 'received' 
+  | 'in_progress' 
+  | 'completed' 
+  | 'rejected' 
+  | 'cancelled';
+
+export interface RadiologyOrder {
+  id: string;
+  orderNumber: string; // RAD-ORD-XXXX
+  doctorId: string;
+  doctorName: string;
+  doctorSpecialty?: string;
+  doctorPhone?: string;
+  clinicName?: string;
+  patientId: string;
+  patientName: string;
+  patientPhone?: string;
+  targetCenterId?: string;
+  targetCenterName?: string;
+  modality: RadiologyModality;
+  bodyRegion: string; // e.g. "Chest", "Brain", "Abdomen", "Knee"
+  priority: 'normal' | 'urgent';
+  clinicalIndication: string;
+  preparationInstructions?: string;
+  status: RadiologyOrderStatus;
+  rejectionReason?: string;
+  reportId?: string;
+  reportSummary?: string;
+  completedAt?: string;
   createdAt: string;
   updatedAt: string;
 }

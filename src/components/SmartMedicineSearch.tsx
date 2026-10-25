@@ -2,7 +2,19 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { db } from '../lib/firebase';
 import { collection, getDocs, query, limit } from 'firebase/firestore';
-import { Search, Pill, Building2, Package, Sparkles, X, Check, ArrowRight } from 'lucide-react';
+import { 
+  Search, 
+  Pill, 
+  Building2, 
+  Package, 
+  Sparkles, 
+  X, 
+  Check, 
+  AlertCircle,
+  RefreshCw,
+  Layers,
+  ArrowRight
+} from 'lucide-react';
 
 export interface SearchMedicineResult {
   id: string;
@@ -13,9 +25,11 @@ export interface SearchMedicineResult {
   manufacturer: string;
   strength: string;
   dosageForm: string;
-  priceIqd: number;
+  packageSize?: string;
+  photoUrl?: string;
+  priceIqd?: number;
   cartonPriceIqd?: number;
-  stockCount: number;
+  stockCount?: number;
   minOrderQuantity?: number;
   sourceType: 'retail' | 'wholesale';
   facilityName: string;
@@ -36,6 +50,7 @@ const IRAQI_MEDICINE_CATALOG: SearchMedicineResult[] = [
     brand: 'Augmentin',
     strength: '1000 mg (875/125)',
     dosageForm: 'Tablets (أقراص)',
+    packageSize: '14 Tablets / Pack',
     priceIqd: 6500,
     cartonPriceIqd: 180000,
     stockCount: 140,
@@ -48,6 +63,27 @@ const IRAQI_MEDICINE_CATALOG: SearchMedicineResult[] = [
     requiresPrescription: true,
   },
   {
+    id: 'med_curam_1g',
+    name: 'Curam 1g (كورام)',
+    nameAr: 'كورام 1 غرام بديل مكافئ',
+    activeIngredient: 'Amoxicillin + Clavulanic Acid (أموكسيسيلين + كلافولانيك)',
+    manufacturer: 'Sandoz / Novartis',
+    brand: 'Curam',
+    strength: '1000 mg (875/125)',
+    dosageForm: 'Tablets (أقراص)',
+    packageSize: '14 Tablets / Pack',
+    priceIqd: 5500,
+    cartonPriceIqd: 160000,
+    stockCount: 90,
+    minOrderQuantity: 5,
+    sourceType: 'wholesale',
+    facilityName: 'مذخر الرشيد التخصصي للأدوية',
+    facilityGovernorate: 'بغداد (Baghdad)',
+    facilityPhone: '07712349988',
+    facilityId: 'demo_wholesaler_rashid',
+    requiresPrescription: true,
+  },
+  {
     id: 'med_pan_ext',
     name: 'Panadol Extra (بنادول إكسترا)',
     nameAr: 'بنادول إكسترا الأحمر',
@@ -56,6 +92,7 @@ const IRAQI_MEDICINE_CATALOG: SearchMedicineResult[] = [
     brand: 'Panadol',
     strength: '500mg / 65mg',
     dosageForm: 'Tablets (أقراص)',
+    packageSize: '24 Tablets / Pack',
     priceIqd: 2500,
     cartonPriceIqd: 65000,
     stockCount: 300,
@@ -70,12 +107,13 @@ const IRAQI_MEDICINE_CATALOG: SearchMedicineResult[] = [
   {
     id: 'med_con_5',
     name: 'Concor 5mg (كونكور)',
-    nameAr: 'كونكور 5 ملغم',
+    nameAr: 'كونكور 5 ملغم لعلاج الضغط',
     activeIngredient: 'Bisoprolol Fumarate (بيسوبرولول)',
     manufacturer: 'Merck KGaA',
     brand: 'Concor',
     strength: '5 mg',
     dosageForm: 'Tablets (أقراص)',
+    packageSize: '30 Tablets / Box',
     priceIqd: 9500,
     cartonPriceIqd: 270000,
     stockCount: 85,
@@ -96,6 +134,7 @@ const IRAQI_MEDICINE_CATALOG: SearchMedicineResult[] = [
     brand: 'Nexium',
     strength: '40 mg',
     dosageForm: 'Tablets (أقراص معوية)',
+    packageSize: '28 Tablets / Box',
     priceIqd: 14000,
     cartonPriceIqd: 390000,
     stockCount: 60,
@@ -108,6 +147,27 @@ const IRAQI_MEDICINE_CATALOG: SearchMedicineResult[] = [
     requiresPrescription: true,
   },
   {
+    id: 'med_esom_40',
+    name: 'Esoget 40mg (إيزوجيت)',
+    nameAr: 'إيزوجيت 40 ملغم بديل مكافئ',
+    activeIngredient: 'Esomeprazole Magnesium (إيزوميبرازول)',
+    manufacturer: 'Getz Pharma',
+    brand: 'Esoget',
+    strength: '40 mg',
+    dosageForm: 'Tablets (أقراص معوية)',
+    packageSize: '14 Tablets / Box',
+    priceIqd: 7500,
+    cartonPriceIqd: 210000,
+    stockCount: 110,
+    minOrderQuantity: 10,
+    sourceType: 'wholesale',
+    facilityName: 'مذخر الرشيد التخصصي للأدوية',
+    facilityGovernorate: 'بغداد (Baghdad)',
+    facilityPhone: '07712349988',
+    facilityId: 'demo_wholesaler_rashid',
+    requiresPrescription: true,
+  },
+  {
     id: 'med_lip_20',
     name: 'Lipitor 20mg (ليبيتور)',
     nameAr: 'ليبيتور 20 ملغم خافض كولسترول',
@@ -116,6 +176,7 @@ const IRAQI_MEDICINE_CATALOG: SearchMedicineResult[] = [
     brand: 'Lipitor',
     strength: '20 mg',
     dosageForm: 'Tablets (أقراص)',
+    packageSize: '30 Tablets / Box',
     priceIqd: 11000,
     cartonPriceIqd: 310000,
     stockCount: 95,
@@ -136,6 +197,7 @@ const IRAQI_MEDICINE_CATALOG: SearchMedicineResult[] = [
     brand: 'Glucophage',
     strength: '850 mg',
     dosageForm: 'Tablets (أقراص)',
+    packageSize: '30 Tablets / Box',
     priceIqd: 4500,
     cartonPriceIqd: 125000,
     stockCount: 220,
@@ -156,6 +218,7 @@ const IRAQI_MEDICINE_CATALOG: SearchMedicineResult[] = [
     brand: 'SDI',
     strength: '500 mg',
     dosageForm: 'Capsules (كبسولات)',
+    packageSize: '20 Capsules / Pack',
     priceIqd: 2000,
     cartonPriceIqd: 50000,
     stockCount: 450,
@@ -176,6 +239,7 @@ const IRAQI_MEDICINE_CATALOG: SearchMedicineResult[] = [
     brand: 'Piofen',
     strength: '400 mg',
     dosageForm: 'Tablets (أقراص)',
+    packageSize: '20 Tablets / Pack',
     priceIqd: 1800,
     cartonPriceIqd: 45000,
     stockCount: 380,
@@ -194,8 +258,9 @@ const IRAQI_MEDICINE_CATALOG: SearchMedicineResult[] = [
     activeIngredient: 'Salbutamol Sulfate (سالبوتامول)',
     manufacturer: 'GlaxoSmithKline (GSK)',
     brand: 'Ventolin',
-    strength: '100 mcg / dose (200 doses)',
+    strength: '100 mcg / dose',
     dosageForm: 'Inhaler (بخاخ)',
+    packageSize: '200 Actuations',
     priceIqd: 5500,
     cartonPriceIqd: 155000,
     stockCount: 110,
@@ -209,20 +274,21 @@ const IRAQI_MEDICINE_CATALOG: SearchMedicineResult[] = [
   },
   {
     id: 'med_ceft_1g',
-    name: 'Rocephin / Ceftriaxone 1g (روسيفين / سفترياكسون)',
+    name: 'Rocephin 1g (روسيفين حقن)',
     nameAr: 'إبرة روسيفين 1 غرام فيال',
     activeIngredient: 'Ceftriaxone Sodium (سفترياكسون)',
-    manufacturer: 'Roche / SDI',
+    manufacturer: 'Roche',
     brand: 'Rocephin',
     strength: '1 g IM/IV',
     dosageForm: 'Injection (فيال حقن)',
+    packageSize: '1 Vial + Solvent',
     priceIqd: 5000,
     cartonPriceIqd: 140000,
     stockCount: 160,
     minOrderQuantity: 10,
     sourceType: 'wholesale',
     facilityName: 'مذخر الرشيد التخصصي للأدوية',
-    facilityGovernorate: 'بغداد (Baghdad)',
+    facilityGovernorate: 'بغداد (بغداد)',
     facilityPhone: '07712349988',
     facilityId: 'demo_wholesaler_rashid',
     requiresPrescription: true,
@@ -247,9 +313,11 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
   const { language, isRTL } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [results, setResults] = useState<SearchMedicineResult[]>([]);
+  const [similarAlternatives, setSimilarAlternatives] = useState<SearchMedicineResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -264,22 +332,26 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, []);
 
-  // 250ms debounced search requiring >= 3 characters
+  // 250ms debounced search requiring strictly >= 3 characters
   useEffect(() => {
     const trimmed = searchTerm.trim().toLowerCase();
     if (trimmed.length < 3) {
       setResults([]);
+      setSimilarAlternatives([]);
       setIsOpen(false);
       setIsSearching(false);
+      setSearchError(null);
       return;
     }
 
     setIsSearching(true);
+    setSearchError(null);
+
     const timer = setTimeout(async () => {
       try {
         let liveResults: SearchMedicineResult[] = [];
 
-        // 1. Fetch from live Firestore if available
+        // 1. Fetch from live Firestore database
         try {
           if (sourceType === 'wholesale' || sourceType === 'all') {
             const wholesaleSnap = await getDocs(query(collection(db, 'wholesale_medicines'), limit(40)));
@@ -294,6 +366,8 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
                 manufacturer: data.manufacturer || '',
                 strength: data.strength || '',
                 dosageForm: data.dosageForm || '',
+                packageSize: data.packSize || data.packageSize || '1 Pack',
+                photoUrl: data.photoUrl,
                 priceIqd: data.wholesalePriceIqd || 0,
                 cartonPriceIqd: data.cartonPriceIqd,
                 stockCount: data.stockPacks || 0,
@@ -314,12 +388,14 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
               liveResults.push({
                 id: d.id,
                 name: data.name || '',
-                nameAr: data.name || '',
+                nameAr: data.nameAr || '',
                 activeIngredient: data.activeIngredient || '',
                 brand: data.brand || '',
                 manufacturer: data.manufacturer || '',
                 strength: data.strength || '',
                 dosageForm: data.dosageForm || '',
+                packageSize: data.packageSize || '1 Pack',
+                photoUrl: data.photoUrl,
                 priceIqd: data.price || 0,
                 stockCount: data.quantity || 0,
                 sourceType: 'retail',
@@ -332,14 +408,14 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
             });
           }
         } catch {
-          // Fallback to verified catalog on network or permission boundaries
+          // Graceful fallback to verified Iraqi catalog
         }
 
-        // Combine live results with offline Iraq medicine catalog
+        // Combine live results with validated Iraqi medicine catalog
         const combinedPool = [...liveResults, ...IRAQI_MEDICINE_CATALOG];
 
         // Deduplicate and filter by query
-        const filtered = combinedPool.filter((item) => {
+        const matched = combinedPool.filter((item) => {
           if (filterFacilityId && item.facilityId === filterFacilityId) {
             return false;
           }
@@ -356,9 +432,9 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
           return matchName || matchNameAr || matchActive || matchBrand || matchManufacturer;
         });
 
-        // Unique by ID or Brand+Strength
+        // Unique by ID or Name + Strength + Facility
         const seen = new Set<string>();
-        const unique = filtered.filter((item) => {
+        const unique = matched.filter((item) => {
           const key = `${item.name}-${item.strength}-${item.facilityId}`;
           if (seen.has(key)) return false;
           seen.add(key);
@@ -366,8 +442,25 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
         });
 
         setResults(unique.slice(0, 8));
-        setIsOpen(unique.length > 0);
+
+        // Find similar alternatives sharing EXACT active ingredient and strength (without mixing strengths)
+        if (unique.length > 0) {
+          const primaryActive = unique[0].activeIngredient.toLowerCase();
+          const primaryStrength = unique[0].strength.toLowerCase();
+          const alternatives = combinedPool.filter((alt) => 
+            alt.id !== unique[0].id &&
+            alt.activeIngredient.toLowerCase() === primaryActive &&
+            alt.strength.toLowerCase() === primaryStrength
+          );
+          setSimilarAlternatives(alternatives.slice(0, 3));
+        } else {
+          setSimilarAlternatives([]);
+        }
+
+        setIsOpen(true);
         setSelectedIndex(-1);
+      } catch (err: unknown) {
+        setSearchError(err instanceof Error ? err.message : 'Search failed');
       } finally {
         setIsSearching(false);
       }
@@ -407,7 +500,11 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
       {/* Search Input Box */}
       <div className="relative flex items-center">
         <div className={`absolute ${isRTL ? 'right-3.5' : 'left-3.5'} text-slate-400 pointer-events-none`}>
-          <Search size={18} className={isSearching ? 'animate-pulse text-[#003366]' : ''} />
+          {isSearching ? (
+            <RefreshCw size={17} className="animate-spin text-[#003366]" />
+          ) : (
+            <Search size={17} />
+          )}
         </div>
 
         <input
@@ -417,13 +514,13 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
           onChange={(e) => setSearchTerm(e.target.value)}
           onKeyDown={handleKeyDown}
           onFocus={() => {
-            if (results.length > 0) setIsOpen(true);
+            if (results.length > 0 || searchTerm.trim().length >= 3) setIsOpen(true);
           }}
           placeholder={
             placeholder ||
             (language === 'ar'
               ? 'ابحث بالاسم التجاري، المادة الفعالة أو الشركة (3 أحرف فأكثر)...'
-              : 'Search brand, active ingredient or manufacturer (3+ chars)...')
+              : 'Search trade name, active ingredient or manufacturer (3+ chars)...')
           }
           className={`w-full py-2.5 rounded-xl border border-slate-300 bg-white text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#003366] transition-all shadow-xs ${
             isRTL ? 'pr-10 pl-10' : 'pl-10 pr-10'
@@ -436,6 +533,7 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
             onClick={() => {
               setSearchTerm('');
               setResults([]);
+              setSimilarAlternatives([]);
               setIsOpen(false);
               inputRef.current?.focus();
             }}
@@ -447,109 +545,195 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
       </div>
 
       {/* Autocomplete Dropdown */}
-      {isOpen && results.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden divide-y divide-slate-100 animate-in fade-in-50 duration-150">
+      {isOpen && searchTerm.trim().length >= 3 && (
+        <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden divide-y divide-slate-100 animate-in fade-in-50 duration-150">
+          
+          {/* Header Summary */}
           <div className="p-2.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-semibold">
             <span className="flex items-center gap-1.5">
               <Sparkles size={13} className="text-amber-500" />
               <span>
-                {language === 'ar'
-                  ? `تم العثور على ${results.length} دواء / مستحضر`
-                  : `Found ${results.length} matches`}
+                {isSearching
+                  ? (language === 'ar' ? 'جاري البحث في قاعدة البيانات الطبية...' : 'Searching medical database...')
+                  : results.length > 0
+                  ? (language === 'ar' ? `تم العثور على ${results.length} دواء / مستحضر` : `Found ${results.length} registered products`)
+                  : (language === 'ar' ? 'نتائج البحث' : 'Search Results')}
               </span>
             </span>
-            <span>
-              {language === 'ar' ? 'اضغط للاختيار' : 'Click to select'}
+            <span className="text-[10px] text-slate-400">
+              {language === 'ar' ? 'بحث ذكي بحسب الاسم والتركيز' : 'Indexed by name & strength'}
             </span>
           </div>
 
-          <div className="max-h-80 overflow-y-auto">
-            {results.map((item, idx) => {
-              const isSelected = idx === selectedIndex;
-              return (
-                <div
-                  key={`${item.id}-${idx}`}
-                  onClick={() => handleSelectItem(item)}
-                  onMouseEnter={() => setSelectedIndex(idx)}
-                  className={`p-3.5 flex items-center justify-between gap-3 cursor-pointer transition-colors ${
-                    isSelected ? 'bg-sky-50/80 text-slate-900' : 'hover:bg-slate-50 text-slate-700'
-                  }`}
-                >
-                  <div className="flex items-start gap-3 min-w-0">
-                    <div
-                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
-                        item.sourceType === 'wholesale'
-                          ? 'bg-teal-50 text-teal-700 border border-teal-200'
-                          : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                      }`}
-                    >
-                      {item.sourceType === 'wholesale' ? <Building2 size={18} /> : <Pill size={18} />}
-                    </div>
+          {/* Loading Indicator */}
+          {isSearching && (
+            <div className="p-8 text-center text-slate-500 text-xs flex flex-col items-center justify-center gap-2">
+              <RefreshCw size={20} className="animate-spin text-[#003366]" />
+              <span>{language === 'ar' ? 'جاري مطابقة الأسماء والمواد الفعالة...' : 'Matching chemical & brand names...'}</span>
+            </div>
+          )}
 
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-sm text-slate-900 leading-tight">
-                          {item.name}
-                        </span>
-                        <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
-                          {item.strength}
-                        </span>
-                        <span className="text-[11px] text-slate-500">
-                          {item.dosageForm}
-                        </span>
-                      </div>
+          {/* Empty State */}
+          {!isSearching && results.length === 0 && !searchError && (
+            <div className="p-8 text-center text-slate-500 text-xs space-y-1.5">
+              <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-2">
+                <Search size={18} />
+              </div>
+              <p className="font-bold text-slate-800 text-sm">
+                {language === 'ar' ? 'لم يتم العثور على أدوية مطابقة' : 'No matching medications found'}
+              </p>
+              <p className="text-slate-500 max-w-xs mx-auto text-[11px]">
+                {language === 'ar'
+                  ? 'يرجى التأكد من صحة الاسم التجاري أو المادة الفعالة باللغة العربية أو الإنجليزية.'
+                  : 'Verify the spelling of the brand or generic active compound in Arabic or English.'}
+              </p>
+            </div>
+          )}
 
-                      <div className="text-xs text-slate-500 mt-0.5 truncate">
-                        <span className="font-medium text-slate-600">
-                          {language === 'ar' ? 'المادة الفعالة: ' : 'Active: '}
-                        </span>
-                        <span>{item.activeIngredient}</span>
-                        <span className="mx-1.5 text-slate-300">|</span>
-                        <span>{item.manufacturer}</span>
-                      </div>
+          {/* Error State */}
+          {searchError && (
+            <div className="p-4 bg-red-50 text-red-700 text-xs flex items-center gap-2">
+              <AlertCircle size={16} className="shrink-0" />
+              <span>{searchError}</span>
+            </div>
+          )}
 
-                      <div className="text-[11px] text-slate-400 mt-1 flex items-center gap-1.5">
-                        <span className="font-semibold text-slate-600">{item.facilityName}</span>
-                        {item.facilityGovernorate && (
-                          <>
-                            <span>·</span>
-                            <span>{item.facilityGovernorate}</span>
-                          </>
-                        )}
-                        {item.minOrderQuantity && item.sourceType === 'wholesale' && (
-                          <>
-                            <span>·</span>
-                            <span className="text-teal-700 font-bold">
-                              {language === 'ar' ? `الحد الأدنى: ${item.minOrderQuantity} باكيت` : `MOQ: ${item.minOrderQuantity}`}
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Price & Stock Column */}
-                  <div className="text-end shrink-0">
-                    <div className="text-sm font-bold text-slate-900 font-mono">
-                      {item.priceIqd.toLocaleString()} <span className="text-[10px] font-sans font-normal text-slate-500">{language === 'ar' ? 'د.ع' : 'IQD'}</span>
-                    </div>
-                    {item.cartonPriceIqd && item.sourceType === 'wholesale' && (
-                      <div className="text-[11px] text-slate-500 font-mono">
-                        {item.cartonPriceIqd.toLocaleString()} {language === 'ar' ? 'د.ع/كارتون' : 'IQD/carton'}
-                      </div>
-                    )}
-                    <div className="text-[11px] font-semibold text-emerald-600 mt-0.5">
-                      {item.stockCount > 0 ? (
-                        language === 'ar' ? `متوفر: ${item.stockCount} باكيت` : `In Stock: ${item.stockCount}`
+          {/* Results List */}
+          {!isSearching && results.length > 0 && (
+            <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
+              {results.map((item, idx) => {
+                const isSelected = idx === selectedIndex;
+                return (
+                  <div
+                    key={`${item.id}-${idx}`}
+                    onClick={() => handleSelectItem(item)}
+                    onMouseEnter={() => setSelectedIndex(idx)}
+                    className={`p-3.5 flex items-center justify-between gap-3 cursor-pointer transition-colors ${
+                      isSelected ? 'bg-sky-50/80 text-slate-900' : 'hover:bg-slate-50 text-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3 min-w-0">
+                      {item.photoUrl ? (
+                        <img 
+                          src={item.photoUrl} 
+                          alt={item.name}
+                          className="w-10 h-10 rounded-xl object-cover border border-slate-200 shrink-0"
+                          onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                        />
                       ) : (
-                        <span className="text-red-500">{language === 'ar' ? 'نفد المخزون' : 'Out of Stock'}</span>
+                        <div
+                          className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                            item.sourceType === 'wholesale'
+                              ? 'bg-teal-50 text-teal-700 border border-teal-200'
+                              : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          }`}
+                        >
+                          {item.sourceType === 'wholesale' ? <Building2 size={18} /> : <Pill size={18} />}
+                        </div>
+                      )}
+
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-bold text-sm text-slate-900 leading-tight">
+                            {item.name}
+                          </span>
+                          <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
+                            {item.strength}
+                          </span>
+                          <span className="text-[11px] text-slate-500 font-medium">
+                            {item.dosageForm}
+                          </span>
+                          {item.packageSize && (
+                            <span className="text-[10px] text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200">
+                              {item.packageSize}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="text-xs text-slate-500 mt-1 truncate">
+                          <span className="font-medium text-slate-600">
+                            {language === 'ar' ? 'المادة الفعالة: ' : 'Active: '}
+                          </span>
+                          <span className="font-semibold text-slate-700">{item.activeIngredient}</span>
+                          <span className="mx-1.5 text-slate-300">|</span>
+                          <span>{item.manufacturer}</span>
+                        </div>
+
+                        <div className="text-[11px] text-slate-400 mt-1 flex items-center gap-1.5 flex-wrap">
+                          <span className="font-semibold text-slate-600">{item.facilityName}</span>
+                          {item.facilityGovernorate && (
+                            <>
+                              <span>·</span>
+                              <span>{item.facilityGovernorate}</span>
+                            </>
+                          )}
+                          {item.minOrderQuantity && item.sourceType === 'wholesale' && (
+                            <>
+                              <span>·</span>
+                              <span className="text-teal-700 font-bold">
+                                {language === 'ar' ? `الحد الأدنى: ${item.minOrderQuantity} باكيت` : `MOQ: ${item.minOrderQuantity}`}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Verified Price & Availability */}
+                    <div className="text-end shrink-0 ps-2">
+                      {typeof item.priceIqd === 'number' && item.priceIqd > 0 && (
+                        <div className="text-sm font-bold text-slate-900 font-mono">
+                          {item.priceIqd.toLocaleString()} <span className="text-[10px] font-sans font-normal text-slate-500">{language === 'ar' ? 'د.ع' : 'IQD'}</span>
+                        </div>
+                      )}
+                      {typeof item.stockCount === 'number' && (
+                        <div className="text-[11px] font-semibold mt-0.5">
+                          {item.stockCount > 0 ? (
+                            <span className="text-emerald-700">
+                              {language === 'ar' ? `متوفر: ${item.stockCount}` : `In Stock: ${item.stockCount}`}
+                            </span>
+                          ) : (
+                            <span className="text-red-500">{language === 'ar' ? 'غير متوفر' : 'Out of Stock'}</span>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Similar Alternatives Section (Distinct to avoid confusion) */}
+          {!isSearching && similarAlternatives.length > 0 && (
+            <div className="p-3 bg-slate-50/80 border-t border-slate-200">
+              <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#003366] mb-2">
+                <Layers size={13} />
+                <span>
+                  {language === 'ar'
+                    ? 'بدائل متطابقة بالمادة الفعالة ونفس التركيز (Generic Equivalents):'
+                    : 'Generic Equivalents with Identical Strength:'}
+                </span>
+              </div>
+              <div className="space-y-1.5">
+                {similarAlternatives.map((alt, aIdx) => (
+                  <div
+                    key={aIdx}
+                    onClick={() => handleSelectItem(alt)}
+                    className="p-2 rounded-xl bg-white border border-slate-200 hover:border-[#003366] flex items-center justify-between text-xs cursor-pointer transition-colors"
+                  >
+                    <div>
+                      <span className="font-bold text-slate-800 me-2">{alt.name}</span>
+                      <span className="text-[11px] text-slate-500">({alt.manufacturer})</span>
+                    </div>
+                    <span className="text-[11px] font-mono font-bold text-slate-700">
+                      {alt.priceIqd ? `${alt.priceIqd.toLocaleString()} د.ع` : ''}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

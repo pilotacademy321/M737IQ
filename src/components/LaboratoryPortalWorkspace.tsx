@@ -9,7 +9,10 @@ import {
   LabResult, 
   LabResultParameter, 
   LabBookingStatus, 
-  LabSampleStatus 
+  LabSampleStatus,
+  LabOrder,
+  LabOrderItem,
+  LabOrderStatus
 } from '../types';
 import { 
   collection, 
@@ -75,10 +78,18 @@ export const LaboratoryPortalWorkspace: React.FC<LaboratoryPortalWorkspaceProps>
   const { user, userProfile, isAdmin, refreshProfile } = useAuth();
   const { language, isRTL } = useLanguage();
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'bookings' | 'samples' | 'tests' | 'results' | 'patients' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'referral_orders' | 'bookings' | 'samples' | 'tests' | 'results' | 'patients' | 'settings'>('dashboard');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Incoming Doctor Referral Orders State
+  const [incomingLabOrders, setIncomingLabOrders] = useState<LabOrder[]>([]);
+  const [labOrderFilter, setLabOrderFilter] = useState<'all' | 'new' | 'received' | 'in_progress' | 'completed' | 'rejected'>('all');
+  const [selectedOrderForCompletion, setSelectedOrderForCompletion] = useState<LabOrder | null>(null);
+  const [resultSummaryInput, setResultSummaryInput] = useState('');
+  const [rejectingOrder, setRejectingOrder] = useState<LabOrder | null>(null);
+  const [rejectOrderReason, setRejectOrderReason] = useState('');
 
   // Lab Profile State
   const [labProfile, setLabProfile] = useState<LabProfile | null>(null);
@@ -398,6 +409,78 @@ export const LaboratoryPortalWorkspace: React.FC<LaboratoryPortalWorkspaceProps>
       resList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setResults(resList);
 
+      // 5. Fetch Diagnostic Referral Orders from Doctors
+      try {
+        const labOrderQuery = query(
+          collection(db, 'lab_orders'),
+          where('targetLabId', '==', user.uid)
+        );
+        const labOrderSnap = await getDocs(labOrderQuery);
+        let ordList = labOrderSnap.docs.map(d => ({ id: d.id, ...d.data() } as LabOrder));
+        ordList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+        if (ordList.length === 0) {
+          const sampleLabOrders: LabOrder[] = [
+            {
+              id: 'demo_lab_ref_1',
+              orderNumber: 'LAB-ORD-9045',
+              doctorId: 'demo_doctor_ahmed',
+              doctorName: 'د. أحمد الرافدين',
+              doctorSpecialty: 'استشاري أمراض باطنية وقلبية',
+              doctorPhone: '07801122334',
+              clinicName: 'عيادة الرافدين الاستشارية',
+              patientId: 'demo_patient_karrar',
+              patientName: 'كرار جاسم الشمري',
+              patientPhone: '07802233445',
+              targetLabId: user.uid,
+              targetLabName: labProfile?.labName || 'مختبرنا التخصصي',
+              priority: 'urgent',
+              clinicalIndication: 'اشتباه بفقر دم أو نقص حديد حاد مع إجهاد مستمر',
+              preparationInstructions: 'لا يشترط الصيام المسبق',
+              status: 'in_progress',
+              tests: [
+                { testName: 'Complete Blood Count (CBC - صورة دم كاملة)' },
+                { testName: 'Serum Ferritin (مخزون الحديد)' },
+              ],
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            },
+            {
+              id: 'demo_lab_ref_2',
+              orderNumber: 'LAB-ORD-9021',
+              doctorId: 'demo_doctor_ahmed',
+              doctorName: 'د. أحمد الرافدين',
+              doctorSpecialty: 'استشاري أمراض باطنية وقلبية',
+              doctorPhone: '07801122334',
+              clinicName: 'عيادة الرافدين الاستشارية',
+              patientId: 'demo_patient_sara',
+              patientName: 'سارة حيدر العراقي',
+              patientPhone: '07705566778',
+              targetLabId: user.uid,
+              targetLabName: labProfile?.labName || 'مختبرنا التخصصي',
+              priority: 'normal',
+              clinicalIndication: 'فحص روتيني لمتابعة دهون الدم ووظائف الكلى',
+              preparationInstructions: 'صيام 12 ساعة قبل سحب العينة صباحاً',
+              status: 'completed',
+              resultSummary: 'نتائج طبيعية، نسبة الكولسترول 185 mg/dL وسكر الصائم 92 mg/dL',
+              completedAt: new Date(Date.now() - 3600000 * 20).toISOString(),
+              tests: [
+                { testName: 'Lipid Profile (تحليل الدهون الشامل)' },
+                { testName: 'Fasting Blood Sugar (سكر الصيام FBS)' },
+                { testName: 'Serum Creatinine (وظائف الكلى - كرياتينين)' },
+              ],
+              createdAt: new Date(Date.now() - 3600000 * 48).toISOString(),
+              updatedAt: new Date(Date.now() - 3600000 * 20).toISOString(),
+            }
+          ];
+          setIncomingLabOrders(sampleLabOrders);
+        } else {
+          setIncomingLabOrders(ordList);
+        }
+      } catch {
+        // Fallback
+      }
+
     } catch (err: unknown) {
       console.error('Error loading laboratory center data:', err);
     } finally {
@@ -431,6 +514,123 @@ export const LaboratoryPortalWorkspace: React.FC<LaboratoryPortalWorkspaceProps>
       });
     } catch (e) {
       console.warn('Failed to record notification in firestore:', e);
+    }
+  };
+
+  // Doctor Referral Orders Handlers
+  const handleReceiveLabOrder = async (orderId: string) => {
+    try {
+      await updateDoc(doc(db, 'lab_orders', orderId), {
+        status: 'received',
+        updatedAt: new Date().toISOString(),
+      });
+      setIncomingLabOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'received', updatedAt: new Date().toISOString() } : o));
+      showToast(language === 'ar' ? 'تم استلام طلب التحاليل بالمختبر' : 'Lab order received');
+    } catch {
+      setIncomingLabOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'received', updatedAt: new Date().toISOString() } : o));
+      showToast(language === 'ar' ? 'تم استلام الطلب' : 'Order received');
+    }
+  };
+
+  const handleStartLabOrderAnalysis = async (orderId: string) => {
+    try {
+      await updateDoc(doc(db, 'lab_orders', orderId), {
+        status: 'in_progress',
+        updatedAt: new Date().toISOString(),
+      });
+      setIncomingLabOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'in_progress', updatedAt: new Date().toISOString() } : o));
+      showToast(language === 'ar' ? 'العينة قيد التحليل والمعالجة' : 'Sample analysis in progress');
+    } catch {
+      setIncomingLabOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'in_progress', updatedAt: new Date().toISOString() } : o));
+      showToast(language === 'ar' ? 'العينة قيد التحليل' : 'In progress');
+    }
+  };
+
+  const handleCompleteLabOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedOrderForCompletion) return;
+    if (!resultSummaryInput.trim()) {
+      showToast(language === 'ar' ? 'يرجى كتابة ملخص النتيجة الصادرة' : 'Provide result summary', 'error');
+      return;
+    }
+
+    try {
+      const now = new Date().toISOString();
+      await updateDoc(doc(db, 'lab_orders', selectedOrderForCompletion.id), {
+        status: 'completed',
+        resultSummary: resultSummaryInput.trim(),
+        completedAt: now,
+        updatedAt: now,
+      });
+
+      setIncomingLabOrders(prev => prev.map(o => o.id === selectedOrderForCompletion.id ? {
+        ...o,
+        status: 'completed',
+        resultSummary: resultSummaryInput.trim(),
+        completedAt: now,
+        updatedAt: now,
+      } : o));
+
+      showToast(language === 'ar' ? `تم اعتماد نتائج التحليل للطلب ${selectedOrderForCompletion.orderNumber}` : 'Lab order completed');
+      if (selectedOrderForCompletion.patientId) {
+        sendPatientNotification(selectedOrderForCompletion.patientId, 'نتائج الفحص المخبري جاهزة', `أصبحت نتائج التحليل للطلب ${selectedOrderForCompletion.orderNumber} جاهزة ومعتمدة من المختبر.`, 'report_ready');
+      }
+
+      setSelectedOrderForCompletion(null);
+      setResultSummaryInput('');
+    } catch {
+      const now = new Date().toISOString();
+      setIncomingLabOrders(prev => prev.map(o => o.id === selectedOrderForCompletion.id ? {
+        ...o,
+        status: 'completed',
+        resultSummary: resultSummaryInput.trim(),
+        completedAt: now,
+        updatedAt: now,
+      } : o));
+      showToast(language === 'ar' ? 'تم اعتماد النتائج' : 'Completed');
+      setSelectedOrderForCompletion(null);
+    }
+  };
+
+  const handleRejectLabOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rejectingOrder) return;
+    if (!rejectOrderReason.trim()) {
+      showToast(language === 'ar' ? 'يرجى كتابة سبب رفض الطلب' : 'Provide reason', 'error');
+      return;
+    }
+
+    try {
+      const now = new Date().toISOString();
+      await updateDoc(doc(db, 'lab_orders', rejectingOrder.id), {
+        status: 'rejected',
+        rejectionReason: rejectOrderReason.trim(),
+        updatedAt: now,
+      });
+
+      setIncomingLabOrders(prev => prev.map(o => o.id === rejectingOrder.id ? {
+        ...o,
+        status: 'rejected',
+        rejectionReason: rejectOrderReason.trim(),
+        updatedAt: now,
+      } : o));
+
+      showToast(language === 'ar' ? 'تم رفض الطلب وإبلاغ الطبيب والمريض' : 'Lab order rejected');
+      if (rejectingOrder.patientId) {
+        sendPatientNotification(rejectingOrder.patientId, 'تعذر إجراء الفحص المخبري', `اعتذر المختبر عن فحص الطلب ${rejectingOrder.orderNumber} لسبب: ${rejectOrderReason.trim()}`, 'booking_update');
+      }
+
+      setRejectingOrder(null);
+      setRejectOrderReason('');
+    } catch {
+      setIncomingLabOrders(prev => prev.map(o => o.id === rejectingOrder.id ? {
+        ...o,
+        status: 'rejected',
+        rejectionReason: rejectOrderReason.trim(),
+        updatedAt: new Date().toISOString(),
+      } : o));
+      showToast(language === 'ar' ? 'تم رفض الطلب' : 'Rejected');
+      setRejectingOrder(null);
     }
   };
 
@@ -1051,6 +1251,7 @@ export const LaboratoryPortalWorkspace: React.FC<LaboratoryPortalWorkspaceProps>
       <div className="flex items-center gap-1 p-1.5 bg-slate-200/80 rounded-2xl overflow-x-auto text-xs font-bold">
         {[
           { id: 'dashboard', labelAr: 'لوحة المؤشرات', labelEn: 'Dashboard', icon: Activity },
+          { id: 'referral_orders', labelAr: `التحويلات الطبية المحالة (${incomingLabOrders.length})`, labelEn: `Doctor Referrals (${incomingLabOrders.length})`, icon: FileCheck2 },
           { id: 'bookings', labelAr: `طلبات التحاليل (${bookings.length})`, labelEn: `Lab Orders (${bookings.length})`, icon: Calendar },
           { id: 'samples', labelAr: 'تتبع العينات والباركود', labelEn: 'Sample Tracking', icon: Pipette },
           { id: 'tests', labelAr: `دليل الفحوصات والأسعار (${tests.length})`, labelEn: `Test Directory (${tests.length})`, icon: DollarSign },
@@ -2113,6 +2314,311 @@ export const LaboratoryPortalWorkspace: React.FC<LaboratoryPortalWorkspaceProps>
             </button>
           </div>
         </form>
+      )}
+
+      {/* TAB: DOCTOR REFERRAL ORDERS */}
+      {activeTab === 'referral_orders' && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <FileCheck2 className="text-emerald-700" size={22} />
+                <h3 className="font-bold text-lg text-slate-900">
+                  {language === 'ar' ? 'طلبات التحاليل المحالة من الأطباء (Referral Orders)' : 'Doctor Referral Orders'}
+                </h3>
+              </div>
+              <p className="text-xs text-slate-500">
+                {language === 'ar' 
+                  ? 'استلام طلبات الفحوصات الطبية المحالة مباشرة من الأطباء، معالجة العينات وربط النتائج المعملية' 
+                  : 'Receive diagnostic test referrals, process laboratory specimens and publish results'}
+              </p>
+            </div>
+          </div>
+
+          {/* Status Filters */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+            {[
+              { id: 'all', labelAr: `كافة الطلبات (${incomingLabOrders.length})`, labelEn: 'All' },
+              { id: 'new', labelAr: `جديدة (${incomingLabOrders.filter(o => o.status === 'new').length})`, labelEn: 'New' },
+              { id: 'received', labelAr: `مستلمة بالمختبر (${incomingLabOrders.filter(o => o.status === 'received').length})`, labelEn: 'Received' },
+              { id: 'in_progress', labelAr: `قيد التحليل (${incomingLabOrders.filter(o => o.status === 'in_progress').length})`, labelEn: 'In Progress' },
+              { id: 'completed', labelAr: `مكتملة ومعتمدة (${incomingLabOrders.filter(o => o.status === 'completed').length})`, labelEn: 'Completed' },
+              { id: 'rejected', labelAr: `مرفوضة (${incomingLabOrders.filter(o => o.status === 'rejected').length})`, labelEn: 'Rejected' },
+            ].map(f => (
+              <button
+                key={f.id}
+                onClick={() => setLabOrderFilter(f.id as any)}
+                className={`px-3.5 py-1.5 rounded-xl font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  labOrderFilter === f.id
+                    ? 'bg-emerald-700 text-white shadow-xs'
+                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                {language === 'ar' ? f.labelAr : f.labelEn}
+              </button>
+            ))}
+          </div>
+
+          {/* Orders List */}
+          {incomingLabOrders.filter(o => labOrderFilter === 'all' || o.status === labOrderFilter).length === 0 ? (
+            <div className="bg-white rounded-3xl p-12 text-center border border-slate-200">
+              <FlaskConical size={40} className="mx-auto text-slate-300 mb-3" />
+              <h4 className="font-bold text-slate-700 mb-1">{language === 'ar' ? 'لا توجد طلبات تحاليل في هذا التصنيف' : 'No referral orders'}</h4>
+              <p className="text-xs text-slate-400">{language === 'ar' ? 'عندما يحيل الأطباء مراجعين إلى مختبرك، ستظهر طلباتهم هنا فوراً.' : 'Orders referred to your lab will appear here.'}</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4">
+              {incomingLabOrders
+                .filter(o => labOrderFilter === 'all' || o.status === labOrderFilter)
+                .map((ord) => {
+                  const isCompleted = ord.status === 'completed';
+                  const isRejected = ord.status === 'rejected';
+
+                  return (
+                    <div
+                      key={ord.id}
+                      className={`bg-white rounded-3xl p-6 border transition-all ${
+                        isCompleted
+                          ? 'border-emerald-300 bg-emerald-50/15 shadow-xs'
+                          : isRejected
+                          ? 'border-red-200 bg-red-50/20 opacity-80'
+                          : 'border-slate-200 shadow-sm hover:shadow-md'
+                      }`}
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                            <span className="font-mono text-xs font-black bg-emerald-800 text-white px-2.5 py-1 rounded-lg">
+                              {ord.orderNumber}
+                            </span>
+                            <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
+                              isCompleted
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : ord.status === 'in_progress'
+                                ? 'bg-amber-100 text-amber-800'
+                                : isRejected
+                                ? 'bg-red-100 text-red-800'
+                                : 'bg-blue-100 text-blue-800'
+                            }`}>
+                              {ord.status === 'new' && (language === 'ar' ? 'طلب جديد' : 'New')}
+                              {ord.status === 'received' && (language === 'ar' ? 'مستلم بالمختبر' : 'Received')}
+                              {ord.status === 'in_progress' && (language === 'ar' ? 'العينة قيد التحليل' : 'In Progress')}
+                              {ord.status === 'completed' && (language === 'ar' ? 'النتائج معتمدة' : 'Completed')}
+                              {ord.status === 'rejected' && (language === 'ar' ? 'طلب معتذر عنه' : 'Rejected')}
+                            </span>
+
+                            {ord.priority === 'urgent' && (
+                              <span className="bg-red-600 text-white px-2 py-0.5 rounded text-[10px] font-bold">
+                                {language === 'ar' ? 'عاجل (STAT)' : 'Urgent'}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="text-sm font-bold text-slate-800">
+                            <span>{language === 'ar' ? 'المريض:' : 'Patient:'} {ord.patientName}</span>
+                            <span className="mx-2 text-slate-300">·</span>
+                            <span className="font-mono text-xs text-slate-500">{ord.patientPhone}</span>
+                            <span className="mx-2 text-slate-300">·</span>
+                            <span className="text-xs text-slate-600">{language === 'ar' ? 'الطبيب:' : 'Doctor:'} {ord.doctorName} ({ord.clinicName})</span>
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex flex-wrap items-center gap-2">
+                          {ord.status === 'new' && (
+                            <button
+                              onClick={() => handleReceiveLabOrder(ord.id)}
+                              className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1 cursor-pointer"
+                            >
+                              <Check size={14} />
+                              <span>{language === 'ar' ? 'استلام الطلب' : 'Receive'}</span>
+                            </button>
+                          )}
+
+                          {ord.status === 'received' && (
+                            <button
+                              onClick={() => handleStartLabOrderAnalysis(ord.id)}
+                              className="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center gap-1 cursor-pointer"
+                            >
+                              <Pipette size={14} />
+                              <span>{language === 'ar' ? 'بدء فحص العينة' : 'Start Analysis'}</span>
+                            </button>
+                          )}
+
+                          {(ord.status === 'received' || ord.status === 'in_progress') && (
+                            <>
+                              <button
+                                onClick={() => {
+                                  setSelectedOrderForCompletion(ord);
+                                  setResultSummaryInput('');
+                                }}
+                                className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 cursor-pointer"
+                              >
+                                <CheckCircle2 size={14} />
+                                <span>{language === 'ar' ? 'اعتماد النتائج' : 'Publish Result'}</span>
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setRejectingOrder(ord);
+                                  setRejectOrderReason('');
+                                }}
+                                className="px-3 py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 font-bold text-xs cursor-pointer"
+                              >
+                                {language === 'ar' ? 'اعتذار / رفض' : 'Reject'}
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Clinical Indication & Instructions */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs mt-3">
+                        <div className="bg-slate-50 p-3 rounded-2xl">
+                          <span className="font-bold text-slate-700 block mb-0.5">{language === 'ar' ? 'دواعي الفحص السريرية:' : 'Clinical Indication:'}</span>
+                          <span className="text-slate-900">{ord.clinicalIndication || 'فحص روتيني'}</span>
+                        </div>
+                        <div className="bg-slate-50 p-3 rounded-2xl">
+                          <span className="font-bold text-slate-700 block mb-0.5">{language === 'ar' ? 'تعليمات التحضير (الصيام):' : 'Preparation:'}</span>
+                          <span className="text-slate-900">{ord.preparationInstructions || 'لا توجد متطلبات خاصة'}</span>
+                        </div>
+                      </div>
+
+                      {/* Requested Tests */}
+                      <div className="mt-3">
+                        <span className="text-xs font-bold text-slate-700 block mb-1.5">
+                          {language === 'ar' ? 'التحاليل المطلوبة بالطلب:' : 'Requested Tests:'}
+                        </span>
+                        <div className="flex flex-wrap gap-2">
+                          {ord.tests.map((t, idx) => (
+                            <span key={idx} className="px-3 py-1 rounded-xl bg-emerald-50 text-emerald-900 border border-emerald-200 text-xs font-semibold">
+                              {t.testName}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Completed Result Banner */}
+                      {isCompleted && ord.resultSummary && (
+                        <div className="mt-4 p-3.5 rounded-2xl bg-emerald-100/70 border border-emerald-300 text-xs text-emerald-950 space-y-1">
+                          <div className="flex items-center justify-between font-bold">
+                            <span className="flex items-center gap-1.5 text-emerald-800">
+                              <ShieldCheck size={16} />
+                              <span>{language === 'ar' ? 'النتائج المعتمدة من المختبر:' : 'Verified Lab Result:'}</span>
+                            </span>
+                            {ord.completedAt && (
+                              <span className="font-mono text-[11px] text-emerald-800 font-normal">
+                                {new Date(ord.completedAt).toLocaleString(language === 'ar' ? 'ar-IQ' : 'en-US')}
+                              </span>
+                            )}
+                          </div>
+                          <p className="font-medium text-emerald-900">{ord.resultSummary}</p>
+                        </div>
+                      )}
+
+                      {/* Rejection notice */}
+                      {isRejected && ord.rejectionReason && (
+                        <div className="mt-3 p-3 rounded-2xl bg-red-50 border border-red-200 text-red-900 text-xs flex items-center gap-2">
+                          <XCircle size={16} className="text-red-600 shrink-0" />
+                          <div>
+                            <span className="font-bold">{language === 'ar' ? 'سبب الاعتذار:' : 'Rejection Reason:'} </span>
+                            <span>{ord.rejectionReason}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* MODAL: COMPLETE LAB ORDER WITH RESULT */}
+      {selectedOrderForCompletion && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 border border-slate-200 shadow-2xl">
+            <h3 className="font-bold text-base text-slate-900 mb-1">
+              {language === 'ar' ? `اعتماد وتوثيق نتائج الطلب ${selectedOrderForCompletion.orderNumber}` : `Publish Lab Results for ${selectedOrderForCompletion.orderNumber}`}
+            </h3>
+            <p className="text-xs text-slate-500 mb-4">
+              {language === 'ar' ? `المريض: ${selectedOrderForCompletion.patientName} - التحاليل: ${selectedOrderForCompletion.tests.map(t => t.testName).join(', ')}` : `Patient: ${selectedOrderForCompletion.patientName}`}
+            </p>
+
+            <form onSubmit={handleCompleteLabOrder} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">{language === 'ar' ? 'ملخص النتيجة المخبرية المعتمدة *' : 'Result Summary *'}</label>
+                <textarea
+                  rows={4}
+                  required
+                  value={resultSummaryInput}
+                  onChange={(e) => setResultSummaryInput(e.target.value)}
+                  placeholder={language === 'ar' ? 'اكتب النتائج والنسب والأرقام المخبرية وتوقيع المختبر...' : 'Enter test parameters, reference ranges, and pathologist comments...'}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-600"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedOrderForCompletion(null)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 font-bold"
+                >
+                  {language === 'ar' ? 'إلغاء' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+                >
+                  {language === 'ar' ? 'اعتماد وإرسال النتيجة' : 'Publish & Complete'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: REJECT LAB ORDER */}
+      {rejectingOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 border border-slate-200 shadow-2xl">
+            <h3 className="font-bold text-base text-slate-900 mb-1">
+              {language === 'ar' ? `الاعتذار عن فحص الطلب ${rejectingOrder.orderNumber}` : `Reject Order ${rejectingOrder.orderNumber}`}
+            </h3>
+            <p className="text-xs text-slate-500 mb-4">
+              {language === 'ar' ? 'يرجى توضيح سبب الرفض ليتم إبلاغ الطبيب والمريض رسمياً.' : 'State reason to notify doctor and patient.'}
+            </p>
+
+            <form onSubmit={handleRejectLabOrder} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">{language === 'ar' ? 'سبب الرفض *' : 'Reason *'}</label>
+                <textarea
+                  rows={3}
+                  required
+                  value={rejectOrderReason}
+                  onChange={(e) => setRejectOrderReason(e.target.value)}
+                  placeholder={language === 'ar' ? 'مثال: عينة غير كافية، عدم توفر الكواشف، صيام غير مكتمل...' : 'Insufficient sample, reagent unavailable, etc.'}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-red-400"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRejectingOrder(null)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 font-bold"
+                >
+                  {language === 'ar' ? 'إلغاء' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold"
+                >
+                  {language === 'ar' ? 'تأكيد الرفض' : 'Confirm Rejection'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {/* MODAL: DIRECT LAB ORDER INTAKE */}

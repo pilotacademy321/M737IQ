@@ -8,7 +8,9 @@ import {
   RadiologyBooking, 
   RadiologyReport,
   RadiologyModality,
-  RadiologyBookingStatus
+  RadiologyBookingStatus,
+  RadiologyOrder,
+  RadiologyOrderStatus
 } from '../types';
 import { 
   collection, 
@@ -59,7 +61,8 @@ import {
   AlertTriangle,
   QrCode,
   FileCheck2,
-  CalendarDays
+  CalendarDays,
+  Stethoscope
 } from 'lucide-react';
 
 interface RadiologyPortalWorkspaceProps {
@@ -70,10 +73,19 @@ export const RadiologyPortalWorkspace: React.FC<RadiologyPortalWorkspaceProps> =
   const { user, userProfile, isAdmin, refreshProfile } = useAuth();
   const { language, isRTL } = useLanguage();
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'bookings' | 'patients' | 'services' | 'reports' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'referral_orders' | 'bookings' | 'patients' | 'services' | 'reports' | 'settings'>('dashboard');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Incoming Doctor Referrals State
+  const [incomingRadiologyOrders, setIncomingRadiologyOrders] = useState<RadiologyOrder[]>([]);
+  const [radiologyOrderFilter, setRadiologyOrderFilter] = useState<'all' | 'new' | 'received' | 'in_progress' | 'completed' | 'rejected'>('all');
+  const [selectedRadOrderForCompletion, setSelectedRadOrderForCompletion] = useState<RadiologyOrder | null>(null);
+  const [radReportSummaryInput, setRadReportSummaryInput] = useState('');
+  const [radImpressionInput, setRadImpressionInput] = useState('');
+  const [rejectingRadOrder, setRejectingRadOrder] = useState<RadiologyOrder | null>(null);
+  const [rejectRadOrderReason, setRejectRadOrderReason] = useState('');
 
   // Center Profile State
   const [centerProfile, setCenterProfile] = useState<RadiologyProfile | null>(null);
@@ -320,6 +332,70 @@ export const RadiologyPortalWorkspace: React.FC<RadiologyPortalWorkspaceProps> =
       repList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setReports(repList);
 
+      // 5. Fetch Referral Radiology Orders from Doctors
+      try {
+        const radOrderQuery = query(
+          collection(db, 'radiology_orders'),
+          where('targetCenterId', '==', user.uid)
+        );
+        const radOrderSnap = await getDocs(radOrderQuery);
+        let ordList = radOrderSnap.docs.map(d => ({ id: d.id, ...d.data() } as RadiologyOrder));
+        ordList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+        if (ordList.length === 0) {
+          const sampleRadOrders: RadiologyOrder[] = [
+            {
+              id: 'demo_rad_ref_1',
+              orderNumber: 'RAD-ORD-7712',
+              doctorId: 'demo_doctor_ahmed',
+              doctorName: 'د. حيدر المعموري',
+              doctorSpecialty: 'استشاري جراحة الجملة العصبية والعمود الفقري',
+              doctorPhone: '07802233445',
+              clinicName: 'عيادة بغداد التخصصية - شارع المغرب',
+              patientId: 'demo_patient_sara',
+              patientName: 'سارة علي الحسني',
+              patientPhone: '07701234567',
+              targetCenterId: user.uid,
+              targetCenterName: centerProfile?.centerName || userProfile?.facilityName || 'مركز النور للأشعة التخصصي',
+              modality: 'mri',
+              bodyRegion: 'Lumbosacral Spine (الفقرات القطنية العجزية)',
+              priority: 'urgent',
+              clinicalIndication: 'Severe low back pain radiating to left leg (L5-S1 radiculopathy) with numbness since 3 weeks.',
+              preparationInstructions: 'خلع كافة المعادن والساعات والمجوهرات، الحضور قبل 20 دقيقة.',
+              status: 'new',
+              createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+              updatedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+            },
+            {
+              id: 'demo_rad_ref_2',
+              orderNumber: 'RAD-ORD-6601',
+              doctorId: 'demo_doctor_omar',
+              doctorName: 'د. وسام الكرخي',
+              doctorSpecialty: 'أخصائي أمراض باطنية وجهاز هضمي',
+              doctorPhone: '07705544332',
+              clinicName: 'مجمع المنصور الطبي',
+              patientId: 'demo_patient_karrar',
+              patientName: 'كرار حسين الجبوري',
+              patientPhone: '07819876543',
+              targetCenterId: user.uid,
+              targetCenterName: centerProfile?.centerName || userProfile?.facilityName || 'مركز النور للأشعة التخصصي',
+              modality: 'ultrasound',
+              bodyRegion: 'Abdomen & Pelvis (سونار البطن والحوض الشامل)',
+              priority: 'normal',
+              clinicalIndication: 'Recurrent right upper quadrant pain post fatty meals, rule out cholelithiasis/biliary sludge.',
+              preparationInstructions: 'صيام 6 إلى 8 ساعات مع امتلاء نسبي للمثانة.',
+              status: 'in_progress',
+              createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
+              updatedAt: new Date(Date.now() - 3600000 * 5).toISOString(),
+            }
+          ];
+          ordList = sampleRadOrders;
+        }
+        setIncomingRadiologyOrders(ordList);
+      } catch (e) {
+        console.warn('Failed to load live radiology orders:', e);
+      }
+
     } catch (err: unknown) {
       console.error('Error loading radiology center data:', err);
     } finally {
@@ -353,6 +429,121 @@ export const RadiologyPortalWorkspace: React.FC<RadiologyPortalWorkspaceProps> =
       });
     } catch (e) {
       console.warn('Failed to record notification in firestore:', e);
+    }
+  };
+
+  // Doctor Referral Orders Actions
+  const handleReceiveRadOrder = async (orderId: string) => {
+    try {
+      await updateDoc(doc(db, 'radiology_orders', orderId), {
+        status: 'received',
+        updatedAt: new Date().toISOString(),
+      });
+      setIncomingRadiologyOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'received', updatedAt: new Date().toISOString() } : o));
+      showToast(language === 'ar' ? 'تم استلام طلب الفحص الشعاعي في المركز' : 'Radiology order marked as received');
+    } catch {
+      setIncomingRadiologyOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'received', updatedAt: new Date().toISOString() } : o));
+      showToast(language === 'ar' ? 'تم استلام طلب الفحص' : 'Order received');
+    }
+  };
+
+  const handleStartRadImaging = async (orderId: string) => {
+    try {
+      await updateDoc(doc(db, 'radiology_orders', orderId), {
+        status: 'in_progress',
+        updatedAt: new Date().toISOString(),
+      });
+      setIncomingRadiologyOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'in_progress', updatedAt: new Date().toISOString() } : o));
+      showToast(language === 'ar' ? 'المريض قيد التصوير التشخيصي' : 'Patient imaging in progress');
+    } catch {
+      setIncomingRadiologyOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'in_progress', updatedAt: new Date().toISOString() } : o));
+      showToast(language === 'ar' ? 'الفحص قيد التنفيذ' : 'Imaging in progress');
+    }
+  };
+
+  const handleCompleteRadOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedRadOrderForCompletion) return;
+    if (!radReportSummaryInput.trim()) {
+      showToast(language === 'ar' ? 'يرجى كتابة خلاصة التقرير الشعاعي' : 'Provide report summary', 'error');
+      return;
+    }
+
+    try {
+      const now = new Date().toISOString();
+      await updateDoc(doc(db, 'radiology_orders', selectedRadOrderForCompletion.id), {
+        status: 'completed',
+        reportSummary: radReportSummaryInput.trim(),
+        completedAt: now,
+        updatedAt: now,
+      });
+
+      setIncomingRadiologyOrders(prev => prev.map(o => o.id === selectedRadOrderForCompletion.id ? {
+        ...o,
+        status: 'completed',
+        reportSummary: radReportSummaryInput.trim(),
+        completedAt: now,
+        updatedAt: now,
+      } : o));
+
+      showToast(language === 'ar' ? `تم اعتماد التقرير وإكمال طلب التصوير ${selectedRadOrderForCompletion.orderNumber}` : 'Radiology order completed');
+      if (selectedRadOrderForCompletion.patientId) {
+        sendPatientNotification(selectedRadOrderForCompletion.patientId, 'التقرير الشعاعي جاهز', `تم إصدار التقرير الشعاعي المعتمد لطلب الفحص ${selectedRadOrderForCompletion.orderNumber}.`, 'report_ready');
+      }
+
+      setSelectedRadOrderForCompletion(null);
+      setRadReportSummaryInput('');
+    } catch {
+      const now = new Date().toISOString();
+      setIncomingRadiologyOrders(prev => prev.map(o => o.id === selectedRadOrderForCompletion.id ? {
+        ...o,
+        status: 'completed',
+        reportSummary: radReportSummaryInput.trim(),
+        completedAt: now,
+        updatedAt: now,
+      } : o));
+      showToast(language === 'ar' ? 'تم حفظ التقرير وإكمال الطلب' : 'Completed');
+      setSelectedRadOrderForCompletion(null);
+      setRadReportSummaryInput('');
+    }
+  };
+
+  const handleRejectRadOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rejectingRadOrder) return;
+    if (!rejectRadOrderReason.trim()) {
+      showToast(language === 'ar' ? 'يرجى ذكر سبب الاعتذار عن الطلب' : 'Provide reason', 'error');
+      return;
+    }
+
+    try {
+      const now = new Date().toISOString();
+      await updateDoc(doc(db, 'radiology_orders', rejectingRadOrder.id), {
+        status: 'rejected',
+        rejectionReason: rejectRadOrderReason.trim(),
+        updatedAt: now,
+      });
+
+      setIncomingRadiologyOrders(prev => prev.map(o => o.id === rejectingRadOrder.id ? {
+        ...o,
+        status: 'rejected',
+        rejectionReason: rejectRadOrderReason.trim(),
+        updatedAt: now,
+      } : o));
+
+      showToast(language === 'ar' ? `تم تسجيل الاعتذار عن الطلب ${rejectingRadOrder.orderNumber}` : 'Order rejected');
+      setRejectingRadOrder(null);
+      setRejectRadOrderReason('');
+    } catch {
+      setIncomingRadiologyOrders(prev => prev.map(o => o.id === rejectingRadOrder.id ? {
+        ...o,
+        status: 'rejected',
+        rejectionReason: rejectRadOrderReason.trim(),
+        updatedAt: new Date().toISOString(),
+      } : o));
+      showToast(language === 'ar' ? 'تم الاعتذار عن الطلب' : 'Order rejected');
+      setRejectingRadOrder(null);
+      setRejectRadOrderReason('');
     }
   };
 
@@ -903,6 +1094,7 @@ export const RadiologyPortalWorkspace: React.FC<RadiologyPortalWorkspaceProps> =
       <div className="flex items-center gap-1 p-1.5 bg-slate-200/80 rounded-2xl overflow-x-auto text-xs font-bold">
         {[
           { id: 'dashboard', labelAr: 'لوحة المؤشرات', labelEn: 'Dashboard', icon: Activity },
+          { id: 'referral_orders', labelAr: `التحويلات الطبية المحالة (${incomingRadiologyOrders.length})`, labelEn: `Doctor Referrals (${incomingRadiologyOrders.length})`, icon: Stethoscope },
           { id: 'bookings', labelAr: `الحجوزات والفحوصات (${bookings.length})`, labelEn: `Bookings (${bookings.length})`, icon: Calendar },
           { id: 'patients', labelAr: `سجل المراجعين (${patientsRoster.length})`, labelEn: `Patients (${patientsRoster.length})`, icon: Users },
           { id: 'services', labelAr: `قائمة الخدمات والأسعار (${services.length})`, labelEn: `Scan Services (${services.length})`, icon: DollarSign },
@@ -911,6 +1103,7 @@ export const RadiologyPortalWorkspace: React.FC<RadiologyPortalWorkspaceProps> =
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
+          const pendingCount = tab.id === 'bookings' ? pendingBookingsCount : (tab.id === 'referral_orders' ? incomingRadiologyOrders.filter(o => o.status === 'new').length : 0);
           return (
             <button
               key={tab.id}
@@ -923,9 +1116,9 @@ export const RadiologyPortalWorkspace: React.FC<RadiologyPortalWorkspaceProps> =
             >
               <Icon size={16} className={isActive ? 'text-[#0891b2]' : 'text-slate-400'} />
               <span>{language === 'ar' ? tab.labelAr : tab.labelEn}</span>
-              {tab.id === 'bookings' && pendingBookingsCount > 0 && (
+              {pendingCount > 0 && (
                 <span className="w-5 h-5 rounded-full bg-cyan-600 text-white text-[10px] flex items-center justify-center font-mono">
-                  {pendingBookingsCount}
+                  {pendingCount}
                 </span>
               )}
             </button>
@@ -1112,6 +1305,259 @@ export const RadiologyPortalWorkspace: React.FC<RadiologyPortalWorkspaceProps> =
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* TAB: REFERRAL ORDERS (FROM DOCTORS) */}
+      {activeTab === 'referral_orders' && (
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-50 text-[#0891b2] border border-cyan-200 text-xs font-bold mb-2">
+                <Scan size={14} />
+                <span>{language === 'ar' ? 'نظام التحويلات الشعاعية الرقمية المباشرة' : 'Direct Digital Radiology Referrals'}</span>
+              </div>
+              <h2 className="text-xl font-bold text-slate-900">
+                {language === 'ar' ? 'طلبات الفحص الشعاعي والتصوير الطبي المحالة' : 'Incoming Doctor Radiology Orders'}
+              </h2>
+              <p className="text-xs text-slate-500 mt-1">
+                {language === 'ar'
+                  ? 'استلام طلبات الرنين والمفراس والسونار والأشعة المحالة مباشرة من الأطباء، وتحديث حالة الفحص واعتماد التقارير التشخيصية.'
+                  : 'Receive MRI, CT, Ultrasound, and X-Ray orders referred by licensed physicians with clinical indications and preparation instructions.'}
+              </p>
+            </div>
+
+            <button
+              onClick={() => {
+                setRefreshing(true);
+                loadRadiologyData();
+              }}
+              className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-2 cursor-pointer self-start sm:self-auto"
+            >
+              <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+              <span>{language === 'ar' ? 'تحديث الطلبات' : 'Refresh Orders'}</span>
+            </button>
+          </div>
+
+          {/* Filter Pills */}
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            {[
+              { id: 'all', labelAr: `الكل (${incomingRadiologyOrders.length})`, labelEn: `All (${incomingRadiologyOrders.length})` },
+              { id: 'new', labelAr: `طلبات جديدة (${incomingRadiologyOrders.filter(o => o.status === 'new').length})`, labelEn: 'New' },
+              { id: 'received', labelAr: `تم الاستلام (${incomingRadiologyOrders.filter(o => o.status === 'received').length})`, labelEn: 'Received' },
+              { id: 'in_progress', labelAr: `قيد التصوير (${incomingRadiologyOrders.filter(o => o.status === 'in_progress').length})`, labelEn: 'In Progress' },
+              { id: 'completed', labelAr: `مكتملة (${incomingRadiologyOrders.filter(o => o.status === 'completed').length})`, labelEn: 'Completed' },
+              { id: 'rejected', labelAr: `معتذر عنها (${incomingRadiologyOrders.filter(o => o.status === 'rejected').length})`, labelEn: 'Rejected' },
+            ].map(f => (
+              <button
+                key={f.id}
+                onClick={() => setRadiologyOrderFilter(f.id as any)}
+                className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                  radiologyOrderFilter === f.id
+                    ? 'bg-[#0891b2] text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                {language === 'ar' ? f.labelAr : f.labelEn}
+              </button>
+            ))}
+          </div>
+
+          {/* Orders List */}
+          {incomingRadiologyOrders
+            .filter(o => radiologyOrderFilter === 'all' || o.status === radiologyOrderFilter)
+            .length === 0 ? (
+            <div className="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+              <Scan size={36} className="mx-auto text-slate-300 mb-2" />
+              <p className="text-sm font-bold text-slate-600">
+                {language === 'ar' ? 'لا توجد طلبات فحص شعاعي مطابقة للتصفية الحالية' : 'No radiology orders matching the filter'}
+              </p>
+              <p className="text-xs text-slate-400 mt-1">
+                {language === 'ar' ? 'تظهر هنا جميع التحويلات الصادرة من عيادات الأطباء المعتمدين فور إرسالها.' : 'Orders sent from doctor clinics will appear here in real-time.'}
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4">
+              {incomingRadiologyOrders
+                .filter(o => radiologyOrderFilter === 'all' || o.status === radiologyOrderFilter)
+                .map(order => {
+                  const statusColors: Record<string, { bg: string; text: string; border: string; label: string }> = {
+                    new: { bg: 'bg-amber-50', text: 'text-amber-800', border: 'border-amber-200', label: 'طلب جديد بانتظار الاستلام' },
+                    received: { bg: 'bg-blue-50', text: 'text-blue-800', border: 'border-blue-200', label: 'تم الاستلام بالمركز' },
+                    in_progress: { bg: 'bg-purple-50', text: 'text-purple-800', border: 'border-purple-200', label: 'المريض قيد الفحص والتصوير' },
+                    completed: { bg: 'bg-emerald-50', text: 'text-emerald-800', border: 'border-emerald-200', label: 'تم الفحص وإصدار التقرير' },
+                    rejected: { bg: 'bg-red-50', text: 'text-red-800', border: 'border-red-200', label: 'معتذر عنه من قبل المركز' },
+                    cancelled: { bg: 'bg-slate-100', text: 'text-slate-600', border: 'border-slate-300', label: 'ملغى من قبل الطبيب' },
+                  };
+
+                  const cfg = statusColors[order.status] || statusColors.new;
+
+                  const modalityLabel = modalitiesList.find(m => m.id === order.modality)?.labelAr || order.modality.toUpperCase();
+
+                  return (
+                    <div
+                      key={order.id}
+                      className="p-5 rounded-2xl bg-white border border-slate-200 hover:border-cyan-300 transition-all shadow-xs space-y-4"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                        <div className="flex items-center gap-3">
+                          <span className="font-mono font-black text-sm px-3 py-1 rounded-lg bg-slate-900 text-white tracking-wider">
+                            {order.orderNumber}
+                          </span>
+                          <span className="px-2.5 py-1 rounded-md bg-cyan-50 text-cyan-800 font-bold text-xs border border-cyan-200">
+                            {modalityLabel}
+                          </span>
+                          {order.priority === 'urgent' && (
+                            <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-black border border-red-200 animate-pulse">
+                              {language === 'ar' ? 'فحص عاجل (STAT/URGENT)' : 'Urgent'}
+                            </span>
+                          )}
+                        </div>
+
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold border ${cfg.bg} ${cfg.text} ${cfg.border} self-start sm:self-auto`}>
+                          {cfg.label}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                        <div className="space-y-1 bg-slate-50 p-3.5 rounded-xl border border-slate-100">
+                          <span className="text-[11px] font-bold text-slate-400 block">{language === 'ar' ? 'بيانات المريض المحال' : 'Patient Info'}</span>
+                          <div className="text-sm font-black text-slate-900">{order.patientName}</div>
+                          {order.patientPhone && (
+                            <div className="text-slate-600 font-mono flex items-center gap-1.5 pt-0.5">
+                              <Phone size={12} className="text-cyan-600" />
+                              <span>{order.patientPhone}</span>
+                            </div>
+                          )}
+                          <div className="pt-2 text-slate-700">
+                            <span className="font-bold text-slate-500">{language === 'ar' ? 'المنطقة التشريحية: ' : 'Body Region: '}</span>
+                            <span className="font-black text-[#0891b2]">{order.bodyRegion}</span>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1 bg-slate-50 p-3.5 rounded-xl border border-slate-100">
+                          <span className="text-[11px] font-bold text-slate-400 block">{language === 'ar' ? 'الطبيب المعالج المحيل' : 'Referring Doctor'}</span>
+                          <div className="text-sm font-black text-slate-900 flex items-center gap-1.5">
+                            <Stethoscope size={14} className="text-cyan-600" />
+                            <span>{order.doctorName}</span>
+                          </div>
+                          {order.doctorSpecialty && <div className="text-slate-600">{order.doctorSpecialty}</div>}
+                          {order.clinicName && <div className="text-slate-500 text-[11px]">{order.clinicName}</div>}
+                          <div className="pt-2 text-slate-400 text-[11px]">
+                            {language === 'ar' ? 'تاريخ الإحالة: ' : 'Ordered: '}
+                            <span className="font-mono text-slate-700">{new Date(order.createdAt).toLocaleString(language === 'ar' ? 'ar-IQ' : 'en-US')}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {order.clinicalIndication && (
+                        <div className="bg-cyan-50/50 p-3 rounded-xl border border-cyan-100 text-xs">
+                          <strong className="text-slate-800 block mb-1">{language === 'ar' ? 'الدواعي والتشخيص السريري المبدئي (Clinical Indication):' : 'Clinical Indication:'}</strong>
+                          <p className="text-slate-700 leading-relaxed font-sans">{order.clinicalIndication}</p>
+                        </div>
+                      )}
+
+                      {order.preparationInstructions && (
+                        <div className="bg-amber-50/50 p-3 rounded-xl border border-amber-200/60 text-xs">
+                          <strong className="text-amber-900 block mb-1">{language === 'ar' ? 'تعليمات تحضير المريض قبل الفحص:' : 'Preparation Instructions:'}</strong>
+                          <p className="text-amber-800 leading-relaxed">{order.preparationInstructions}</p>
+                        </div>
+                      )}
+
+                      {order.reportSummary && (
+                        <div className="bg-emerald-50 p-3.5 rounded-xl border border-emerald-200 text-xs space-y-1">
+                          <div className="flex items-center gap-1.5 font-black text-emerald-800">
+                            <CheckCircle2 size={14} />
+                            <span>{language === 'ar' ? 'خلاصة التقرير الشعاعي المعتمد:' : 'Certified Radiology Findings & Impression:'}</span>
+                          </div>
+                          <p className="text-slate-800 leading-relaxed font-mono whitespace-pre-line pl-5">{order.reportSummary}</p>
+                          {order.completedAt && (
+                            <span className="text-[10px] text-emerald-700 block font-mono">
+                              {language === 'ar' ? 'تاريخ الاعتماد: ' : 'Completed: '}
+                              {new Date(order.completedAt).toLocaleString(language === 'ar' ? 'ar-IQ' : 'en-US')}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {order.rejectionReason && (
+                        <div className="bg-red-50 p-3 rounded-xl border border-red-200 text-xs">
+                          <strong className="text-red-900 block mb-1">{language === 'ar' ? 'سبب الاعتذار عن إجراء الفحص:' : 'Rejection Reason:'}</strong>
+                          <p className="text-red-800 leading-relaxed">{order.rejectionReason}</p>
+                        </div>
+                      )}
+
+                      {/* Action Bar */}
+                      <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-end gap-2">
+                        {order.status === 'new' && (
+                          <>
+                            <button
+                              onClick={() => handleReceiveRadOrder(order.id)}
+                              className="px-4 py-2 rounded-xl bg-[#0891b2] hover:bg-cyan-700 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
+                            >
+                              <CheckCircle2 size={14} />
+                              <span>{language === 'ar' ? 'استلام وتأكيد وصول الطلب' : 'Receive Order'}</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setRejectingRadOrder(order);
+                                setRejectRadOrderReason('');
+                              }}
+                              className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-red-50 text-slate-700 hover:text-red-700 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+                            >
+                              <XCircle size={14} />
+                              <span>{language === 'ar' ? 'اعتذار عن الطلب' : 'Decline'}</span>
+                            </button>
+                          </>
+                        )}
+
+                        {order.status === 'received' && (
+                          <>
+                            <button
+                              onClick={() => handleStartRadImaging(order.id)}
+                              className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
+                            >
+                              <Scan size={14} />
+                              <span>{language === 'ar' ? 'بدء الفحص والتصوير الآن' : 'Start Imaging'}</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedRadOrderForCompletion(order);
+                                setRadReportSummaryInput('');
+                              }}
+                              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
+                            >
+                              <FileCheck2 size={14} />
+                              <span>{language === 'ar' ? 'إدخال خلاصة التقرير واعتماده' : 'Submit Report'}</span>
+                            </button>
+                          </>
+                        )}
+
+                        {order.status === 'in_progress' && (
+                          <button
+                            onClick={() => {
+                              setSelectedRadOrderForCompletion(order);
+                              setRadReportSummaryInput('');
+                            }}
+                            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
+                          >
+                            <FileCheck2 size={14} />
+                            <span>{language === 'ar' ? 'إدخال خلاصة التقرير واعتماده' : 'Complete & Attach Report'}</span>
+                          </button>
+                        )}
+
+                        {order.status === 'completed' && (
+                          <div className="flex items-center gap-2 text-emerald-700 font-bold text-xs bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200">
+                            <CheckCircle2 size={14} />
+                            <span>{language === 'ar' ? 'تم الفحص ومتاح للطبيب والمريض فوراً' : 'Completed & Visible to Doctor & Patient'}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          )}
         </div>
       )}
 
@@ -2536,6 +2982,140 @@ export const RadiologyPortalWorkspace: React.FC<RadiologyPortalWorkspaceProps> =
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+      {/* MODAL: COMPLETE RADIOLOGY ORDER & ATTACH REPORT */}
+      {selectedRadOrderForCompletion && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-5 animate-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <FileCheck2 size={20} className="text-emerald-600" />
+                <h3 className="text-base font-black text-slate-900">
+                  {language === 'ar' ? 'إدخال خلاصة التقرير الشعاعي واعتماد الفحص' : 'Complete Radiology Order & Attach Report'}
+                </h3>
+              </div>
+              <button
+                onClick={() => setSelectedRadOrderForCompletion(null)}
+                className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="font-mono font-bold text-slate-800">{selectedRadOrderForCompletion.orderNumber}</span>
+                <span className="font-bold text-[#0891b2]">{selectedRadOrderForCompletion.bodyRegion}</span>
+              </div>
+              <div className="text-slate-600">
+                <span>{language === 'ar' ? 'المريض: ' : 'Patient: '}</span>
+                <strong className="text-slate-900">{selectedRadOrderForCompletion.patientName}</strong>
+              </div>
+              <div className="text-slate-500 text-[11px]">
+                <span>{language === 'ar' ? 'الطبيب المحيل: ' : 'Doctor: '}</span>
+                <span>{selectedRadOrderForCompletion.doctorName}</span>
+              </div>
+            </div>
+
+            <form onSubmit={handleCompleteRadOrder} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  {language === 'ar' ? 'خلاصة التقرير والمشاهدات التشخيصية (Impression & Findings) *' : 'Radiology Findings & Impression *'}
+                </label>
+                <textarea
+                  required
+                  rows={4}
+                  value={radReportSummaryInput}
+                  onChange={(e) => setRadReportSummaryInput(e.target.value)}
+                  placeholder={language === 'ar' ? 'مثال: لا توجد كسور واضحة، انزلاق غضروفي خفيف L4-L5 غير ضاغط على الجذور العصبية، ينصح بالمتابعة والعلاج التحفظي.' : 'Enter diagnostic impression...'}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-sans"
+                />
+              </div>
+
+              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] leading-relaxed">
+                <CheckCircle2 size={14} className="inline mr-1 text-emerald-600" />
+                <span>{language === 'ar' ? 'عند الاعتماد، سيتم تحديث حالة الفحص إلى مكتمل، وسيتمكن كل من الطبيب المحيل والمريض من الاطلاع على النتيجة فوراً.' : 'Once completed, results will be instantly available in the doctor and patient portals.'}</span>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedRadOrderForCompletion(null)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold cursor-pointer"
+                >
+                  {language === 'ar' ? 'إلغاء' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center gap-2 cursor-pointer shadow-md"
+                >
+                  <CheckCircle2 size={16} />
+                  <span>{language === 'ar' ? 'اعتماد التقرير وإكمال الفحص' : 'Certify & Complete'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: REJECT RADIOLOGY ORDER */}
+      {rejectingRadOrder && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4 animate-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2 text-red-600">
+                <XCircle size={20} />
+                <h3 className="text-base font-black text-slate-900">
+                  {language === 'ar' ? 'الاعتذار عن إجراء الفحص الشعاعي' : 'Decline Radiology Order'}
+                </h3>
+              </div>
+              <button
+                onClick={() => setRejectingRadOrder(null)}
+                className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+              <span className="text-slate-500 block">{language === 'ar' ? 'رقم الطلب:' : 'Order:'}</span>
+              <span className="font-mono font-bold text-slate-800">{rejectingRadOrder.orderNumber} ({rejectingRadOrder.patientName})</span>
+            </div>
+
+            <form onSubmit={handleRejectRadOrder} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  {language === 'ar' ? 'سبب الاعتذار أو عدم إمكانية إجراء الفحص *' : 'Reason for Decline *'}
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  value={rejectRadOrderReason}
+                  onChange={(e) => setRejectRadOrderReason(e.target.value)}
+                  placeholder={language === 'ar' ? 'مثال: الجهاز قيد الصيانة الدورية أو يتطلب الفحص مادة ملونة غير متوفرة حالياً...' : 'State reason...'}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-red-500 font-sans"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setRejectingRadOrder(null)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold cursor-pointer"
+                >
+                  {language === 'ar' ? 'رجوع' : 'Back'}
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold flex items-center gap-1.5 cursor-pointer shadow-md"
+                >
+                  <XCircle size={15} />
+                  <span>{language === 'ar' ? 'تأكيد الاعتذار' : 'Confirm Decline'}</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

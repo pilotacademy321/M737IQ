@@ -8,14 +8,14 @@ export type AppRoute =
   | PortalId;
 
 export const VALID_PORTAL_IDS: PortalId[] = [
-  'doctor',
-  'radiology',
-  'laboratory',
-  'pharmacy',
-  'wholesaler',
   'patient',
-  'super_admin',
+  'doctor',
+  'pharmacy',
+  'laboratory',
+  'radiology',
+  'wholesaler',
   'secretary',
+  'super_admin',
 ];
 
 export interface RouteState {

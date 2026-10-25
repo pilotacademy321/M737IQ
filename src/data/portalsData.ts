@@ -2,9 +2,36 @@ import { PortalInfo } from '../types';
 
 export const PORTALS_DATA: PortalInfo[] = [
   {
+    id: 'patient',
+    role: 'patient',
+    order: 1,
+    titleAr: 'بوابة المريض',
+    titleEn: 'Patient Portal',
+    subtitleAr: 'حجز المواعيد، السجل الصحي ومتابعة العلاج',
+    subtitleEn: 'Appointments, personal health history & treatment tracking',
+    descAr: 'الملف الصحي الرقمي الموحد للمواطن، حجز مواعيد الأطباء والمراكز، استعراض نتائج التحاليل وتقارير الأشعة، والبحث عن الأدوية المتوفرة.',
+    descEn: 'Unified personal health companion: book certified doctor consultations, view diagnostic lab results, ultrasound scans, and track treatments.',
+    accentColor: '#0284c7', // Sky / Medical Blue
+    bgLight: 'bg-sky-50 text-sky-600',
+    borderColor: 'border-sky-200 hover:border-sky-400',
+    iconName: 'patient',
+    plannedModulesAr: [
+      'سجل المريض الطبي الإلكتروني وتاريخ الزيارات',
+      'حجز وتأكيد المواعيد لدى الأطباء والمراكز',
+      'استعراض نتائج المختبر وصور الأشعة والسونار',
+      'محرك البحث عن الصيدليات وتوفر الأدوية'
+    ],
+    plannedModulesEn: [
+      'Personal Electronic Health Records & History',
+      'Real-Time Appointment Scheduling & Reminders',
+      'Direct Access to Lab Results & Ultrasound Scans',
+      'Local Pharmacy Finder & Medication Locator'
+    ]
+  },
+  {
     id: 'doctor',
     role: 'doctor',
-    order: 1,
+    order: 2,
     titleAr: 'بوابة الطبيب',
     titleEn: 'Doctor Portal',
     subtitleAr: 'الحجوزات، الملف المهني وإدارة المواعيد',
@@ -29,12 +56,66 @@ export const PORTALS_DATA: PortalInfo[] = [
     ]
   },
   {
+    id: 'pharmacy',
+    role: 'pharmacy',
+    order: 3,
+    titleAr: 'بوابة الصيدلية',
+    titleEn: 'Pharmacy Portal',
+    subtitleAr: 'صرف الوصفات، الأسعار وتوفر المخزون',
+    subtitleEn: 'Prescriptions, medication stock & live availability',
+    descAr: 'صرف الوصفات الطبية الإلكترونية المعتمدة، متابعة توفر الأدوية في الصيدليات الأهلية، وإدارة طلبيات التوريد من المذاخر العلمية.',
+    descEn: 'Streamlined dispensing of electronic prescriptions, live inventory tracking across Iraqi pharmacies, and supply replenishment from drug wholesalers.',
+    accentColor: '#059669', // Emerald Green
+    bgLight: 'bg-emerald-50 text-emerald-600',
+    borderColor: 'border-emerald-200 hover:border-emerald-400',
+    iconName: 'pharmacy',
+    plannedModulesAr: [
+      'التحقق من الوصفة الإلكترونية وصرف الدواء',
+      'إدارة المخزون والتنبيه بنواقص الأدوية والتواريخ',
+      'نظام التوافق الدوائي والتحذير من التفاعلات',
+      'إتاحة استعلام المرضى عن توافر الدواء القريب'
+    ],
+    plannedModulesEn: [
+      'e-Prescription Verification & Dispensing Desk',
+      'Stock Inventory & Expiry Date Alert Engine',
+      'Drug-Drug Interaction Safety Checks',
+      'Medication Location & Price Lookup Index'
+    ]
+  },
+  {
+    id: 'laboratory',
+    role: 'laboratory',
+    order: 4,
+    titleAr: 'بوابة المختبر والتحاليل',
+    titleEn: 'Medical Laboratory Portal',
+    subtitleAr: 'التحاليل السريرية والنتائج والتقارير',
+    subtitleEn: 'Clinical pathology, specimen tracking & verified results',
+    descAr: 'إدارة متقدمة للتحاليل المخبرية السريرية، ربط الأجهزة الآلية، وتوفير نتائج الفحوصات بباركود موحد موثوق للطبيب والمريض.',
+    descEn: 'State-of-the-art laboratory information workflow connecting automated analyzers, specimen barcodes, and rapid certified pathology reporting.',
+    accentColor: '#ea580c', // Orange
+    bgLight: 'bg-orange-50 text-orange-600',
+    borderColor: 'border-orange-200 hover:border-orange-400',
+    iconName: 'laboratory',
+    plannedModulesAr: [
+      'تتبع العينات السريرية برمز الباركود',
+      'إدخال وأرشفة نتائج التحاليل المخبرية',
+      'إشعارات فورية للطبيب والمريض بجاهزية النتيجة',
+      'تكامل مع أجهزة الفحص والتحليل الآلي'
+    ],
+    plannedModulesEn: [
+      'Clinical Specimen Barcode & Chain of Custody',
+      'Pathology & Chemistry Test Result Entry',
+      'Automated SMS/Notification Dispatch',
+      'Direct Diagnostic Analyzer Integration'
+    ]
+  },
+  {
     id: 'radiology',
     role: 'radiology_center',
-    order: 2,
-    titleAr: 'بوابة الأشعة والسونار',
-    titleEn: 'Radiology and Ultrasound Portal',
-    subtitleAr: 'الفحوصات، الصور والتقارير الطبية',
+    order: 5,
+    titleAr: 'بوابة مركز الأشعة والسونار',
+    titleEn: 'Radiology & Ultrasound Center Portal',
+    subtitleAr: 'الفحوصات الشعاعية، الصور والتقارير الطبية',
     subtitleEn: 'Scans, imaging & diagnostic radiology reports',
     descAr: 'ربط مراكز الأشعة والسونار والتصوير بالرنين والمفراس لتسليم التقارير والصور الشعاعية مباشرة للأطباء والمرضى بأعلى درجات الدقة.',
     descEn: 'Connecting MRI, CT, ultrasound and X-ray imaging centers to deliver diagnostic scans and radiologist findings securely to physicians and patients.',
@@ -56,65 +137,11 @@ export const PORTALS_DATA: PortalInfo[] = [
     ]
   },
   {
-    id: 'laboratory',
-    role: 'laboratory',
-    order: 3,
-    titleAr: 'بوابة المختبرات والتحاليل',
-    titleEn: 'Medical Laboratories Portal',
-    subtitleAr: 'التحاليل والنتائج والتقارير',
-    subtitleEn: 'Lab tests, clinical pathology & automated results',
-    descAr: 'إدارة متقدمة للتحاليل المخبرية السريرية، ربط الأجهزة الآلية، وتوفير نتائج الفحوصات بباركود موحد موثوق للطبيب والمريض.',
-    descEn: 'State-of-the-art laboratory information workflow connecting automated analyzers, specimen barcodes, and rapid certified pathology reporting.',
-    accentColor: '#ea580c', // Orange
-    bgLight: 'bg-orange-50 text-orange-600',
-    borderColor: 'border-orange-200 hover:border-orange-400',
-    iconName: 'laboratory',
-    plannedModulesAr: [
-      'تتبع العينات السريرية برمز الباركود',
-      'إدخال وأرشفة نتائج التحاليل المخبرية',
-      'إشعارات فورية للطبيب والمريض بجاهزية النتيجة',
-      'تكامل مع أجهزة الفحص والتحليل الآلي'
-    ],
-    plannedModulesEn: [
-      'Clinical Specimen Barcode & Chain of Custody',
-      'Pathology & Chemistry Test Result Entry',
-      'Automated SMS/Notification Dispatch',
-      'Direct Diagnostic Analyzer Integration'
-    ]
-  },
-  {
-    id: 'pharmacy',
-    role: 'pharmacy',
-    order: 4,
-    titleAr: 'بوابة الصيدليات',
-    titleEn: 'Pharmacy Portal',
-    subtitleAr: 'الدواء، الأسعار وتوفر المخزون',
-    subtitleEn: 'Prescriptions, medication stock & live availability',
-    descAr: 'صرف الوصفات الطبية الإلكترونية المعتمدة، متابعة توفر الأدوية في الصيدليات الأهلية والمستودعات، وتسهيل بحث المرضى عن العلاج.',
-    descEn: 'Streamlined dispensing of electronic prescriptions, live inventory tracking across Iraqi pharmacies, and medication availability locator.',
-    accentColor: '#059669', // Emerald Green
-    bgLight: 'bg-emerald-50 text-emerald-600',
-    borderColor: 'border-emerald-200 hover:border-emerald-400',
-    iconName: 'pharmacy',
-    plannedModulesAr: [
-      'التحقق من الوصفة الإلكترونية وصرف الدواء',
-      'إدارة المخزون والتنبيه بنواقص الأدوية والتواريخ',
-      'نظام التوافق الدوائي والتحذير من التفاعلات',
-      'إتاحة استعلام المرضى عن توافر الدواء القريب'
-    ],
-    plannedModulesEn: [
-      'e-Prescription Verification & Dispensing Desk',
-      'Stock Inventory & Expiry Date Alert Engine',
-      'Drug-Drug Interaction Safety Checks',
-      'Medication Location & Price Lookup Index'
-    ]
-  },
-  {
     id: 'wholesaler',
     role: 'wholesaler',
-    order: 5,
-    titleAr: 'بوابة المذاخر والمكاتب العلمية',
-    titleEn: 'Pharmaceutical Wholesaler Portal',
+    order: 6,
+    titleAr: 'بوابة المذاخر الدوائية',
+    titleEn: 'Pharmaceutical Wholesalers Portal',
     subtitleAr: 'مستودعات الأدوية، التوريد بالجملة والطلبيات',
     subtitleEn: 'Drug warehouses, B2B wholesale catalog & pharmacy replenishment',
     descAr: 'منظومة توريد الأدوية والمستلزمات الطبية للمذاخر والمكاتب العلمية في العراق لربطها بالصيدليات والمستشفيات مع إدارة الوجبات والأسعار الرسمية.',
@@ -137,66 +164,12 @@ export const PORTALS_DATA: PortalInfo[] = [
     ]
   },
   {
-    id: 'patient',
-    role: 'patient',
-    order: 6,
-    titleAr: 'بوابة المريض',
-    titleEn: 'Patient Portal',
-    subtitleAr: 'حجز المواعيد، البحث عن الأدوية والمتابعة الصحية',
-    subtitleEn: 'Appointments, pharmacy finder & personal health history',
-    descAr: 'الملف الصحي الرقمي المتكامل للمواطن، حجز مواعيد الأطباء، الاطلاع على الفحوصات وتقارير الأشعة، والبحث عن الأدوية الشحيحة بسهولة.',
-    descEn: 'Unified digital healthcare companion for patients: book verified doctor consultations, view lab results & radiology scans, and locate medicines nearby.',
-    accentColor: '#0284c7', // Sky / Medical Blue
-    bgLight: 'bg-sky-50 text-sky-600',
-    borderColor: 'border-sky-200 hover:border-sky-400',
-    iconName: 'patient',
-    plannedModulesAr: [
-      'سجل المريض الطبي الإلكتروني وتاريخ الزيارات',
-      'حجز وتأكيد المواعيد لدى الأطباء والمراكز',
-      'استعراض نتائج المختبر وصور الأشعة والسونار',
-      'محرك البحث عن الصيدليات وتوفر الأدوية'
-    ],
-    plannedModulesEn: [
-      'Personal Electronic Health Records & History',
-      'Real-Time Appointment Scheduling & Reminders',
-      'Direct Access to Lab Results & Ultrasound Scans',
-      'Local Pharmacy Finder & Medication Locator'
-    ]
-  },
-  {
-    id: 'super_admin',
-    role: 'super_admin',
-    order: 7,
-    titleAr: 'بوابة المشرف العام',
-    titleEn: 'Super Admin Portal',
-    subtitleAr: 'إدارة المستخدمين والاشتراكات',
-    subtitleEn: 'User governance, licensing & subscription management',
-    descAr: 'مركز القيادة والرقابة التنظيمية للمنصة، تدقيق تراخيص الكوادر الطبية والمراكز الصحية، وإدارة مستويات الصلاحيات والأمان وفق المعايير المعتمدة.',
-    descEn: 'Central administrative governance hub: verifying healthcare provider credentials, managing licensing tiers, security audits, and system parameters.',
-    accentColor: '#7c3aed', // Purple / Violet
-    bgLight: 'bg-purple-50 text-purple-600',
-    borderColor: 'border-purple-200 hover:border-purple-400',
-    iconName: 'super_admin',
-    plannedModulesAr: [
-      'تدقيق وتفعيل حسابات الأطباء والمراكز الصحية',
-      'إدارة باقات الاشتراك والامتيازات المؤسسية',
-      'مراقبة سلامة وسرعة تدفق البيانات الطبية',
-      'سجلات التدقيق الأمني ومطابقة الخصوصية'
-    ],
-    plannedModulesEn: [
-      'Provider Credential Verification & Approval',
-      'Subscription Tier & Licensing Governance',
-      'Platform Health & Aviation-Grade Reliability Telemetry',
-      'Security Audit Trails & Data Privacy Compliance'
-    ]
-  },
-  {
     id: 'secretary',
     role: 'secretary',
-    order: 8,
+    order: 7,
     titleAr: 'بوابة السكرتير',
     titleEn: 'Secretary Portal',
-    subtitleAr: 'الربط بين المراكز وإدارة الصلاحيات',
+    subtitleAr: 'الربط بين المراكز وإدارة الصلاحيات والاستقبال',
     subtitleEn: 'Reception triage, inter-center links & schedule coordination',
     descAr: 'تنظيم قاعة الانتظار، استقبال وتأكيد وصول المراجعين، تنسيق جداول الأطباء، وتسهيل التواصل بين العيادة والمختبرات والصيدليات المحيطة.',
     descEn: 'Front-desk reception and clinical workflow coordinator: manages patient check-ins, organizes waiting queues, and coordinates schedules across clinical centers.',
@@ -215,6 +188,33 @@ export const PORTALS_DATA: PortalInfo[] = [
       'Phone & Walk-in Appointment Scheduling',
       'Inter-facility Coordination & Referrals',
       'Clinic Receipts & Billing Reconciliation'
+    ]
+  },
+  {
+    id: 'super_admin',
+    role: 'super_admin',
+    order: 8,
+    titleAr: 'بوابة السوبر أدمن',
+    titleEn: 'Super Admin Portal',
+    subtitleAr: 'إدارة المستخدمين والاشتراكات والرقابة المركزية',
+    subtitleEn: 'User governance, licensing & central administrative control',
+    descAr: 'مركز القيادة والرقابة التنظيمية للمنصة، تدقيق تراخيص الكوادر الطبية والمراكز الصحية، وإدارة مستويات الصلاحيات والأمان وفق المعايير المعتمدة.',
+    descEn: 'Central administrative governance hub: verifying healthcare provider credentials, managing licensing tiers, security audits, and system parameters.',
+    accentColor: '#7c3aed', // Purple / Violet
+    bgLight: 'bg-purple-50 text-purple-600',
+    borderColor: 'border-purple-200 hover:border-purple-400',
+    iconName: 'super_admin',
+    plannedModulesAr: [
+      'تدقيق وتفعيل حسابات الأطباء والمراكز الصحية',
+      'إدارة باقات الاشتراك والامتيازات المؤسسية',
+      'مراقبة سلامة وسرعة تدفق البيانات الطبية',
+      'سجلات التدقيق الأمني ومطابقة الخصوصية'
+    ],
+    plannedModulesEn: [
+      'Provider Credential Verification & Approval',
+      'Subscription Tier & Licensing Governance',
+      'Platform Health & Aviation-Grade Reliability Telemetry',
+      'Security Audit Trails & Data Privacy Compliance'
     ]
   }
 ];

@@ -236,6 +236,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loadUserProfile = async (firebaseUser: User) => {
     try {
       const isVerifiedSuperAdminEmail = 
+        Boolean(firebaseUser.emailVerified) &&
         firebaseUser.email?.trim().toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
 
       let hasAdminDoc = false;
