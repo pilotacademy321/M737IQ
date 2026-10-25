@@ -15,6 +15,12 @@ import {
 import { logAuditEvent } from '../lib/auditLogger';
 import { validateAndCompressImage, formatWhatsAppUrl } from '../utils/mediaUtils';
 import { 
+  uploadMedicalScanFile, 
+  StoredMedicalFile, 
+  formatMedicalFileSize, 
+  isDicomFile 
+} from '../lib/medicalStorage';
+import { 
   collection, 
   query, 
   where, 
@@ -151,8 +157,12 @@ export const RadiologyPortalWorkspace: React.FC<RadiologyPortalWorkspaceProps> =
     radiologistLicense: 'RAD-IQ-8821',
     fileUrl: '',
     scanImages: [] as string[],
+    dicomFiles: [] as StoredMedicalFile[],
     status: 'published' as 'draft' | 'published',
   });
+
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [isUploadingScan, setIsUploadingScan] = useState(false);
 
   // Patient Search & Selected Patient Filter
   const [patientSearchTerm, setPatientSearchTerm] = useState('');
@@ -948,35 +958,61 @@ export const RadiologyPortalWorkspace: React.FC<RadiologyPortalWorkspaceProps> =
     }
   };
 
-  // Image Upload handler for Report (reads file to base64 Data URL)
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Medical & DICOM File Upload handler (securely uploads to Firebase Cloud Storage, never stores Base64 in Firestore)
+  const handleMedicalFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (!files || files.length === 0) return;
+    if (!files || files.length === 0 || !user) return;
 
     const file = files[0];
-    if (file.size > 5 * 1024 * 1024) {
-      showToast(language === 'ar' ? 'حجم الصورة يجب ألا يتجاوز 5 ميغابايت' : 'Image size must be under 5MB', 'error');
-      return;
-    }
+    setIsUploadingScan(true);
+    setUploadProgress(0);
 
-    const reader = new FileReader();
-    reader.onload = (uploadEvent) => {
-      const dataUrl = uploadEvent.target?.result as string;
-      if (dataUrl) {
-        setNewReportData(prev => ({
-          ...prev,
-          scanImages: [...prev.scanImages, dataUrl]
-        }));
-        showToast(language === 'ar' ? 'تم إرفاق صورة الفحص الإشعاعي' : 'Scan image attached');
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const stored = await uploadMedicalScanFile(file, {
+        centerId: user.uid,
+        modality: newReportData.modality,
+        patientName: newReportData.patientName || 'Patient',
+        bookingId: selectedBookingForReport?.id,
+        uploadedByUid: user.uid,
+        onProgress: (pct) => setUploadProgress(pct),
+      });
+
+      setNewReportData(prev => ({
+        ...prev,
+        dicomFiles: [...(prev.dicomFiles || []), stored],
+        // If web image format, also add to scanImages for direct thumbnail display
+        scanImages: (!stored.isDicom && (stored.mimeType.startsWith('image/') || stored.name.match(/\.(png|jpe?g|webp)$/i)))
+          ? [...prev.scanImages, stored.downloadUrl]
+          : prev.scanImages
+      }));
+
+      showToast(
+        language === 'ar' 
+          ? `تم رفع ${stored.isDicom ? 'ملف الأشعة DICOM' : 'صورة الفحص'} بنجاح (${stored.sizeFormatted}) إلى التخزين السحابي` 
+          : `File ${stored.name} uploaded to Cloud Storage (${stored.sizeFormatted})`
+      );
+    } catch (err: unknown) {
+      console.error('Upload Error:', err);
+      const errMsg = err instanceof Error ? err.message : 'فشل رفع الملف إلى التخزين السحابي';
+      showToast(errMsg, 'error');
+    } finally {
+      setIsUploadingScan(false);
+      setUploadProgress(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   const handleRemoveReportImage = (indexToRemove: number) => {
     setNewReportData(prev => ({
       ...prev,
       scanImages: prev.scanImages.filter((_, idx) => idx !== indexToRemove)
+    }));
+  };
+
+  const handleRemoveDicomFile = (idToRemove: string) => {
+    setNewReportData(prev => ({
+      ...prev,
+      dicomFiles: (prev.dicomFiles || []).filter(f => f.id !== idToRemove)
     }));
   };
 
@@ -995,6 +1031,10 @@ export const RadiologyPortalWorkspace: React.FC<RadiologyPortalWorkspaceProps> =
       const now = new Date().toISOString();
       const patientId = selectedBookingForReport?.patientId || `pat_${Date.now()}`;
 
+      const primaryDownloadUrl = newReportData.fileUrl || 
+        newReportData.dicomFiles?.[0]?.downloadUrl || 
+        `https://m737.iq/reports/download/${reportId}.pdf`;
+
       const report: RadiologyReport = {
         id: reportId,
         centerId: user.uid,
@@ -1011,8 +1051,9 @@ export const RadiologyPortalWorkspace: React.FC<RadiologyPortalWorkspaceProps> =
         recommendations: newReportData.recommendations,
         radiologistName: newReportData.radiologistName,
         radiologistLicense: newReportData.radiologistLicense,
-        fileUrl: newReportData.fileUrl || `https://m737.iq/reports/download/${reportId}.pdf`,
+        fileUrl: primaryDownloadUrl,
         scanImages: newReportData.scanImages,
+        dicomFiles: newReportData.dicomFiles || [],
         status: newReportData.status,
         createdAt: now,
         updatedAt: now,
@@ -1058,6 +1099,7 @@ export const RadiologyPortalWorkspace: React.FC<RadiologyPortalWorkspaceProps> =
         radiologistLicense: 'RAD-IQ-8821',
         fileUrl: '',
         scanImages: [],
+        dicomFiles: [],
         status: 'published',
       });
       await loadRadiologyData();
@@ -3059,49 +3101,111 @@ export const RadiologyPortalWorkspace: React.FC<RadiologyPortalWorkspaceProps> =
                 />
               </div>
 
-              {/* Upload Scan Images Section */}
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="font-bold text-slate-700 flex items-center gap-1.5">
-                    <ImageIcon size={15} className="text-[#0891b2]" />
-                    <span>{language === 'ar' ? 'إرفاق صور السونار والأشعة (PACS / Scan Images)' : 'Attach Scan Images'}</span>
+              {/* Upload DICOM & Radiology Studies to Cloud Storage */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-slate-700 flex items-center gap-1.5 text-xs sm:text-sm">
+                    <Scan size={16} className="text-[#0891b2]" />
+                    <span>{language === 'ar' ? 'ملفات ودراسات الأشعة (DICOM / Cloud Storage Scans)' : 'DICOM & Scan Studies'}</span>
                   </label>
                   <button
                     type="button"
+                    disabled={isUploadingScan}
                     onClick={() => fileInputRef.current?.click()}
-                    className="px-3 py-1 rounded-lg bg-cyan-100 hover:bg-cyan-200 text-cyan-800 font-bold text-xs flex items-center gap-1 cursor-pointer"
+                    className="px-3 py-1.5 rounded-lg bg-[#003366] hover:bg-[#002244] text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all disabled:opacity-50"
                   >
                     <Upload size={13} />
-                    <span>{language === 'ar' ? 'رفع صورة' : 'Upload Image'}</span>
+                    <span>{isUploadingScan ? (language === 'ar' ? 'جارٍ الرفع...' : 'Uploading...') : (language === 'ar' ? 'رفع ملف DICOM / صورة' : 'Upload File')}</span>
                   </button>
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
+                    accept=".dcm,.dicom,image/*,application/pdf"
+                    onChange={handleMedicalFileUpload}
                     className="hidden"
                   />
                 </div>
 
-                {newReportData.scanImages.length === 0 ? (
-                  <p className="text-[11px] text-slate-400">
-                    {language === 'ar' ? 'يمكنك إرفاق صور التلفزيون والأشعة المقطعية لتوثيقها وحفظها في التقرير الطبي للمريض.' : 'Attach scan frames for medical documentation.'}
-                  </p>
-                ) : (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">
-                    {newReportData.scanImages.map((img, i) => (
-                      <div key={i} className="relative group rounded-xl overflow-hidden border border-slate-200 aspect-square">
-                        <img src={img} alt="scan" className="w-full h-full object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveReportImage(i)}
-                          className="absolute top-1 end-1 w-5 h-5 rounded-full bg-red-600 text-white flex items-center justify-center text-xs opacity-80 group-hover:opacity-100"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ))}
+                {/* Upload Progress Bar */}
+                {isUploadingScan && (
+                  <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-xs text-[#003366] space-y-1.5 animate-in fade-in">
+                    <div className="flex items-center justify-between font-bold">
+                      <span className="flex items-center gap-1.5">
+                        <RefreshCw size={12} className="animate-spin" />
+                        <span>{language === 'ar' ? 'جارٍ الرفع المشفر إلى Firebase Cloud Storage...' : 'Uploading securely to Cloud Storage...'}</span>
+                      </span>
+                      <span>{uploadProgress || 0}%</span>
+                    </div>
+                    <div className="w-full bg-blue-200 rounded-full h-1.5 overflow-hidden">
+                      <div 
+                        className="bg-[#003366] h-1.5 rounded-full transition-all duration-200" 
+                        style={{ width: `${uploadProgress || 0}%` }}
+                      />
+                    </div>
                   </div>
+                )}
+
+                {/* DICOM File Metadata Chips */}
+                {newReportData.dicomFiles && newReportData.dicomFiles.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="text-[11px] font-bold text-slate-600">
+                      {language === 'ar' ? `الملفات المرفوعة إلى التخزين السحابي (${newReportData.dicomFiles.length}):` : `Uploaded Cloud Files (${newReportData.dicomFiles.length}):`}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {newReportData.dicomFiles.map((file) => (
+                        <div key={file.id} className="p-2.5 rounded-xl bg-white border border-slate-200 flex items-center justify-between gap-2 shadow-xs">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${file.isDicom ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-100 text-slate-700'}`}>
+                              {file.isDicom ? 'DICOM' : 'SCAN'}
+                            </span>
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold text-slate-800 truncate" title={file.name}>{file.name}</p>
+                              <p className="text-[10px] text-slate-400 font-mono">{file.sizeFormatted} · Cloud Storage</p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveDicomFile(file.id)}
+                            className="p-1 rounded-md text-red-500 hover:text-red-700 hover:bg-red-50 text-xs transition-colors cursor-pointer"
+                            title={language === 'ar' ? 'حذف' : 'Remove'}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Preview Image Thumbnails (if any image formats attached) */}
+                {newReportData.scanImages.length > 0 && (
+                  <div className="pt-1">
+                    <div className="text-[11px] font-bold text-slate-600 mb-1.5">
+                      {language === 'ar' ? 'معاينة الصور الإشعاعية المرفقة:' : 'Scan Thumbnails:'}
+                    </div>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                      {newReportData.scanImages.map((img, i) => (
+                        <div key={i} className="relative group rounded-xl overflow-hidden border border-slate-200 aspect-square bg-black">
+                          <img src={img} alt="scan" className="w-full h-full object-contain" />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveReportImage(i)}
+                            className="absolute top-1 end-1 w-5 h-5 rounded-full bg-red-600 text-white flex items-center justify-center text-xs opacity-80 group-hover:opacity-100 cursor-pointer"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {(!newReportData.dicomFiles || newReportData.dicomFiles.length === 0) && newReportData.scanImages.length === 0 && !isUploadingScan && (
+                  <p className="text-[11px] text-slate-400">
+                    {language === 'ar' 
+                      ? 'يمكنك رفع دراسات DICOM عالية الدقة (.dcm) أو صور الفحص (.png, .jpg) حتى 50 ميغابايت. يتم حفظها في Firebase Cloud Storage وحفظ الرابط الآمن بالتقرير.'
+                      : 'Upload high-res DICOM (.dcm) or scan images up to 50MB. Stored securely in Firebase Cloud Storage.'}
+                  </p>
                 )}
               </div>
 
@@ -3283,6 +3387,45 @@ export const RadiologyPortalWorkspace: React.FC<RadiologyPortalWorkspaceProps> =
                 <div className="text-xs text-slate-600">
                   <strong className="text-slate-800">{language === 'ar' ? 'التوصيات والمتابعة: ' : 'Recommendations: '}</strong>
                   <span>{viewingReportModal.recommendations}</span>
+                </div>
+              )}
+
+              {/* Cloud-Stored DICOM Studies */}
+              {viewingReportModal.dicomFiles && viewingReportModal.dicomFiles.length > 0 && (
+                <div className="p-3.5 rounded-2xl bg-indigo-50/60 border border-indigo-200 space-y-2">
+                  <h4 className="text-xs font-bold text-indigo-950 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Scan size={15} className="text-indigo-700" />
+                      <span>{language === 'ar' ? `ملفات الأشعة المرفوعة سحابياً (DICOM Studies - ${viewingReportModal.dicomFiles.length}):` : `Cloud DICOM Studies (${viewingReportModal.dicomFiles.length}):`}</span>
+                    </span>
+                    <span className="text-[10px] font-mono font-normal text-indigo-700 bg-indigo-100/80 px-2 py-0.5 rounded-md">
+                      Firebase Cloud Storage
+                    </span>
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {viewingReportModal.dicomFiles.map((dfile) => (
+                      <div key={dfile.id} className="p-2.5 rounded-xl bg-white border border-indigo-100 flex items-center justify-between gap-2 shadow-xs">
+                        <div className="min-w-0 flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 font-bold text-[10px] flex items-center justify-center shrink-0">
+                            {dfile.isDicom ? 'DCM' : 'IMG'}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-slate-800 truncate" title={dfile.name}>{dfile.name}</p>
+                            <p className="text-[10px] text-slate-400 font-mono">{dfile.sizeFormatted} · {dfile.modality.toUpperCase()}</p>
+                          </div>
+                        </div>
+                        <a
+                          href={dfile.downloadUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold flex items-center gap-1 shrink-0 transition-colors shadow-xs"
+                        >
+                          <FileDown size={13} />
+                          <span>{language === 'ar' ? 'تحميل' : 'Download'}</span>
+                        </a>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 

@@ -21,6 +21,7 @@ import {
 } from '../types';
 import { SmartMedicineSearch, SearchMedicineResult } from './SmartMedicineSearch';
 import { PrescriptionPdfModal } from './PrescriptionPdfModal';
+import { DrugInteractionPanel } from './DrugInteractionPanel';
 import { logAuditEvent } from '../lib/auditLogger';
 import { validateAndCompressImage, formatWhatsAppUrl } from '../utils/mediaUtils';
 import { 
@@ -3206,6 +3207,13 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
                         </button>
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {/* Evidence-based Drug Interaction Safety Screening */}
+                {newRxItems.length >= 2 && (
+                  <div className="pt-2">
+                    <DrugInteractionPanel medicines={newRxItems} />
                   </div>
                 )}
               </div>

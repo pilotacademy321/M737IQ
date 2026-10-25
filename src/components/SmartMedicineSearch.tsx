@@ -13,8 +13,13 @@ import {
   AlertCircle,
   RefreshCw,
   Layers,
-  ArrowRight
+  ArrowRight,
+  Stethoscope,
+  ShieldAlert,
+  Plus,
+  Trash2
 } from 'lucide-react';
+import { DrugInteractionPanel } from './DrugInteractionPanel';
 
 export interface SearchMedicineResult {
   id: string;
@@ -301,6 +306,7 @@ interface SmartMedicineSearchProps {
   sourceType?: 'retail' | 'wholesale' | 'all';
   filterFacilityId?: string;
   className?: string;
+  showDdiCheckerButton?: boolean;
 }
 
 export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
@@ -309,6 +315,7 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
   sourceType = 'all',
   filterFacilityId,
   className = '',
+  showDdiCheckerButton = false,
 }) => {
   const { language, isRTL } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
@@ -318,6 +325,7 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
   const [isSearching, setIsSearching] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [ddiModalOpen, setDdiModalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -736,6 +744,200 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
           )}
         </div>
       )}
+
+      {/* Optional DDI Trigger Button */}
+      {showDdiCheckerButton && (
+        <div className="mt-2 flex items-center justify-between text-xs">
+          <button
+            type="button"
+            onClick={() => setDdiModalOpen(true)}
+            className="text-[11px] font-bold text-[#003366] hover:text-[#002244] hover:underline flex items-center gap-1 cursor-pointer"
+          >
+            <Stethoscope size={13} className="text-[#0891b2]" />
+            <span>{language === 'ar' ? 'فحص التداخلات الدوائية المعتمد (WHO/FDA)' : 'Clinical Drug Interaction Checker'}</span>
+          </button>
+        </div>
+      )}
+
+      {/* Dedicated Interactive Drug Interaction Modal */}
+      <DrugInteractionModal
+        isOpen={ddiModalOpen}
+        onClose={() => setDdiModalOpen(false)}
+      />
+    </div>
+  );
+};
+
+export const DrugInteractionModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+}> = ({ isOpen, onClose }) => {
+  const { language, isRTL } = useLanguage();
+  const [selectedList, setSelectedList] = useState<Array<{ name: string; activeIngredient?: string }>>([
+    { name: 'Warfarin 5mg', activeIngredient: 'Warfarin' },
+    { name: 'Aspirin 100mg', activeIngredient: 'Acetylsalicylic acid' },
+  ]);
+  const [customInput, setCustomInput] = useState('');
+
+  if (!isOpen) return null;
+
+  const handleAddFromCatalog = (med: SearchMedicineResult) => {
+    if (!selectedList.some(m => m.name === med.name)) {
+      setSelectedList(prev => [...prev, { name: med.name, activeIngredient: med.activeIngredient }]);
+    }
+  };
+
+  const handleAddCustom = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customInput.trim()) return;
+    setSelectedList(prev => [...prev, { name: customInput.trim(), activeIngredient: customInput.trim() }]);
+    setCustomInput('');
+  };
+
+  const handleRemove = (idx: number) => {
+    setSelectedList(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
+      <div 
+        className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden my-auto"
+        dir={isRTL ? 'rtl' : 'ltr'}
+      >
+        {/* Header */}
+        <div className="px-6 py-4 bg-gradient-to-r from-slate-900 to-[#003366] text-white flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-white">
+              <Stethoscope size={20} />
+            </div>
+            <div>
+              <h2 className="text-base sm:text-lg font-bold tracking-tight">
+                {language === 'ar' ? 'فحص التداخلات الدوائية المعتمد' : 'Clinical Drug Interaction Screening'}
+              </h2>
+              <p className="text-xs text-slate-300">
+                {language === 'ar' 
+                  ? 'منظومة دعم القرار السريري المستندة إلى WHO وFDA والمكتبة الوطنية الأمريكية NLM' 
+                  : 'Evidence-based clinical decision support (WHO, FDA, NLM)'}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="p-6 overflow-y-auto space-y-4 text-slate-800 text-sm">
+          {/* Quick add custom */}
+          <form onSubmit={handleAddCustom} className="flex gap-2">
+            <input
+              type="text"
+              value={customInput}
+              onChange={(e) => setCustomInput(e.target.value)}
+              placeholder={language === 'ar' ? 'اكتب اسم الدواء أو المادة الفعالة (مثال: Concor, Verapamil)...' : 'Type medicine or active ingredient...'}
+              className="flex-1 px-3 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#003366]"
+            />
+            <button
+              type="submit"
+              className="px-4 py-2 rounded-xl bg-[#003366] hover:bg-[#002244] text-white font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors"
+            >
+              <Plus size={14} />
+              <span>{language === 'ar' ? 'إضافة' : 'Add'}</span>
+            </button>
+          </form>
+
+          {/* Preset Clinical Pairs Buttons for instant verification */}
+          <div className="space-y-1.5">
+            <span className="text-[11px] font-bold text-slate-500 block">
+              {language === 'ar' ? 'نماذج سريرية معتمدة للاختبار والتحقق الفوري:' : 'Preset clinical test cases:'}
+            </span>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => setSelectedList([
+                  { name: 'Warfarin 5mg', activeIngredient: 'Warfarin' },
+                  { name: 'Voltaren 50mg', activeIngredient: 'Diclofenac' },
+                ])}
+                className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold cursor-pointer"
+              >
+                وارفارين + فولتارين (نزف هضمي)
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedList([
+                  { name: 'Concor 5mg', activeIngredient: 'Bisoprolol' },
+                  { name: 'Verapamil 80mg', activeIngredient: 'Verapamil' },
+                ])}
+                className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold cursor-pointer"
+              >
+                كونكور + فيراباميل (بطء قلب)
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedList([
+                  { name: 'Plavix 75mg', activeIngredient: 'Clopidogrel' },
+                  { name: 'Nexium 40mg', activeIngredient: 'Esomeprazole' },
+                ])}
+                className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold cursor-pointer"
+              >
+                بلافيكس + نيكسيوم (تثبيط الفعالية)
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedList([
+                  { name: 'Augmentin 1g', activeIngredient: 'Amoxicillin + Clavulanic' },
+                  { name: 'Panadol Extra', activeIngredient: 'Paracetamol' },
+                ])}
+                className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-semibold cursor-pointer border border-emerald-200"
+              >
+                أوجمنتين + بنادول (آمن / لا تداخل)
+              </button>
+            </div>
+          </div>
+
+          {/* Active Drugs Chips */}
+          <div className="space-y-1.5">
+            <span className="text-[11px] font-bold text-slate-700 block">
+              {language === 'ar' ? `الأدوية قيد التدقيق السريري (${selectedList.length}):` : `Medications Under Review (${selectedList.length}):`}
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {selectedList.map((med, idx) => (
+                <div key={idx} className="px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-xs font-bold text-slate-800 flex items-center gap-2">
+                  <Pill size={13} className="text-[#003366]" />
+                  <span>{med.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemove(idx)}
+                    className="text-red-500 hover:text-red-700 cursor-pointer"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Interactive Results Panel */}
+          <div className="pt-2">
+            <DrugInteractionPanel medicines={selectedList} />
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500 shrink-0">
+          <span>{language === 'ar' ? 'منظومة دعم القرار السريري M737' : 'M737 Clinical Decision Support'}</span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-1.5 rounded-xl bg-white border border-slate-300 font-bold text-slate-700 hover:bg-slate-100 cursor-pointer"
+          >
+            {language === 'ar' ? 'إغلاق' : 'Close'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

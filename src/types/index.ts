@@ -430,6 +430,21 @@ export interface RadiologyReport {
   fileUrl?: string;
   reportUrl?: string;
   scanImages?: string[];
+  dicomFiles?: Array<{
+    id: string;
+    name: string;
+    size: number;
+    sizeFormatted: string;
+    modality: string;
+    storagePath: string;
+    downloadUrl: string;
+    mimeType: string;
+    uploadedAt: string;
+    uploadedBy: string;
+    patientName?: string;
+    bookingId?: string;
+    isDicom: boolean;
+  }>;
   reviewStatus?: string;
   status: 'draft' | 'published' | 'ready';
   createdAt: string;

@@ -1,10 +1,14 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { initializeFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 import firebaseConfig from '@/firebase-applet-config.json';
 
 // Initialize the Firebase core applet
 export const app = initializeApp(firebaseConfig);
+
+// Initialize Cloud Storage
+export const storage = getStorage(app);
 
 // Initialize Cloud Firestore with experimentalAutoDetectLongPolling.
 // This allows Firestore to auto-detect WebSockets or Long Polling dynamically

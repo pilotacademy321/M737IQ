@@ -13,6 +13,7 @@ import {
   PrescriptionStatus
 } from '../types';
 import { PrescriptionPdfModal } from './PrescriptionPdfModal';
+import { DrugInteractionPanel } from './DrugInteractionPanel';
 import { logAuditEvent } from '../lib/auditLogger';
 import { validateAndCompressImage, formatWhatsAppUrl } from '../utils/mediaUtils';
 import { 
@@ -3200,6 +3201,13 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
                             </div>
                           ))}
                         </div>
+
+                        {/* Automatic Drug-Drug Interaction Safety Verification */}
+                        {rx.items && rx.items.length >= 2 && (
+                          <div className="pt-2">
+                            <DrugInteractionPanel medicines={rx.items} />
+                          </div>
+                        )}
                       </div>
 
                       {/* Dispensed Certification Stamp */}

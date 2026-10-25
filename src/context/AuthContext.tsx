@@ -516,21 +516,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const sendPasswordReset = async (email: string) => {
     setLoading(true);
     setAuthError(null);
+    const trimmedEmail = email ? email.trim() : '';
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!trimmedEmail) {
+      const errText = 'يرجى إدخال عنوان البريد الإلكتروني أولاً.';
+      setAuthError(errText);
+      setLoading(false);
+      throw new Error(errText);
+    }
+    if (!emailRegex.test(trimmedEmail)) {
+      const errText = 'صيغة البريد الإلكتروني غير صالحة. يرجى كتابة بريد إلكتروني صحيح (مثال: user@example.com).';
+      setAuthError(errText);
+      setLoading(false);
+      throw new Error(errText);
+    }
+
     try {
-      await sendPasswordResetEmail(auth, email.trim());
+      await sendPasswordResetEmail(auth, trimmedEmail);
     } catch (err: unknown) {
       console.error('Password Reset Error:', err);
       const code = (typeof err === 'object' && err !== null && 'code' in err)
         ? String((err as { code: unknown }).code)
         : '';
+      let userFriendlyMsg = 'فشل إرسال رابط استعادة كلمة المرور، يرجى المحاولة لاحقاً.';
       if (code === 'auth/user-not-found') {
-        setAuthError('لم يتم العثور على حساب مرتبط بهذا البريد الإلكتروني.');
+        userFriendlyMsg = 'لم يتم العثور على أي حساب مسجل بهذا البريد الإلكتروني في النظام.';
       } else if (code === 'auth/invalid-email') {
-        setAuthError('صيغة البريد الإلكتروني غير صالحة.');
-      } else {
-        setAuthError(err instanceof Error ? err.message : 'فشل إرسال رابط استعادة كلمة المرور');
+        userFriendlyMsg = 'صيغة البريد الإلكتروني غير صالحة.';
+      } else if (code === 'auth/missing-email') {
+        userFriendlyMsg = 'يرجى إدخال عنوان البريد الإلكتروني.';
+      } else if (code === 'auth/too-many-requests') {
+        userFriendlyMsg = 'تم حظر إرسال الطلبات مؤقتاً بسبب تكرار المحاولات. يرجى الانتظار بضع دقائق ثم المحاولة مجدداً.';
+      } else if (code === 'auth/network-request-failed') {
+        userFriendlyMsg = 'تعذر الاتصال بخوادم المصادقة. يرجى التحقق من اتصال الإنترنت والمحاولة ثانية.';
+      } else if (err instanceof Error) {
+        userFriendlyMsg = err.message;
       }
-      throw err;
+      setAuthError(userFriendlyMsg);
+      throw new Error(userFriendlyMsg);
     } finally {
       setLoading(false);
     }
@@ -723,6 +747,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         currentHostname,
         firebaseProjectId,
         signInWithGoogle,
+        signInWithEmail,
+        signUpWithEmail,
+        sendPasswordReset,
         signInAsDemoUser,
         exitDemoMode,
         signOut,

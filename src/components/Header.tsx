@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { Logo } from './Logo';
-import { Menu, X, Globe, ArrowLeft, ArrowRight, LogIn, LogOut } from 'lucide-react';
+import { AuthModal } from './AuthModal';
+import { Menu, X, Globe, ArrowLeft, ArrowRight, LogIn, LogOut, KeyRound } from 'lucide-react';
 
 interface HeaderProps {
   activeSection: string;
@@ -30,6 +31,8 @@ export const Header: React.FC<HeaderProps> = ({
   } = useAuth();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalInitialMode, setAuthModalInitialMode] = useState<'signin' | 'reset'>('signin');
 
   useEffect(() => {
     const handleScroll = () => {
@@ -178,12 +181,25 @@ export const Header: React.FC<HeaderProps> = ({
             ) : (
               <div className="hidden sm:flex items-center gap-1.5">
                 <button
-                  onClick={signInWithGoogle}
+                  onClick={() => {
+                    setAuthModalInitialMode('signin');
+                    setAuthModalOpen(true);
+                  }}
                   disabled={authLoading}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-colors cursor-pointer"
                 >
                   <LogIn size={14} className="text-[#003366]" />
                   <span>{language === 'ar' ? 'تسجيل الدخول' : 'Sign In'}</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setAuthModalInitialMode('reset');
+                    setAuthModalOpen(true);
+                  }}
+                  title={language === 'ar' ? 'استعادة كلمة المرور' : 'Reset Password'}
+                  className="p-1.5 rounded-lg text-slate-600 hover:text-[#003366] hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-colors cursor-pointer"
+                >
+                  <KeyRound size={15} />
                 </button>
                 <button
                   onClick={() => setShowDomainHelp(true)}
@@ -262,10 +278,26 @@ export const Header: React.FC<HeaderProps> = ({
               ) : (
                 <div className="flex flex-col gap-2">
                   <button
-                    onClick={signInWithGoogle}
-                    className="w-full py-2.5 rounded-lg text-xs font-bold text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-center cursor-pointer"
+                    onClick={() => {
+                      setAuthModalInitialMode('signin');
+                      setAuthModalOpen(true);
+                      setMobileMenuOpen(false);
+                    }}
+                    className="w-full py-2.5 rounded-lg text-xs font-bold text-white bg-[#003366] hover:bg-[#002244] text-center cursor-pointer flex items-center justify-center gap-2"
                   >
-                    {language === 'ar' ? 'تسجيل الدخول عبر Google' : 'Sign In with Google'}
+                    <LogIn size={14} />
+                    <span>{language === 'ar' ? 'تسجيل الدخول / الدخول بالبريد' : 'Sign In'}</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setAuthModalInitialMode('reset');
+                      setAuthModalOpen(true);
+                      setMobileMenuOpen(false);
+                    }}
+                    className="w-full py-2 rounded-lg text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-center cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <KeyRound size={14} />
+                    <span>{language === 'ar' ? 'استعادة كلمة المرور' : 'Reset Password'}</span>
                   </button>
                   <button
                     onClick={() => {
@@ -288,6 +320,13 @@ export const Header: React.FC<HeaderProps> = ({
           </nav>
         </div>
       )}
+
+      {/* Unified Authentication & Password Reset Modal */}
+      <AuthModal
+        isOpen={authModalOpen}
+        initialMode={authModalInitialMode}
+        onClose={() => setAuthModalOpen(false)}
+      />
     </header>
   );
 };
