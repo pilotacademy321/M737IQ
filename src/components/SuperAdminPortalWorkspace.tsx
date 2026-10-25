@@ -12,6 +12,7 @@ import {
   SubscriptionPlan,
   UserSubscription
 } from '../types';
+import { fetchSystemAuditLogs, SystemAuditLogEntry, AuditCategory } from '../lib/auditLogger';
 import { 
   collection, 
   query, 
@@ -87,6 +88,10 @@ export const SuperAdminPortalWorkspace: React.FC<SuperAdminPortalWorkspaceProps>
 
   // Audit Logs & Stats
   const [auditLogs, setAuditLogs] = useState<ClinicAuditLog[]>([]);
+  const [systemAuditLogs, setSystemAuditLogs] = useState<SystemAuditLogEntry[]>([]);
+  const [auditCategoryFilter, setAuditCategoryFilter] = useState<'all' | AuditCategory | 'clinic_frontdesk'>('all');
+  const [auditSearchQuery, setAuditSearchQuery] = useState('');
+  const [auditStatusFilter, setAuditStatusFilter] = useState('all');
   const [totalAppointments, setTotalAppointments] = useState(0);
 
   // Subscriptions & Dynamic Plans State
@@ -300,7 +305,14 @@ export const SuperAdminPortalWorkspace: React.FC<SuperAdminPortalWorkspaceProps>
       list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
       setUsersList(list);
 
-      // 2. Fetch Recent Audit Logs
+      // 2. Fetch System Audit Logs & Front-Desk Audit Logs
+      try {
+        const sysLogs = await fetchSystemAuditLogs(150);
+        setSystemAuditLogs(sysLogs);
+      } catch (e) {
+        console.warn('System audit logs loading fallback:', e);
+      }
+
       try {
         const logsSnap = await getDocs(collection(db, 'clinic_audit_logs'));
         const logs = logsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as ClinicAuditLog));
@@ -1181,67 +1193,323 @@ export const SuperAdminPortalWorkspace: React.FC<SuperAdminPortalWorkspaceProps>
         </div>
       )}
 
-      {/* TAB 3: AUDIT TRAIL LOGS */}
+      {/* TAB 3: COMPREHENSIVE MULTI-PORTAL SYSTEM AUDIT LOGS */}
       {activeTab === 'audit_logs' && (
-        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <Clock size={18} className="text-[#003366]" />
-                <span>{language === 'ar' ? 'سجل الرقابة الإدارية والعمليات الميدانية' : 'Platform Front-Desk Audit Trail'}</span>
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                {language === 'ar'
-                  ? 'توثيق غير قابل للتعديل لكافة الإجراءات المتخذة في العيادات والمراكز الصحية لحماية خصوصية المرضى.'
-                  : 'Immutable audit logs tracking scheduling, cancellations, check-ins, and walk-ins.'}
-              </p>
+        <div className="space-y-6">
+          {/* Header & Metrics Strip */}
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <ShieldCheck size={24} className="text-[#003366]" />
+                  <h3 className="text-xl font-black text-slate-900">
+                    {language === 'ar' ? 'سجل الرقابة الطبية والعمليات الميدانية للمنصة' : 'Central Medical & Transaction Audit Trail'}
+                  </h3>
+                </div>
+                <p className="text-xs text-slate-500">
+                  {language === 'ar'
+                    ? 'توثيق مركزي غير قابل للتلاعب لكافة الوصفات، صرف الأدوية، الإحالات التشخيصية، تقارير الأشعة والمختبر، وطلبيات الجملة.'
+                    : 'Tamper-proof audit logging across e-prescriptions, dispensing, diagnostic referrals, and B2B wholesale transactions.'}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={loadAdminData}
+                disabled={refreshing}
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-2 transition-colors cursor-pointer self-start sm:self-auto"
+              >
+                <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+                <span>{language === 'ar' ? 'تحديث السجل الآن' : 'Refresh Logs'}</span>
+              </button>
+            </div>
+
+            {/* Quick Stat Counters */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+              <div className="p-3.5 rounded-2xl bg-blue-50/80 border border-blue-200/80">
+                <span className="text-[11px] font-bold text-blue-700 block mb-1">
+                  {language === 'ar' ? 'إجمالي العمليات الموثقة' : 'Total Logged Events'}
+                </span>
+                <span className="text-2xl font-black text-[#003366] font-mono">
+                  {systemAuditLogs.length + auditLogs.length}
+                </span>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-emerald-50/80 border border-emerald-200/80">
+                <span className="text-[11px] font-bold text-emerald-700 block mb-1">
+                  {language === 'ar' ? 'الوصفات وصرف الأدوية' : 'Prescriptions & Dispensing'}
+                </span>
+                <span className="text-2xl font-black text-emerald-900 font-mono">
+                  {systemAuditLogs.filter(l => l.category === 'prescriptions').length}
+                </span>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-purple-50/80 border border-purple-200/80">
+                <span className="text-[11px] font-bold text-purple-700 block mb-1">
+                  {language === 'ar' ? 'المختبر والأشعة' : 'Diagnostic Orders & Reports'}
+                </span>
+                <span className="text-2xl font-black text-purple-900 font-mono">
+                  {systemAuditLogs.filter(l => l.category === 'diagnostic_orders' || l.category === 'lab_diagnostics' || l.category === 'radiology').length}
+                </span>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-teal-50/80 border border-teal-200/80">
+                <span className="text-[11px] font-bold text-teal-700 block mb-1">
+                  {language === 'ar' ? 'طلبيات الجملة B2B' : 'Wholesale B2B Orders'}
+                </span>
+                <span className="text-2xl font-black text-teal-900 font-mono">
+                  {systemAuditLogs.filter(l => l.category === 'wholesale_b2b').length}
+                </span>
+              </div>
+            </div>
+
+            {/* Category Filter Pills */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs pt-2 border-t border-slate-100">
+              {[
+                { id: 'all', labelAr: `كافة العمليات (${systemAuditLogs.length + auditLogs.length})`, labelEn: 'All' },
+                { id: 'prescriptions', labelAr: `الوصفات والصرف (${systemAuditLogs.filter(l => l.category === 'prescriptions').length})`, labelEn: 'Rx & Dispensing' },
+                { id: 'diagnostic_orders', labelAr: `طلبات الفحوصات (${systemAuditLogs.filter(l => l.category === 'diagnostic_orders').length})`, labelEn: 'Diagnostic Referrals' },
+                { id: 'lab_diagnostics', labelAr: `المختبر والنتائج (${systemAuditLogs.filter(l => l.category === 'lab_diagnostics').length})`, labelEn: 'Lab Results' },
+                { id: 'radiology', labelAr: `الأشعة والتقارير (${systemAuditLogs.filter(l => l.category === 'radiology').length})`, labelEn: 'Radiology' },
+                { id: 'wholesale_b2b', labelAr: `توريد المذاخر B2B (${systemAuditLogs.filter(l => l.category === 'wholesale_b2b').length})`, labelEn: 'Wholesale B2B' },
+                { id: 'profiles', labelAr: `الملفات والاعتماد (${systemAuditLogs.filter(l => l.category === 'profiles' || l.category === 'accreditation').length})`, labelEn: 'Profiles' },
+                { id: 'clinic_frontdesk', labelAr: `استقبال العيادات (${auditLogs.length})`, labelEn: 'Front-Desk' },
+              ].map(cat => (
+                <button
+                  key={cat.id}
+                  onClick={() => setAuditCategoryFilter(cat.id as any)}
+                  className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all cursor-pointer ${
+                    auditCategoryFilter === cat.id
+                      ? 'bg-[#003366] text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {cat.labelAr}
+                </button>
+              ))}
+            </div>
+
+            {/* Search & Status Filters */}
+            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 text-xs">
+              <div className="sm:col-span-8 relative">
+                <Search size={16} className="absolute start-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={auditSearchQuery}
+                  onChange={(e) => setAuditSearchQuery(e.target.value)}
+                  placeholder={language === 'ar' ? 'بحث برقم الوصفة (RX-)، طلب الفحص (LAB-/RAD-)، فاتورة الجملة (INV-)، أو اسم المنفّذ...' : 'Search by reference number, actor, target or notes...'}
+                  className="w-full ps-10 pe-4 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm focus:ring-2 focus:ring-[#003366]"
+                />
+              </div>
+
+              <div className="sm:col-span-4">
+                <select
+                  value={auditStatusFilter}
+                  onChange={(e) => setAuditStatusFilter(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm bg-white"
+                >
+                  <option value="all">{language === 'ar' ? 'كافة الحالات التشغيلية' : 'All Statuses'}</option>
+                  <option value="dispensed">{language === 'ar' ? 'تم الصرف (Dispensed)' : 'Dispensed'}</option>
+                  <option value="completed">{language === 'ar' ? 'مكتمل ومعتمد (Completed)' : 'Completed'}</option>
+                  <option value="approved">{language === 'ar' ? 'موافق عليه (Approved)' : 'Approved'}</option>
+                  <option value="in_progress">{language === 'ar' ? 'قيد التنفيذ والتحليل' : 'In Progress'}</option>
+                  <option value="cancelled">{language === 'ar' ? 'ملغى (Cancelled)' : 'Cancelled'}</option>
+                  <option value="rejected">{language === 'ar' ? 'مرفوض (Rejected)' : 'Rejected'}</option>
+                </select>
+              </div>
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-start">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold uppercase tracking-wider">
-                  <th className="py-2.5 px-3">{language === 'ar' ? 'التوقيت' : 'Timestamp'}</th>
-                  <th className="py-2.5 px-3">{language === 'ar' ? 'العيادة / الطبيب' : 'Clinic / Doctor'}</th>
-                  <th className="py-2.5 px-3">{language === 'ar' ? 'القائم بالإجراء' : 'Actor'}</th>
-                  <th className="py-2.5 px-3">{language === 'ar' ? 'نوع الإجراء' : 'Action'}</th>
-                  <th className="py-2.5 px-3">{language === 'ar' ? 'التفاصيل' : 'Details'}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {auditLogs.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="py-8 text-center text-slate-400">
-                      {language === 'ar' ? 'لا توجد سجلات رقابة مسجلة حالياً.' : 'No audit records logged yet.'}
-                    </td>
+          {/* Audit Logs Table */}
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-start">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold uppercase tracking-wider">
+                    <th className="py-3 px-3.5">{language === 'ar' ? 'التوقيت' : 'Timestamp'}</th>
+                    <th className="py-3 px-3.5">{language === 'ar' ? 'التصنيف' : 'Category'}</th>
+                    <th className="py-3 px-3.5">{language === 'ar' ? 'المرجع الرقمي' : 'Reference #'}</th>
+                    <th className="py-3 px-3.5">{language === 'ar' ? 'المنفّذ (المصدر)' : 'Actor (Source)'}</th>
+                    <th className="py-3 px-3.5">{language === 'ar' ? 'المستهدف (الوجهة)' : 'Target'}</th>
+                    <th className="py-3 px-3.5">{language === 'ar' ? 'الحالة' : 'Status'}</th>
+                    <th className="py-3 px-3.5">{language === 'ar' ? 'التفاصيل التشغيلية' : 'Operational Details'}</th>
                   </tr>
-                ) : (
-                  auditLogs.map((log) => (
-                    <tr key={log.id} className="hover:bg-slate-50">
-                      <td className="py-2.5 px-3 font-mono text-slate-500">
-                        {log.timestamp ? new Date(log.timestamp).toLocaleString(language === 'ar' ? 'ar-IQ' : 'en-US') : '—'}
-                      </td>
-                      <td className="py-2.5 px-3 font-semibold text-slate-800">
-                        {log.doctorName || log.doctorId}
-                      </td>
-                      <td className="py-2.5 px-3">
-                        <span className="font-medium text-slate-700">{log.actorName}</span>
-                        <span className="text-[10px] text-slate-400 block capitalize">({log.actorRole})</span>
-                      </td>
-                      <td className="py-2.5 px-3">
-                        <span className="px-2 py-0.5 rounded-md bg-slate-100 font-mono text-[10px] font-bold text-slate-700">
-                          {log.action}
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-3 text-slate-600 max-w-xs truncate">
-                        {log.details}
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {/* System Audit Logs rendering */}
+                  {systemAuditLogs
+                    .filter(log => {
+                      // Category filter
+                      if (auditCategoryFilter !== 'all' && auditCategoryFilter !== 'clinic_frontdesk') {
+                        if (log.category !== auditCategoryFilter) return false;
+                      }
+                      if (auditCategoryFilter === 'clinic_frontdesk') {
+                        return false; // will be shown below from auditLogs
+                      }
+                      // Status filter
+                      if (auditStatusFilter !== 'all' && log.status !== auditStatusFilter) {
+                        return false;
+                      }
+                      // Search query
+                      if (auditSearchQuery.trim()) {
+                        const q = auditSearchQuery.toLowerCase();
+                        const matchRef = (log.resourceNumber || '').toLowerCase().includes(q);
+                        const matchActor = (log.actorName || '').toLowerCase().includes(q);
+                        const matchTarget = (log.targetName || '').toLowerCase().includes(q);
+                        const matchDetails = (log.details || '').toLowerCase().includes(q);
+                        return matchRef || matchActor || matchTarget || matchDetails;
+                      }
+                      return true;
+                    })
+                    .map((log) => {
+                      const getCategoryBadge = (cat: string) => {
+                        switch (cat) {
+                          case 'prescriptions':
+                            return { label: language === 'ar' ? 'وصفات وصرف' : 'Prescription', color: 'bg-emerald-100 text-emerald-800 border-emerald-200' };
+                          case 'diagnostic_orders':
+                            return { label: language === 'ar' ? 'إحالة تشخيصية' : 'Referral', color: 'bg-purple-100 text-purple-800 border-purple-200' };
+                          case 'lab_diagnostics':
+                            return { label: language === 'ar' ? 'مختبر وتحاليل' : 'Laboratory', color: 'bg-indigo-100 text-indigo-800 border-indigo-200' };
+                          case 'radiology':
+                            return { label: language === 'ar' ? 'أشعة وسونار' : 'Radiology', color: 'bg-cyan-100 text-cyan-800 border-cyan-200' };
+                          case 'wholesale_b2b':
+                            return { label: language === 'ar' ? 'توريد جملة B2B' : 'Wholesale B2B', color: 'bg-teal-100 text-teal-800 border-teal-200' };
+                          case 'profiles':
+                            return { label: language === 'ar' ? 'ملفات واعتماد' : 'Profile', color: 'bg-blue-100 text-blue-800 border-blue-200' };
+                          default:
+                            return { label: cat, color: 'bg-slate-100 text-slate-700 border-slate-200' };
+                        }
+                      };
+
+                      const catBadge = getCategoryBadge(log.category);
+
+                      return (
+                        <tr key={log.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="py-3 px-3.5 font-mono text-slate-500 whitespace-nowrap">
+                            {new Date(log.timestamp).toLocaleString(language === 'ar' ? 'ar-IQ' : 'en-US')}
+                          </td>
+
+                          <td className="py-3 px-3.5 whitespace-nowrap">
+                            <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${catBadge.color}`}>
+                              {catBadge.label}
+                            </span>
+                          </td>
+
+                          <td className="py-3 px-3.5 font-mono font-bold text-slate-900 whitespace-nowrap">
+                            <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 border border-slate-200">
+                              {log.resourceNumber || log.resourceId.slice(0, 10)}
+                            </span>
+                          </td>
+
+                          <td className="py-3 px-3.5">
+                            <div className="font-bold text-slate-800">{log.actorName}</div>
+                            <span className="text-[10px] text-slate-400 uppercase font-mono">
+                              {log.actorRole}
+                            </span>
+                          </td>
+
+                          <td className="py-3 px-3.5">
+                            {log.targetName ? (
+                              <div>
+                                <div className="font-semibold text-slate-700">{log.targetName}</div>
+                                {log.targetRole && (
+                                  <span className="text-[10px] text-slate-400 uppercase font-mono">
+                                    {log.targetRole}
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-slate-400">—</span>
+                            )}
+                          </td>
+
+                          <td className="py-3 px-3.5 whitespace-nowrap">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              log.status === 'dispensed' || log.status === 'completed' || log.status === 'delivered'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : log.status === 'approved' || log.status === 'accepted'
+                                ? 'bg-teal-100 text-teal-800'
+                                : log.status === 'cancelled' || log.status === 'rejected'
+                                ? 'bg-red-100 text-red-800'
+                                : 'bg-blue-100 text-blue-800'
+                            }`}>
+                              {log.status}
+                            </span>
+                          </td>
+
+                          <td className="py-3 px-3.5 text-slate-600 max-w-sm">
+                            <p className="line-clamp-2 leading-relaxed">{log.details}</p>
+                          </td>
+                        </tr>
+                      );
+                    })}
+
+                  {/* Clinic Front Desk Logs rendering */}
+                  {(auditCategoryFilter === 'all' || auditCategoryFilter === 'clinic_frontdesk') &&
+                    auditLogs
+                      .filter(log => {
+                        if (auditSearchQuery.trim()) {
+                          const q = auditSearchQuery.toLowerCase();
+                          return (log.doctorName || '').toLowerCase().includes(q) ||
+                            (log.actorName || '').toLowerCase().includes(q) ||
+                            (log.details || '').toLowerCase().includes(q);
+                        }
+                        return true;
+                      })
+                      .map((log) => (
+                        <tr key={`clinic_${log.id}`} className="hover:bg-slate-50 transition-colors">
+                          <td className="py-3 px-3.5 font-mono text-slate-500 whitespace-nowrap">
+                            {log.timestamp ? new Date(log.timestamp).toLocaleString(language === 'ar' ? 'ar-IQ' : 'en-US') : '—'}
+                          </td>
+
+                          <td className="py-3 px-3.5 whitespace-nowrap">
+                            <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                              {language === 'ar' ? 'استقبال عيادة' : 'Front-Desk'}
+                            </span>
+                          </td>
+
+                          <td className="py-3 px-3.5 font-mono font-bold text-slate-900 whitespace-nowrap">
+                            <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
+                              {log.appointmentId || log.id.slice(0, 10)}
+                            </span>
+                          </td>
+
+                          <td className="py-3 px-3.5">
+                            <div className="font-bold text-slate-800">{log.actorName}</div>
+                            <span className="text-[10px] text-slate-400 uppercase font-mono">
+                              {log.actorRole}
+                            </span>
+                          </td>
+
+                          <td className="py-3 px-3.5">
+                            <div className="font-semibold text-slate-700">{log.doctorName}</div>
+                            <span className="text-[10px] text-slate-400 block">{language === 'ar' ? 'عيادة الطبيب' : 'Clinic'}</span>
+                          </td>
+
+                          <td className="py-3 px-3.5 whitespace-nowrap">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
+                              {log.action}
+                            </span>
+                          </td>
+
+                          <td className="py-3 px-3.5 text-slate-600 max-w-sm">
+                            <p className="line-clamp-2 leading-relaxed">{log.details}</p>
+                          </td>
+                        </tr>
+                      ))}
+
+                  {/* Empty state */}
+                  {systemAuditLogs.length === 0 && auditLogs.length === 0 && (
+                    <tr>
+                      <td colSpan={7} className="py-12 text-center text-slate-400">
+                        <Clock size={36} className="mx-auto mb-2 opacity-30" />
+                        <p className="font-bold">{language === 'ar' ? 'لا توجد سجلات رقابة مسجلة حالياً.' : 'No audit records logged yet.'}</p>
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

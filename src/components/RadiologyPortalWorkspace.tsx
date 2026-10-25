@@ -590,7 +590,7 @@ export const RadiologyPortalWorkspace: React.FC<RadiologyPortalWorkspaceProps> =
         patientId: selectedRadOrderForCompletion.patientId,
         patientName: selectedRadOrderForCompletion.patientName,
         patientPhone: selectedRadOrderForCompletion.patientPhone,
-        serviceName: selectedRadOrderForCompletion.procedureName,
+        serviceName: selectedRadOrderForCompletion.procedureName || `${selectedRadOrderForCompletion.modality.toUpperCase()} Scan - ${selectedRadOrderForCompletion.bodyRegion}`,
         modality: selectedRadOrderForCompletion.modality,
         bodyPart: selectedRadOrderForCompletion.bodyPart,
         findings: radReportSummaryInput.trim(),
@@ -2541,7 +2541,7 @@ export const RadiologyPortalWorkspace: React.FC<RadiologyPortalWorkspaceProps> =
                 />
                 {editProfileForm.whatsapp && (
                   <a
-                    href={formatWhatsAppUrl(editProfileForm.whatsapp, language === 'ar' ? 'مرحباً مركز الأشعة والسونار، أود الاستفسار عن حجز موعد' : 'Hello Radiology Center, appointment inquiry')}
+                    href={formatWhatsAppUrl(editProfileForm.whatsapp, language === 'ar' ? 'مرحباً مركز الأشعة والسونار، أود الاستفسار عن حجز موعد' : 'Hello Radiology Center, appointment inquiry') || '#'}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="px-3 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs flex items-center gap-1 shrink-0 transition-colors shadow-sm"

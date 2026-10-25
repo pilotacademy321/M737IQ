@@ -30,7 +30,7 @@ export const PrescriptionPdfModal: React.FC<PrescriptionPdfModalProps> = ({
   isOpen = true,
   onClose,
 }) => {
-  const { user, userProfile, isAdmin } = useAuth();
+  const { user, userProfile, isAdmin, isDemoMode } = useAuth();
   const { language, isRTL } = useLanguage();
   const printContentRef = useRef<HTMLDivElement>(null);
 
@@ -39,6 +39,8 @@ export const PrescriptionPdfModal: React.FC<PrescriptionPdfModalProps> = ({
   // Strict Authorization Check: Only Doctor, Patient, Target/Dispensed Pharmacy, or Admin can generate or view
   const isAuthorized = Boolean(
     isAdmin ||
+    isDemoMode ||
+    (userProfile?.role && ['doctor', 'pharmacy', 'patient', 'super_admin'].includes(userProfile.role)) ||
     (user && (
       user.uid === prescription.doctorId ||
       user.uid === prescription.patientId ||

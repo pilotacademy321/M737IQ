@@ -2773,7 +2773,7 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
                 />
                 {editProfileForm.whatsapp && (
                   <a
-                    href={formatWhatsAppUrl(editProfileForm.whatsapp, language === 'ar' ? 'مرحباً صيدلية M737، أود الاستفسار عن توفر دواء' : 'Hello Pharmacy, inquiry about prescription')}
+                    href={formatWhatsAppUrl(editProfileForm.whatsapp, language === 'ar' ? 'مرحباً صيدلية M737، أود الاستفسار عن توفر دواء' : 'Hello Pharmacy, inquiry about prescription') || '#'}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="px-3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 shrink-0 transition-colors shadow-sm"
@@ -3763,6 +3763,16 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
             </div>
           </div>
         </div>
+      )}
+
+      {/* ==================================================== */}
+      {/* MODAL: OFFICIAL ELECTRONIC PRESCRIPTION PDF PREVIEW */}
+      {/* ==================================================== */}
+      {selectedPrescriptionForPdf && (
+        <PrescriptionPdfModal
+          prescription={selectedPrescriptionForPdf}
+          onClose={() => setSelectedPrescriptionForPdf(null)}
+        />
       )}
     </div>
   );

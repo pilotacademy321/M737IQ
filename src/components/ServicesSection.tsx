@@ -7,6 +7,9 @@ import {
   Scan, 
   Pill, 
   HeartHandshake, 
+  Building2,
+  Users,
+  ShieldCheck,
   ArrowLeft, 
   ArrowRight,
   Check
@@ -23,11 +26,25 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
 
   const servicesConfig = [
     {
+      id: 'patient',
+      portalId: 'patient' as PortalId,
+      icon: HeartHandshake,
+      accent: '#0284c7',
+      badge: language === 'ar' ? 'خدمة المريض' : 'Patient Experience',
+    },
+    {
       id: 'doctor',
       portalId: 'doctor' as PortalId,
       icon: Stethoscope,
       accent: '#dc2626',
       badge: language === 'ar' ? 'القطاع السريري' : 'Clinical Practice',
+    },
+    {
+      id: 'pharmacy',
+      portalId: 'pharmacy' as PortalId,
+      icon: Pill,
+      accent: '#059669',
+      badge: language === 'ar' ? 'الدواء والصيدلة' : 'Pharmaceuticals',
     },
     {
       id: 'laboratory',
@@ -44,18 +61,25 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
       badge: language === 'ar' ? 'التصوير الطبي' : 'Medical Imaging',
     },
     {
-      id: 'pharmacy',
-      portalId: 'pharmacy' as PortalId,
-      icon: Pill,
-      accent: '#059669',
-      badge: language === 'ar' ? 'الدواء والصيدلة' : 'Pharmaceuticals',
+      id: 'wholesaler',
+      portalId: 'wholesaler' as PortalId,
+      icon: Building2,
+      accent: '#0d9488',
+      badge: language === 'ar' ? 'التوريد والمذاخر' : 'Wholesale Supply',
     },
     {
-      id: 'patient',
-      portalId: 'patient' as PortalId,
-      icon: HeartHandshake,
-      accent: '#0284c7',
-      badge: language === 'ar' ? 'خدمة المريض' : 'Patient Experience',
+      id: 'secretary',
+      portalId: 'secretary' as PortalId,
+      icon: Users,
+      accent: '#2563eb',
+      badge: language === 'ar' ? 'السكرتارية والاستقبال' : 'Reception & Triage',
+    },
+    {
+      id: 'super_admin',
+      portalId: 'super_admin' as PortalId,
+      icon: ShieldCheck,
+      accent: '#7c3aed',
+      badge: language === 'ar' ? 'الرقابة والإدارة' : 'Executive Governance',
     },
   ];
 

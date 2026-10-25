@@ -675,20 +675,20 @@ export const LaboratoryPortalWorkspace: React.FC<LaboratoryPortalWorkspaceProps>
         bookingId: selectedOrderForCompletion.id,
         testName: selectedOrderForCompletion.tests.map(t => t.testName).join(' + '),
         category: 'Clinical Pathology',
-        sampleType: selectedOrderForCompletion.sampleType || 'Whole Blood / Serum',
+        sampleType: selectedOrderForCompletion.tests[0]?.sampleType || 'Whole Blood / Serum',
         parameters: selectedOrderForCompletion.tests.map(t => ({
           name: t.testName,
           value: 'ضمن المدى المرجعي الطبيعي (Within Reference Range)',
           unit: 'Standard',
-          normalRange: 'Standard Clinical Value',
-          isAbnormal: false
+          referenceRange: 'Standard Clinical Value',
+          status: 'normal'
         })),
         notes: resultSummaryInput.trim(),
         pathologistName: certDoctor,
         pathologistLicense: licenseNum,
         fileUrl: `https://m737.iq/certified-results/${resId}.pdf`,
         reviewStatus: 'reviewed',
-        status: 'final',
+        status: 'published',
         createdAt: now,
         updatedAt: now,
       };
@@ -2471,7 +2471,7 @@ export const LaboratoryPortalWorkspace: React.FC<LaboratoryPortalWorkspaceProps>
                 />
                 {editProfileForm.whatsapp && (
                   <a
-                    href={formatWhatsAppUrl(editProfileForm.whatsapp, language === 'ar' ? 'مرحباً مختبر التحليلات، أود الاستفسار عن فحص طبي' : 'Hello Lab, inquiry about test')}
+                    href={formatWhatsAppUrl(editProfileForm.whatsapp, language === 'ar' ? 'مرحباً مختبر التحليلات، أود الاستفسار عن فحص طبي' : 'Hello Lab, inquiry about test') || '#'}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="px-3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 shrink-0 transition-colors shadow-sm"

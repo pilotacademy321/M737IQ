@@ -10,9 +10,11 @@ import { doc, setDoc, collection, getDocs, query, orderBy, limit } from 'firebas
 export type AuditCategory =
   | 'prescriptions'
   | 'lab_diagnostics'
+  | 'diagnostic_orders'
   | 'radiology'
   | 'wholesale_b2b'
   | 'accreditation'
+  | 'profiles'
   | 'security';
 
 export type AuditActionType =
@@ -26,6 +28,7 @@ export type AuditActionType =
   | 'lab_order_received'
   | 'lab_order_scheduled'
   | 'lab_order_in_progress'
+  | 'lab_order_analysis_started'
   | 'lab_order_completed'
   | 'lab_order_rejected'
   | 'lab_order_cancelled'
@@ -33,6 +36,7 @@ export type AuditActionType =
   | 'radiology_order_received'
   | 'radiology_order_scheduled'
   | 'radiology_order_in_progress'
+  | 'radiology_imaging_started'
   | 'radiology_order_completed'
   | 'radiology_order_rejected'
   | 'radiology_order_cancelled'
@@ -44,7 +48,9 @@ export type AuditActionType =
   | 'wholesale_order_cancelled'
   | 'wholesale_stock_adjusted'
   | 'profile_photo_updated'
-  | 'profile_contact_updated';
+  | 'profile_contact_updated'
+  | 'profile_updated'
+  | 'wholesaler_profile_updated';
 
 export interface SystemAuditLogEntry {
   id: string;

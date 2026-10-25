@@ -615,13 +615,17 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const compressed = await validateAndCompressImage(file, { maxWidth: 500, maxHeight: 500, quality: 0.8, maxSizeBytes: 70000 });
-      setProfileForm((prev) => ({ ...prev, logoUrl: compressed }));
-      setFeedbackMsg({
-        type: 'success',
-        text: language === 'ar' ? 'تم تجهيز وضغط شعار المذخر بنجاح' : 'Logo uploaded & optimized',
-      });
-      setTimeout(() => setFeedbackMsg(null), 3000);
+      const res = await validateAndCompressImage(file, { maxWidth: 500, maxHeight: 500, quality: 0.8, maxSizeBytes: 70000 });
+      if (res.valid && res.dataUrl) {
+        setProfileForm((prev) => ({ ...prev, logoUrl: res.dataUrl! }));
+        setFeedbackMsg({
+          type: 'success',
+          text: language === 'ar' ? 'تم تجهيز وضغط شعار المذخر بنجاح' : 'Logo uploaded & optimized',
+        });
+        setTimeout(() => setFeedbackMsg(null), 3000);
+      } else {
+        throw new Error(res.error || (language === 'ar' ? 'تعذر ضغط الشعار' : 'Failed to compress logo'));
+      }
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : 'Error processing image';
       setFeedbackMsg({ type: 'error', text: errorMsg });

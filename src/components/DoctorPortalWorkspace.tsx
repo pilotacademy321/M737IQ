@@ -1218,7 +1218,7 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
       await logAuditEvent({
         action: 'prescription_cancelled',
         category: 'prescriptions',
-        actorUid: user.uid,
+        actorUid: user?.uid || doctorProfile?.doctorId || 'doctor',
         actorName: doctorProfile?.fullName || userProfile?.displayName || 'الطبيب',
         actorRole: 'doctor',
         targetUid: rx?.targetPharmacyId || rx?.patientId,
@@ -1363,7 +1363,7 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
       await logAuditEvent({
         action: 'lab_order_cancelled',
         category: 'lab_diagnostics',
-        actorUid: user.uid,
+        actorUid: user?.uid || doctorProfile?.doctorId || 'doctor',
         actorName: doctorProfile?.fullName || 'الطبيب',
         actorRole: 'doctor',
         targetUid: ord?.targetLabId,
@@ -1485,7 +1485,7 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
       await logAuditEvent({
         action: 'radiology_order_cancelled',
         category: 'radiology',
-        actorUid: user.uid,
+        actorUid: user?.uid || doctorProfile?.doctorId || 'doctor',
         actorName: doctorProfile?.fullName || 'الطبيب',
         actorRole: 'doctor',
         targetUid: ord?.targetCenterId,
@@ -3909,6 +3909,16 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
             </form>
           </div>
         </div>
+      )}
+
+      {/* ==================================================== */}
+      {/* MODAL: OFFICIAL ELECTRONIC PRESCRIPTION PDF PREVIEW */}
+      {/* ==================================================== */}
+      {selectedPrescriptionForPdf && (
+        <PrescriptionPdfModal
+          prescription={selectedPrescriptionForPdf}
+          onClose={() => setSelectedPrescriptionForPdf(null)}
+        />
       )}
     </div>
   );

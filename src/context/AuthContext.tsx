@@ -3,7 +3,11 @@ import {
   User, 
   signInWithPopup, 
   signOut as firebaseSignOut, 
-  onAuthStateChanged 
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
+  updateProfile
 } from 'firebase/auth';
 import { 
   doc, 
@@ -31,6 +35,9 @@ interface AuthContextType {
   currentHostname: string;
   firebaseProjectId: string;
   signInWithGoogle: () => Promise<void>;
+  signInWithEmail: (email: string, pass: string) => Promise<void>;
+  signUpWithEmail: (email: string, pass: string, displayName: string, role: UserRole, phone?: string) => Promise<void>;
+  sendPasswordReset: (email: string) => Promise<void>;
   signInAsDemoUser: (role: UserRole, customName?: string) => Promise<void>;
   exitDemoMode: () => void;
   signOut: () => Promise<void>;
@@ -50,6 +57,7 @@ interface AuthContextType {
 }
 
 const SUPER_ADMIN_EMAIL = 'bcgmoc@gmail.com';
+const SUPER_ADMIN_EMAILS = ['bcgmoc@gmail.com', 'mustfa200633@gmail.com'];
 const DEMO_STORAGE_KEY = 'm737_demo_role_v1';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -237,7 +245,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const isVerifiedSuperAdminEmail = 
         Boolean(firebaseUser.emailVerified) &&
-        firebaseUser.email?.trim().toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
+        Boolean(firebaseUser.email) &&
+        SUPER_ADMIN_EMAILS.includes(firebaseUser.email!.trim().toLowerCase());
 
       let hasAdminDoc = false;
       try {
@@ -397,6 +406,131 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Authentication Error:', rawError);
         setAuthError(rawError);
       }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const signInWithEmail = async (email: string, pass: string) => {
+    setLoading(true);
+    setAuthError(null);
+    try {
+      const result = await signInWithEmailAndPassword(auth, email.trim(), pass);
+      if (result.user) {
+        localStorage.removeItem(DEMO_STORAGE_KEY);
+        setIsDemoMode(false);
+        setUnauthorizedDomainDetected(false);
+        setShowDomainHelp(false);
+        await loadUserProfile(result.user);
+      }
+    } catch (err: unknown) {
+      console.error('Email Sign-In Error:', err);
+      const code = (typeof err === 'object' && err !== null && 'code' in err)
+        ? String((err as { code: unknown }).code)
+        : '';
+      if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+        setAuthError('البريد الإلكتروني أو كلمة المرور غير صحيحة. يرجى التحقق وإعادة المحاولة.');
+      } else if (code === 'auth/invalid-email') {
+        setAuthError('صيغة البريد الإلكتروني غير صالحة.');
+      } else if (code === 'auth/too-many-requests') {
+        setAuthError('تم حظر المحاولات مؤقتاً بسبب تكرار المحاولات الخاطئة. حاول لاحقاً.');
+      } else {
+        setAuthError(err instanceof Error ? err.message : 'فشل تسجيل الدخول بالبريد الإلكتروني');
+      }
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const signUpWithEmail = async (
+    email: string, 
+    pass: string, 
+    displayName: string, 
+    role: UserRole, 
+    phone?: string
+  ) => {
+    setLoading(true);
+    setAuthError(null);
+    try {
+      const result = await createUserWithEmailAndPassword(auth, email.trim(), pass);
+      const user = result.user;
+      if (displayName) {
+        await updateProfile(user, { displayName });
+      }
+
+      const isVerifiedSuperAdminEmail = SUPER_ADMIN_EMAILS.includes(email.trim().toLowerCase());
+      const effectiveRole: UserRole = isVerifiedSuperAdminEmail ? 'super_admin' : role;
+      const effectiveStatus: AccountStatus = (effectiveRole === 'patient' || effectiveRole === 'super_admin') 
+        ? 'approved' 
+        : 'pending';
+
+      const now = new Date().toISOString();
+      const profile: UserProfile = {
+        uid: user.uid,
+        email: user.email || email.trim(),
+        displayName: displayName || user.email?.split('@')[0] || 'User',
+        role: effectiveRole,
+        status: effectiveStatus,
+        phone: phone || '',
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      await setDoc(doc(db, 'users', user.uid), profile);
+
+      if (effectiveRole === 'super_admin' || isVerifiedSuperAdminEmail) {
+        await setDoc(doc(db, 'admins', user.uid), {
+          uid: user.uid,
+          email: user.email,
+          role: 'super_admin',
+          grantedAt: now,
+        }, { merge: true });
+        setIsAdmin(true);
+      }
+
+      setUserProfile(profile);
+      setNeedsOnboarding(false);
+      localStorage.removeItem(DEMO_STORAGE_KEY);
+      setIsDemoMode(false);
+    } catch (err: unknown) {
+      console.error('Email Sign-Up Error:', err);
+      const code = (typeof err === 'object' && err !== null && 'code' in err)
+        ? String((err as { code: unknown }).code)
+        : '';
+      if (code === 'auth/email-already-in-use') {
+        setAuthError('هذا البريد الإلكتروني مسجل مسبقاً. يمكنك تسجيل الدخول مباشرة.');
+      } else if (code === 'auth/weak-password') {
+        setAuthError('كلمة المرور ضعيفة. يجب أن تتكون من 6 أحرف على الأقل.');
+      } else if (code === 'auth/invalid-email') {
+        setAuthError('صيغة البريد الإلكتروني غير صالحة.');
+      } else {
+        setAuthError(err instanceof Error ? err.message : 'فشل إنشاء الحساب');
+      }
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const sendPasswordReset = async (email: string) => {
+    setLoading(true);
+    setAuthError(null);
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+    } catch (err: unknown) {
+      console.error('Password Reset Error:', err);
+      const code = (typeof err === 'object' && err !== null && 'code' in err)
+        ? String((err as { code: unknown }).code)
+        : '';
+      if (code === 'auth/user-not-found') {
+        setAuthError('لم يتم العثور على حساب مرتبط بهذا البريد الإلكتروني.');
+      } else if (code === 'auth/invalid-email') {
+        setAuthError('صيغة البريد الإلكتروني غير صالحة.');
+      } else {
+        setAuthError(err instanceof Error ? err.message : 'فشل إرسال رابط استعادة كلمة المرور');
+      }
+      throw err;
     } finally {
       setLoading(false);
     }

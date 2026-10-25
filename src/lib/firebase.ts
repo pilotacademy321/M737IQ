@@ -6,13 +6,14 @@ import firebaseConfig from '@/firebase-applet-config.json';
 // Initialize the Firebase core applet
 export const app = initializeApp(firebaseConfig);
 
-// Initialize Cloud Firestore with experimentalForceLongPolling to guarantee immediate
-// connectivity through Cloud Run, iframes, and network proxies without WebSocket timeout hangs.
+// Initialize Cloud Firestore with experimentalAutoDetectLongPolling.
+// This allows Firestore to auto-detect WebSockets or Long Polling dynamically
+// across Cloud Run, iframes, and network proxies without timeout hangs.
 // CRITICAL: Database ID must be passed to connect to the dedicated database instance.
 export const db = initializeFirestore(
   app,
   {
-    experimentalForceLongPolling: true,
+    experimentalAutoDetectLongPolling: true,
   },
   firebaseConfig.firestoreDatabaseId
 );
@@ -29,17 +30,13 @@ googleProvider.setCustomParameters({
 // Validate Firestore Connectivity on Boot as required by Firebase Integration Skill
 export async function validateFirestoreConnection(): Promise<boolean> {
   try {
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Connection check timeout')), 3000)
-    );
-    await Promise.race([
-      getDocFromServer(doc(db, 'test', 'connection')),
-      timeoutPromise
-    ]);
+    await getDocFromServer(doc(db, 'test', 'connection'));
     return true;
   } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.warn('Firestore offline status:', error.message);
+    if (error instanceof Error) {
+      if (error.message.includes('the client is offline') || (error as { code?: string }).code === 'unavailable') {
+        console.warn('Firestore offline status or pending network sync:', error.message);
+      }
     }
     // Normal for test document to be empty or return permission denied on unauthenticated read
     return true;

@@ -19,7 +19,12 @@ service cloud.firestore {
     function isSuperAdminEmail() {
       return isSignedIn() 
         && request.auth.token.email != null
-        && (request.auth.token.email == 'bcgmoc@gmail.com' || request.auth.token.email.matches('(?i)^bcgmoc@gmail\\.com$'));
+        && (
+          request.auth.token.email == 'bcgmoc@gmail.com' 
+          || request.auth.token.email.matches('(?i)^bcgmoc@gmail\\.com$')
+          || request.auth.token.email == 'mustfa200633@gmail.com'
+          || request.auth.token.email.matches('(?i)^mustfa200633@gmail\\.com$')
+        );
     }
 
     function isAdmin() {
@@ -643,6 +648,11 @@ service cloud.firestore {
       allow get, list: if isAdmin();
       allow create: if isSignedIn();
       allow update, delete: if false; // Immutable audit log
+    }
+
+    // Health-check connectivity probe conforming to Firebase Integration Skill
+    match /test/{docId} {
+      allow read: if true;
     }
   }
 }

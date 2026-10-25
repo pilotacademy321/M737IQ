@@ -275,6 +275,8 @@ export interface RadiologyOrder {
   targetCenterName?: string;
   modality: RadiologyModality;
   bodyRegion: string; // e.g. "Chest", "Brain", "Abdomen", "Knee"
+  bodyPart?: string;
+  procedureName?: string;
   priority: 'normal' | 'urgent';
   clinicalIndication: string;
   preparationInstructions?: string;
@@ -357,6 +359,7 @@ export interface RadiologyProfile {
   centerId: string;
   centerName: string;
   logoUrl?: string;
+  directorName?: string;
   licenseNumber: string;
   address: string;
   governorate: string;
@@ -412,9 +415,11 @@ export interface RadiologyReport {
   centerName: string;
   patientId: string;
   patientName: string;
+  patientPhone?: string;
   bookingId?: string;
   serviceName: string;
   modality: RadiologyModality;
+  bodyPart?: string;
   clinicalIndication?: string;
   technique?: string;
   findings: string;
@@ -423,8 +428,10 @@ export interface RadiologyReport {
   radiologistName: string;
   radiologistLicense?: string;
   fileUrl?: string;
+  reportUrl?: string;
   scanImages?: string[];
-  status: 'draft' | 'published';
+  reviewStatus?: string;
+  status: 'draft' | 'published' | 'ready';
   createdAt: string;
   updatedAt: string;
 }

@@ -5,6 +5,7 @@
 
 export interface ImageValidationResult {
   valid: boolean;
+  success?: boolean;
   error?: string;
   dataUrl?: string;
 }
@@ -15,14 +16,27 @@ export interface ImageValidationResult {
  */
 export async function validateAndCompressImage(
   file: File,
-  maxDimension = 400,
-  quality = 0.82
+  maxDimensionOrOptions: number | { maxWidth?: number; maxHeight?: number; maxDimension?: number; quality?: number; maxSizeBytes?: number } = 400,
+  qualityParam = 0.82
 ): Promise<ImageValidationResult> {
+  let maxDimension = 400;
+  let quality = qualityParam;
+
+  if (typeof maxDimensionOrOptions === 'object' && maxDimensionOrOptions !== null) {
+    maxDimension = maxDimensionOrOptions.maxWidth || maxDimensionOrOptions.maxDimension || 400;
+    if (typeof maxDimensionOrOptions.quality === 'number') {
+      quality = maxDimensionOrOptions.quality;
+    }
+  } else if (typeof maxDimensionOrOptions === 'number') {
+    maxDimension = maxDimensionOrOptions;
+  }
+
   // 1. Validate MIME type
   const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
   if (!allowedTypes.includes(file.type)) {
     return {
       valid: false,
+      success: false,
       error: 'نوع الملف غير مدعوم. يرجى اختيار صورة بصيغة JPG أو PNG أو WebP (Unsupported image format).',
     };
   }
@@ -31,6 +45,7 @@ export async function validateAndCompressImage(
   if (file.size > 5 * 1024 * 1024) {
     return {
       valid: false,
+      success: false,
       error: 'حجم الصورة كبير جداً. الحد الأقصى المسموح به هو 5 ميغابايت (Max file size is 5MB).',
     };
   }
@@ -38,13 +53,13 @@ export async function validateAndCompressImage(
   return new Promise((resolve) => {
     const reader = new FileReader();
     reader.onerror = () => {
-      resolve({ valid: false, error: 'تعذر قراءة ملف الصورة (Failed to read image).' });
+      resolve({ valid: false, success: false, error: 'تعذر قراءة ملف الصورة (Failed to read image).' });
     };
 
     reader.onload = (event) => {
       const img = new Image();
       img.onerror = () => {
-        resolve({ valid: false, error: 'تعذر معالجة بيانات الصورة (Invalid image content).' });
+        resolve({ valid: false, success: false, error: 'تعذر معالجة بيانات الصورة (Invalid image content).' });
       };
 
       img.onload = () => {
@@ -70,7 +85,7 @@ export async function validateAndCompressImage(
 
           const ctx = canvas.getContext('2d');
           if (!ctx) {
-            resolve({ valid: false, error: 'تعذر تهيئة محرك معالجة الصور (Canvas context error).' });
+            resolve({ valid: false, success: false, error: 'تعذر تهيئة محرك معالجة الصور (Canvas context error).' });
             return;
           }
 
@@ -83,11 +98,13 @@ export async function validateAndCompressImage(
           const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
           resolve({
             valid: true,
+            success: true,
             dataUrl: compressedDataUrl,
           });
         } catch (err: unknown) {
           resolve({
             valid: false,
+            success: false,
             error: err instanceof Error ? err.message : 'خطأ أثناء ضغط الصورة (Compression failed).',
           });
         }
