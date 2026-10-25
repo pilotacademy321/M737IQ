@@ -23,6 +23,7 @@ import { SmartMedicineSearch, SearchMedicineResult } from './SmartMedicineSearch
 import { PrescriptionPdfModal } from './PrescriptionPdfModal';
 import { DrugInteractionPanel } from './DrugInteractionPanel';
 import { logAuditEvent } from '../lib/auditLogger';
+import { recordRealMetricEvent } from '../lib/platformMetrics';
 import { validateAndCompressImage, formatWhatsAppUrl } from '../utils/mediaUtils';
 import { 
   collection, 
@@ -1129,6 +1130,9 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
         showToast(language === 'ar' ? `تم إصدار الوصفة الإلكترونية برقم ${rxNum} بنجاح` : `Prescription ${rxNum} created`);
       }
 
+      // Increment real platform statistics
+      recordRealMetricEvent('prescription');
+
       // Record System Audit Log
       await logAuditEvent({
         action: 'prescription_created',
@@ -1281,6 +1285,9 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
         showToast(language === 'ar' ? `تم إرسال طلب التحاليل بنجاح برقم ${orderNumber}` : `Lab order ${orderNumber} created`);
       }
 
+      // Increment real platform statistics
+      recordRealMetricEvent('test');
+
       // Record Audit Log
       await logAuditEvent({
         action: 'lab_order_created',
@@ -1403,6 +1410,9 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
         setRadiologyOrders(prev => [newOrder, ...prev]);
         showToast(language === 'ar' ? `تم إرسال طلب الأشعة بنجاح برقم ${orderNumber}` : `Radiology order ${orderNumber} created`);
       }
+
+      // Increment real platform statistics
+      recordRealMetricEvent('test');
 
       // Record Audit Log
       await logAuditEvent({

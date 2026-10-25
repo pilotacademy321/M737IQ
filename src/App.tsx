@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import { AuthProvider } from './context/AuthContext';
 import { Header } from './components/Header';
+import { AppSidebar } from './components/AppSidebar';
 import { HomePageView } from './components/HomePageView';
 import { PortalsSelectionPage } from './components/PortalsSelectionPage';
 import { AboutUsPage } from './components/AboutUsPage';
@@ -16,12 +17,17 @@ import { Footer } from './components/Footer';
 import { LegalModal } from './components/LegalModals';
 import { OnboardingModal } from './components/OnboardingModal';
 import { AuthDomainGuideModal } from './components/AuthDomainGuideModal';
+import { FeaturesGuideModal } from './components/FeaturesGuideModal';
 import { PortalId } from './types';
 import { parseCurrentRoute, navigateTo, RouteState } from './utils/navigation';
 
 const MainAppContent: React.FC = () => {
-  const { language } = useLanguage();
+  const { language, isRTL } = useLanguage();
   const [routeState, setRouteState] = useState<RouteState>(() => parseCurrentRoute());
+  const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
+  const [featuresGuideOpen, setFeaturesGuideOpen] = useState(false);
+  const [domainHelpOpen, setDomainHelpOpen] = useState(false);
+
   const [legalModal, setLegalModal] = useState<{
     isOpen: boolean;
     type: 'privacy' | 'terms' | null;
@@ -115,7 +121,7 @@ const MainAppContent: React.FC = () => {
       );
     }
 
-    // 5. Dedicated Welcome Landing Page (Default: / or /home)
+    // 5. Dedicated Welcome Landing Page (Default: / or /home matching mockup)
     return (
       <HomePageView
         onNavigate={handleNavigate}
@@ -126,21 +132,42 @@ const MainAppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900 transition-colors duration-200">
-      {/* Global Responsive Navigation Header */}
-      <Header
-        activeSection={routeState.route}
-        onNavigate={handleNavigate}
+      {/* Right Persistent Dark-Navy Sidebar (Matching Mockup) */}
+      <AppSidebar
+        currentRoute={routeState.route}
         selectedPortalId={routeState.portalId}
-        onResetToHome={handleResetToHome}
+        onNavigateHome={handleResetToHome}
+        onSelectPortal={handleSelectPortal}
+        onNavigate={handleNavigate}
+        onOpenProfile={() => {
+          handleNavigate('patient');
+        }}
+        onOpenSettings={() => setDomainHelpOpen(true)}
+        onOpenFeaturesGuide={() => setFeaturesGuideOpen(true)}
+        mobileOpen={sidebarMobileOpen}
+        onCloseMobile={() => setSidebarMobileOpen(false)}
       />
 
-      {/* Main Routed Content */}
-      <main className="flex-1">
-        {renderCurrentView()}
-      </main>
+      {/* Main Content Area (With right offset on desktop for RTL sidebar) */}
+      <div className={`flex-1 flex flex-col min-w-0 ${isRTL ? 'lg:pe-72' : 'lg:ps-72'} transition-all`}>
+        {/* Global Top Navigation Header (Matching Mockup with Search & User Pill) */}
+        <Header
+          activeSection={routeState.route}
+          onNavigate={handleNavigate}
+          selectedPortalId={routeState.portalId}
+          onResetToHome={handleResetToHome}
+          onToggleSidebar={() => setSidebarMobileOpen((prev) => !prev)}
+          onSelectPortal={handleSelectPortal}
+        />
 
-      {/* Comprehensive Footer */}
-      <Footer onNavigate={handleNavigate} onOpenLegal={handleOpenLegal} />
+        {/* Routed View Container */}
+        <main className="flex-1 p-3 sm:p-5 lg:p-6 max-w-7xl w-full mx-auto">
+          {renderCurrentView()}
+        </main>
+
+        {/* Global Footer */}
+        <Footer onNavigate={handleNavigate} onOpenLegal={handleOpenLegal} />
+      </div>
 
       {/* Legal Terms & Privacy Modal */}
       <LegalModal
@@ -152,8 +179,17 @@ const MainAppContent: React.FC = () => {
       {/* New User Role Setup & Accreditation Modal */}
       <OnboardingModal />
 
+      {/* Features Guide Modal */}
+      <FeaturesGuideModal
+        isOpen={featuresGuideOpen}
+        onClose={() => setFeaturesGuideOpen(false)}
+        onSelectPortal={handleSelectPortal}
+      />
+
       {/* Firebase Domain Guide & Instant Sandbox Modal */}
-      <AuthDomainGuideModal onSelectPortal={handleSelectPortal} />
+      <AuthDomainGuideModal 
+        onSelectPortal={handleSelectPortal} 
+      />
     </div>
   );
 };

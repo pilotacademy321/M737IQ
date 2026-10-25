@@ -24,6 +24,8 @@ service cloud.firestore {
           || request.auth.token.email.matches('(?i)^bcgmoc@gmail\\.com$')
           || request.auth.token.email == 'mustfa200633@gmail.com'
           || request.auth.token.email.matches('(?i)^mustfa200633@gmail\\.com$')
+          || request.auth.token.email == 'mmrym2186@gmail.com'
+          || request.auth.token.email.matches('(?i)^mmrym2186@gmail\\.com$')
         );
     }
 
@@ -648,6 +650,12 @@ service cloud.firestore {
       allow get, list: if isAdmin();
       allow create: if isSignedIn();
       allow update, delete: if false; // Immutable audit log
+    }
+
+    // Platform Realtime Public Metrics (Zero-PII aggregated live counters)
+    match /platform_metrics/{docId} {
+      allow read: if true;
+      allow write: if isSignedIn();
     }
 
     // Health-check connectivity probe conforming to Firebase Integration Skill

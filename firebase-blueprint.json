@@ -1168,6 +1168,20 @@
         "updatedAt": { "type": "string" }
       },
       "required": ["wholesalerId", "wholesalerName", "pharmacyId", "pharmacyName", "deliveryAddress", "governorate", "items", "totalAmountIQD", "status", "createdAt", "updatedAt"]
+    },
+    "PlatformMetrics": {
+      "title": "PlatformMetrics",
+      "description": "Real-time aggregated platform counters for quick statistics",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "appointmentsToday": { "type": "number" },
+        "activeUsers": { "type": "number" },
+        "diagnosticTests": { "type": "number" },
+        "prescriptions": { "type": "number" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["appointmentsToday", "activeUsers", "diagnosticTests", "prescriptions", "updatedAt"]
     }
   },
   "firestore": {
@@ -1266,6 +1280,10 @@
     "/wholesale_orders/{orderId}": {
       "schema": "WholesaleOrder",
       "description": "B2B wholesale purchase orders from retail pharmacies to warehouses"
+    },
+    "/platform_metrics/{docId}": {
+      "schema": "PlatformMetrics",
+      "description": "Live non-PII aggregated statistics counters"
     }
   }
 }

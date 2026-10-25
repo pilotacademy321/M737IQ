@@ -1,15 +1,35 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
-import { Logo } from './Logo';
 import { AuthModal } from './AuthModal';
-import { Menu, X, Globe, ArrowLeft, ArrowRight, LogIn, LogOut, KeyRound, Trash2, RefreshCw, UserCheck, Instagram } from 'lucide-react';
+import { 
+  Menu, 
+  X, 
+  Globe, 
+  Search, 
+  Bell, 
+  Mail, 
+  ChevronDown, 
+  LogIn, 
+  LogOut, 
+  KeyRound, 
+  Trash2, 
+  UserCheck, 
+  User, 
+  ShieldCheck, 
+  CheckCircle2,
+  Calendar,
+  ExternalLink
+} from 'lucide-react';
+import { PortalId } from '../types';
 
 interface HeaderProps {
   activeSection: string;
   onNavigate: (sectionId: string) => void;
   selectedPortalId: string | null;
   onResetToHome: () => void;
+  onToggleSidebar?: () => void;
+  onSelectPortal?: (portalId: PortalId) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -17,27 +37,46 @@ export const Header: React.FC<HeaderProps> = ({
   onNavigate,
   selectedPortalId,
   onResetToHome,
+  onToggleSidebar,
+  onSelectPortal,
 }) => {
-  const { language, setLanguage, t, isRTL } = useLanguage();
+  const { language, setLanguage, isRTL } = useLanguage();
   const { 
     user, 
     userProfile, 
     loading: authLoading, 
-    signInWithGoogle, 
-    signOut,
-    isDemoMode,
+    signOut, 
+    deleteOwnAccountPermanently,
     setShowDomainHelp,
-    unauthorizedDomainDetected,
-    deleteOwnAccountPermanently
+    unauthorizedDomainDetected
   } = useAuth();
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const [searchQuery, setSearchQuery] = useState('');
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalInitialMode, setAuthModalInitialMode] = useState<'signin' | 'reset'>('signin');
+  const [showAccountDropdown, setShowAccountDropdown] = useState(false);
+  const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [showSelfDeleteModal, setShowSelfDeleteModal] = useState(false);
   const [isDeletingOwnAccount, setIsDeletingOwnAccount] = useState(false);
   const [selfDeleteError, setSelfDeleteError] = useState<string | null>(null);
+
+  const accountRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
+
+  // Close popovers on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (accountRef.current && !accountRef.current.contains(e.target as Node)) {
+        setShowAccountDropdown(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setShowNotificationsDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleConfirmSelfDelete = async () => {
     setIsDeletingOwnAccount(true);
@@ -56,330 +95,250 @@ export const Header: React.FC<HeaderProps> = ({
     }
   };
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  const navItems = [
-    { id: 'home', label: t.nav.home },
-    { id: 'portals', label: language === 'ar' ? 'بوابات المنصة' : 'Portals' },
-    { id: 'about', label: t.nav.about },
-    { id: 'support', label: language === 'ar' ? 'الدعم والتواصل' : 'Support' },
-  ];
-
-  const handleLinkClick = (id: string) => {
-    setMobileMenuOpen(false);
-    onNavigate(id);
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      if (onSelectPortal) {
+        onSelectPortal('pharmacy');
+      } else {
+        onNavigate('portals');
+      }
+    }
   };
 
+  const currentRoleLabel = userProfile?.role 
+    ? (language === 'ar'
+        ? {
+            patient: 'مريض',
+            doctor: 'طبيب معتمد',
+            pharmacy: 'صيدلية أهلية',
+            laboratory: 'مختبر طبي',
+            radiology_center: 'مركز أشعة',
+            wholesaler: 'مذخر أدوية',
+            secretary: 'سكرتارية واستقبال',
+            super_admin: 'إدارة عليا'
+          }[userProfile.role] || userProfile.role
+        : userProfile.role)
+    : (language === 'ar' ? 'مريض' : 'Patient');
+
+  const currentDisplayName = userProfile?.displayName || user?.displayName || (language === 'ar' ? 'أحمد محمد' : 'Ahmed Mohammed');
+
   return (
-    <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled
-          ? 'bg-white/95 backdrop-blur-md shadow-sm border-b border-slate-200/80 py-2.5'
-          : 'bg-white/90 backdrop-blur-sm border-b border-slate-100 py-3.5'
-      }`}
-    >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between gap-6">
-          {/* Zone 1: Brand Logo */}
-          <button
-            onClick={() => {
-              onResetToHome();
-              onNavigate('home');
-            }}
-            className="flex items-center gap-2 group text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#003366] rounded-lg p-1"
-            aria-label={t.brandName}
-          >
-            <Logo size="sm" showTagline={true} />
-          </button>
-
-          {/* Zone 2: Navigation Links (Desktop) */}
-          <nav
-            className="hidden md:flex items-center gap-1 lg:gap-2"
-            aria-label="Main Navigation"
-          >
-            {navItems.map((item) => {
-              const isActive = activeSection === item.id && !selectedPortalId;
-              return (
+    <>
+      <header className="bg-white border-b border-slate-200/90 sticky top-0 z-30 transition-all duration-200">
+        <div className="px-4 sm:px-6 lg:px-8 py-2.5">
+          <div className="flex items-center justify-between gap-4">
+            {/* Right side in RTL: Mobile menu toggle + Global Search Bar */}
+            <div className="flex items-center gap-3 flex-1 max-w-2xl">
+              {/* Mobile Sidebar Hamburger Button */}
+              {onToggleSidebar && (
                 <button
-                  key={item.id}
-                  onClick={() => handleLinkClick(item.id)}
-                  className={`px-3 py-1.5 text-sm font-semibold transition-all rounded-md relative whitespace-nowrap cursor-pointer ${
-                    isActive
-                      ? 'text-[#003366] font-bold'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
-                  }`}
+                  onClick={onToggleSidebar}
+                  className="lg:hidden p-2 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+                  aria-label="Toggle Navigation Menu"
                 >
-                  {item.label}
-                  {isActive && (
-                    <span className="absolute bottom-0 left-3 right-3 h-0.5 bg-[#c4152e] rounded-full transition-all" />
-                  )}
+                  <Menu size={22} />
                 </button>
-              );
-            })}
-          </nav>
+              )}
 
-          {/* Zone 3: Language Switcher, Auth Profile & Actions */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* Language Switcher Button Group */}
-            <div
-              className="flex items-center bg-slate-100 border border-slate-200 rounded-full p-0.5"
-              role="group"
-              aria-label="Language Selector"
-            >
-              <button
-                type="button"
-                onClick={() => setLanguage('ar')}
-                className={`px-2.5 py-1 text-xs font-bold rounded-full transition-all cursor-pointer ${
-                  language === 'ar'
-                    ? 'bg-[#003366] text-white shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-                aria-pressed={language === 'ar'}
-              >
-                AR
-              </button>
-              <button
-                type="button"
-                onClick={() => setLanguage('en')}
-                className={`px-2.5 py-1 text-xs font-bold rounded-full transition-all cursor-pointer ${
-                  language === 'en'
-                    ? 'bg-[#003366] text-white shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-                aria-pressed={language === 'en'}
-              >
-                EN
-              </button>
+              {/* Mockup Search Bar */}
+              <form onSubmit={handleSearchSubmit} className="relative w-full">
+                <div className="relative flex items-center">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder={
+                      language === 'ar'
+                        ? 'ابحث عن الأطباء، التخصصات، أو الخدمات...'
+                        : 'Search doctors, specialties, or medical services...'
+                    }
+                    className="w-full bg-slate-50 hover:bg-white focus:bg-white text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 rounded-full py-2 sm:py-2.5 ps-10 pe-4 border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all outline-hidden"
+                  />
+                  <div className="absolute start-3.5 text-slate-400 pointer-events-none">
+                    <Search size={17} />
+                  </div>
+                </div>
+              </form>
             </div>
 
-            {/* User Account / Sign In State */}
-            {user ? (
-              <div className="hidden sm:flex items-center gap-1.5">
+            {/* Left side in RTL: Language, Messages, Notifications, User Profile Chip */}
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+              {/* Language Switcher Pill */}
+              <button
+                onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-50 hover:bg-slate-100 text-xs font-bold text-slate-700 border border-slate-200 transition-colors cursor-pointer"
+                title={language === 'ar' ? 'Switch to English' : 'التحويل إلى العربية'}
+              >
+                <Globe size={15} className="text-slate-500" />
+                <span>{language === 'ar' ? 'العربية' : 'English'}</span>
+              </button>
+
+              {/* Direct Messages / Contact Mail Icon */}
+              <button
+                onClick={() => onNavigate('support')}
+                className="p-2 rounded-full text-slate-500 hover:text-slate-800 hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-colors cursor-pointer relative"
+                title={language === 'ar' ? 'الرسائل والدعم' : 'Messages & Support'}
+              >
+                <Mail size={18} />
+              </button>
+
+              {/* Notifications Bell with Red Badge count */}
+              <div className="relative" ref={notifRef}>
                 <button
-                  onClick={() => setShowAccountModal(true)}
-                  className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-xs font-bold text-[#003366] flex items-center gap-2 transition-colors cursor-pointer"
-                  title={language === 'ar' ? 'إدارة الحساب والإعدادات' : 'Account Management & Settings'}
+                  onClick={() => setShowNotificationsDropdown((prev) => !prev)}
+                  className="p-2 rounded-full text-slate-500 hover:text-slate-800 hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-colors cursor-pointer relative"
+                  title={language === 'ar' ? 'الإشعارات' : 'Notifications'}
                 >
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span className="max-w-[110px] truncate">{userProfile?.displayName || user.displayName || user.email?.split('@')[0]}</span>
+                  <Bell size={18} />
+                  <span className="absolute top-1 end-1 w-4 h-4 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white">
+                    1
+                  </span>
                 </button>
-                <button
-                  onClick={signOut}
-                  title={language === 'ar' ? 'تسجيل الخروج' : 'Sign Out'}
-                  className="p-2 rounded-xl text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
-                >
-                  <LogOut size={16} />
-                </button>
-              </div>
-            ) : (
-              <div className="hidden sm:flex items-center gap-1.5">
-                <button
-                  onClick={() => {
-                    setAuthModalInitialMode('signin');
-                    setAuthModalOpen(true);
-                  }}
-                  disabled={authLoading}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-colors cursor-pointer"
-                >
-                  <LogIn size={14} className="text-[#003366]" />
-                  <span>{language === 'ar' ? 'تسجيل الدخول' : 'Sign In'}</span>
-                </button>
-                <button
-                  onClick={() => {
-                    setAuthModalInitialMode('reset');
-                    setAuthModalOpen(true);
-                  }}
-                  title={language === 'ar' ? 'استعادة كلمة المرور' : 'Reset Password'}
-                  className="p-1.5 rounded-lg text-slate-600 hover:text-[#003366] hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-colors cursor-pointer"
-                >
-                  <KeyRound size={15} />
-                </button>
-                {unauthorizedDomainDetected && (
-                  <button
-                    onClick={() => setShowDomainHelp(true)}
-                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200 transition-colors cursor-pointer"
-                    title={language === 'ar' ? 'تصريح نطاق المعاينة في Firebase' : 'Authorize Preview Domain in Firebase'}
-                  >
-                    <span>{language === 'ar' ? 'تصريح النطاق' : 'Fix Domain'}</span>
-                  </button>
+
+                {/* Notifications Dropdown */}
+                {showNotificationsDropdown && (
+                  <div className="absolute top-full mt-2 end-0 w-80 bg-white rounded-2xl shadow-xl border border-slate-200 p-4 z-50 animate-in fade-in-50 zoom-in-95 duration-150">
+                    <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
+                      <span className="font-extrabold text-xs text-slate-900">
+                        {language === 'ar' ? 'الإشعارات الحديثة' : 'Recent Notifications'}
+                      </span>
+                      <span className="text-[10px] bg-red-50 text-red-600 font-bold px-1.5 py-0.5 rounded-md">
+                        1 جديد
+                      </span>
+                    </div>
+
+                    <div className="space-y-2.5">
+                      <div className="p-2.5 rounded-xl bg-blue-50/70 border border-blue-100 flex items-start gap-2.5">
+                        <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 mt-0.5">
+                          <Calendar size={14} />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-slate-900">
+                            {language === 'ar' ? 'تأكيد موعد العيادة' : 'Clinic Appointment Confirmed'}
+                          </p>
+                          <p className="text-[11px] text-slate-600 mt-0.5">
+                            {language === 'ar' ? 'تم تأكيد موعدك بنجاح مع د. سارة محمد.' : 'Your appointment with Dr. Sara Mohammed is confirmed.'}
+                          </p>
+                          <span className="text-[10px] text-slate-400 mt-1 block">
+                            {language === 'ar' ? 'منذ 5 دقائق' : '5 mins ago'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
-            )}
 
-            {/* Official Instagram Link (Desktop) */}
-            <a
-              href="https://www.instagram.com/m737iq"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold text-pink-700 bg-pink-50 hover:bg-pink-100 border border-pink-200 transition-colors shadow-xs"
-              title="حساب إنستغرام: @m737iq"
-            >
-              <Instagram size={14} className="text-pink-600" />
-              <span className="font-mono">@m737iq</span>
-            </a>
+              {/* User Profile Chip (Avatar + Name + Role + Dropdown) */}
+              <div className="relative" ref={accountRef}>
+                <button
+                  onClick={() => setShowAccountDropdown((prev) => !prev)}
+                  className="flex items-center gap-2.5 p-1 sm:ps-1 sm:pe-3 rounded-full hover:bg-slate-100 border border-slate-200/80 transition-colors cursor-pointer group"
+                >
+                  {/* User Avatar */}
+                  <div className="relative w-8 h-8 rounded-full overflow-hidden bg-gradient-to-tr from-blue-700 to-sky-400 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+                    {user?.photoURL ? (
+                      <img src={user.photoURL} alt={currentDisplayName} className="w-full h-full object-cover" />
+                    ) : (
+                      <User size={16} />
+                    )}
+                    <span className="absolute bottom-0 end-0 w-2 h-2 rounded-full bg-emerald-500 border border-white" />
+                  </div>
 
-            {/* Quick Portals CTA Button (Desktop) */}
-            <button
-              onClick={() => handleLinkClick('portals')}
-              className="hidden lg:inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold text-white brand-gradient-btn shadow-sm hover:shadow-md hover:brightness-105 active:scale-95 transition-all cursor-pointer whitespace-nowrap"
-            >
-              <span>{t.nav.getStarted}</span>
-              {isRTL ? <ArrowLeft size={14} /> : <ArrowRight size={14} />}
-            </button>
+                  {/* Name and Role Title */}
+                  <div className="hidden sm:flex flex-col text-start leading-tight">
+                    <span className="text-xs font-bold text-slate-900 truncate max-w-[110px]">
+                      {currentDisplayName}
+                    </span>
+                    <span className="text-[10px] font-medium text-slate-500 truncate">
+                      {currentRoleLabel}
+                    </span>
+                  </div>
 
-            {/* Mobile Hamburger Toggle */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-lg text-slate-700 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-[#003366]"
-              aria-expanded={mobileMenuOpen}
-              aria-label="Toggle navigation menu"
-            >
-              {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
-            </button>
+                  <ChevronDown size={14} className="text-slate-400 group-hover:text-slate-700 transition-transform" />
+                </button>
+
+                {/* Account Actions Dropdown */}
+                {showAccountDropdown && (
+                  <div className="absolute top-full mt-2 end-0 w-64 bg-white rounded-2xl shadow-xl border border-slate-200 p-2 z-50 animate-in fade-in-50 zoom-in-95 duration-150">
+                    <div className="p-3 bg-slate-50 rounded-xl mb-1.5 border border-slate-100">
+                      <div className="text-xs font-black text-slate-900 truncate">{currentDisplayName}</div>
+                      <div className="text-[11px] text-slate-500 truncate">{user?.email || (language === 'ar' ? 'مستخدم المنصة' : 'Platform User')}</div>
+                      <div className="mt-1.5 inline-block text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-100 text-blue-800">
+                        {currentRoleLabel}
+                      </div>
+                    </div>
+
+                    <div className="space-y-0.5 text-xs font-medium text-slate-700">
+                      {user ? (
+                        <>
+                          <button
+                            onClick={() => {
+                              setShowAccountDropdown(false);
+                              setShowAccountModal(true);
+                            }}
+                            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors text-start cursor-pointer"
+                          >
+                            <UserCheck size={15} className="text-blue-600" />
+                            <span>{language === 'ar' ? 'بيانات الحساب والاعتماد' : 'Account Details'}</span>
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              setShowAccountDropdown(false);
+                              signOut();
+                            }}
+                            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-red-50 text-red-600 transition-colors text-start cursor-pointer"
+                          >
+                            <LogOut size={15} />
+                            <span>{language === 'ar' ? 'تسجيل الخروج' : 'Sign Out'}</span>
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => {
+                              setShowAccountDropdown(false);
+                              setAuthModalInitialMode('signin');
+                              setAuthModalOpen(true);
+                            }}
+                            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-blue-50 text-blue-700 transition-colors text-start font-bold cursor-pointer"
+                          >
+                            <LogIn size={15} />
+                            <span>{language === 'ar' ? 'تسجيل الدخول / إنشاء حساب' : 'Sign In / Register'}</span>
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              setShowAccountDropdown(false);
+                              setAuthModalInitialMode('reset');
+                              setAuthModalOpen(true);
+                            }}
+                            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors text-start cursor-pointer"
+                          >
+                            <KeyRound size={15} />
+                            <span>{language === 'ar' ? 'استعادة كلمة المرور' : 'Reset Password'}</span>
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* Mobile Menu Drawer */}
-      {mobileMenuOpen && (
-        <div className="md:hidden bg-white border-b border-slate-200 px-4 pt-3 pb-6 shadow-xl animate-in slide-in-from-top-2 duration-200">
-          <nav className="flex flex-col gap-1.5">
-            {navItems.map((item) => {
-              const isActive = activeSection === item.id && !selectedPortalId;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => handleLinkClick(item.id)}
-                  className={`text-start px-3 py-2.5 text-base font-semibold rounded-lg transition-colors cursor-pointer ${
-                    isActive
-                      ? 'bg-slate-100 text-[#003366] font-bold'
-                      : 'text-slate-700 hover:bg-slate-50'
-                  }`}
-                >
-                  {item.label}
-                </button>
-              );
-            })}
-            <div className="pt-3 mt-2 border-t border-slate-100 flex flex-col gap-2">
-              {user ? (
-                <div className="flex flex-col gap-2 p-3 rounded-2xl bg-slate-50 border border-slate-200">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                      <span className="text-xs font-bold text-slate-900">{userProfile?.displayName || user.displayName || user.email}</span>
-                    </div>
-                    {isDemoMode && (
-                      <span className="text-[10px] bg-amber-200 text-amber-900 font-bold px-1.5 py-0.5 rounded">
-                        Demo
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-[11px] text-slate-500 font-mono">
-                    {userProfile?.role ? `الدور: ${userProfile.role}` : user.email}
-                  </div>
-                  <div className="flex items-center gap-2 pt-2 border-t border-slate-200">
-                    <button
-                      onClick={() => {
-                        setMobileMenuOpen(false);
-                        setShowAccountModal(true);
-                      }}
-                      className="flex-1 py-1.5 rounded-lg text-xs font-bold text-[#003366] bg-blue-50 hover:bg-blue-100 text-center cursor-pointer"
-                    >
-                      {language === 'ar' ? 'إدارة الحساب' : 'Manage Account'}
-                    </button>
-                    <button
-                      onClick={() => {
-                        setMobileMenuOpen(false);
-                        setShowSelfDeleteModal(true);
-                      }}
-                      className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 cursor-pointer flex items-center gap-1"
-                      title={language === 'ar' ? 'حذف الحساب نهائياً' : 'Delete Account'}
-                    >
-                      <Trash2 size={12} />
-                      <span>{language === 'ar' ? 'حذف الحساب' : 'Delete'}</span>
-                    </button>
-                    <button
-                      onClick={signOut}
-                      className="py-1.5 px-3 rounded-lg text-xs font-bold text-slate-600 bg-slate-200 hover:bg-slate-300 cursor-pointer"
-                    >
-                      {language === 'ar' ? 'خروج' : 'Logout'}
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  <button
-                    onClick={() => {
-                      setAuthModalInitialMode('signin');
-                      setAuthModalOpen(true);
-                      setMobileMenuOpen(false);
-                    }}
-                    className="w-full py-2.5 rounded-lg text-xs font-bold text-white bg-[#003366] hover:bg-[#002244] text-center cursor-pointer flex items-center justify-center gap-2"
-                  >
-                    <LogIn size={14} />
-                    <span>{language === 'ar' ? 'تسجيل الدخول / الدخول بالبريد' : 'Sign In'}</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setAuthModalInitialMode('reset');
-                      setAuthModalOpen(true);
-                      setMobileMenuOpen(false);
-                    }}
-                    className="w-full py-2 rounded-lg text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-center cursor-pointer flex items-center justify-center gap-1.5"
-                  >
-                    <KeyRound size={14} />
-                    <span>{language === 'ar' ? 'استعادة كلمة المرور' : 'Reset Password'}</span>
-                  </button>
-                  {unauthorizedDomainDetected && (
-                    <button
-                      onClick={() => {
-                        setShowDomainHelp(true);
-                        setMobileMenuOpen(false);
-                      }}
-                      className="w-full py-2 rounded-lg text-xs font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-300 text-center cursor-pointer"
-                    >
-                      {language === 'ar' ? 'تصريح نطاق المعاينة في Firebase' : 'Authorize Domain in Firebase'}
-                    </button>
-                  )}
-                </div>
-              )}
-              <a
-                href="https://www.instagram.com/m737iq"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full py-2.5 rounded-lg text-xs font-bold text-pink-700 bg-pink-50 hover:bg-pink-100 border border-pink-200 text-center cursor-pointer flex items-center justify-center gap-2 transition-colors"
-              >
-                <Instagram size={15} className="text-pink-600" />
-                <span>{language === 'ar' ? 'إنستغرام المنصة: @m737iq' : 'Instagram: @m737iq'}</span>
-              </a>
-
-              <button
-                onClick={() => handleLinkClick('portals')}
-                className="w-full py-2.5 rounded-lg text-sm font-bold text-white brand-gradient-btn text-center shadow-sm"
-              >
-                {t.nav.getStarted}
-              </button>
-            </div>
-          </nav>
-        </div>
-      )}
-
-      {/* Unified Authentication & Password Reset Modal */}
+      {/* Auth Modal */}
       <AuthModal
         isOpen={authModalOpen}
         initialMode={authModalInitialMode}
         onClose={() => setAuthModalOpen(false)}
       />
 
-      {/* ==================================================== */}
-      {/* MODAL: USER ACCOUNT MANAGEMENT */}
-      {/* ==================================================== */}
+      {/* Account Management Modal */}
       {showAccountModal && user && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-5 animate-in zoom-in-95 duration-150">
@@ -441,141 +400,70 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             </div>
 
-            {/* Quick Actions */}
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowAccountModal(false);
-                  const roleToPortalMap: Record<string, string> = {
-                    patient: 'patient',
-                    doctor: 'doctor',
-                    pharmacy: 'pharmacy',
-                    laboratory: 'laboratory',
-                    radiology_center: 'radiology',
-                    wholesaler: 'wholesaler',
-                    secretary: 'secretary',
-                    super_admin: 'super_admin',
-                  };
-                  const portalTarget = (userProfile?.role && roleToPortalMap[userProfile.role]) || 'portals';
-                  handleLinkClick(portalTarget);
-                }}
-                className="flex-1 py-2.5 rounded-xl bg-[#003366] hover:bg-[#002244] text-white font-bold text-xs transition-colors cursor-pointer text-center"
-              >
-                {language === 'ar' ? 'فتح لوحة التشغيل / البوابة' : 'Open Workspace'}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowAccountModal(false);
-                  signOut();
-                }}
-                className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer flex items-center gap-1.5"
-              >
-                <LogOut size={13} />
-                <span>{language === 'ar' ? 'خروج' : 'Logout'}</span>
-              </button>
-            </div>
-
-            {/* Danger Zone: Permanent Account Deletion */}
-            <div className="p-4 rounded-2xl bg-red-50/70 border border-red-200 space-y-2">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-red-900">
-                <Trash2 size={13} className="text-red-600" />
-                <span>{language === 'ar' ? 'منطقة الخطر: حذف الحساب نهائياً' : 'Danger Zone: Delete Account'}</span>
-              </div>
-              <p className="text-[11px] text-slate-600 leading-relaxed">
-                {language === 'ar'
-                  ? 'سيتم حذف هويتك وكافة سجلاتك الرقمية والمهنية نهائياً من قاعدة بيانات Firestore.'
-                  : 'Permanently remove your account and all associated records from Firestore.'}
-              </p>
+            <div className="flex items-center justify-between pt-2">
               <button
                 type="button"
                 onClick={() => {
                   setShowAccountModal(false);
                   setShowSelfDeleteModal(true);
                 }}
-                className="w-full py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
+                className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1.5 cursor-pointer"
               >
                 <Trash2 size={13} />
-                <span>{language === 'ar' ? 'حذف الحساب نهائياً' : 'Delete Account Permanently'}</span>
+                <span>{language === 'ar' ? 'حذف الحساب نهائياً' : 'Delete Account'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowAccountModal(false)}
+                className="px-5 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                {language === 'ar' ? 'إغلاق' : 'Close'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ==================================================== */}
-      {/* MODAL: SELF-SERVICE PERMANENT ACCOUNT DELETION */}
-      {/* ==================================================== */}
-      {showSelfDeleteModal && (
+      {/* Delete Own Account Confirmation Modal */}
+      {showSelfDeleteModal && user && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-red-200 space-y-4 animate-in zoom-in-95 duration-150">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center shrink-0">
-                <Trash2 size={24} />
-              </div>
-              <div>
-                <h3 className="text-base font-black text-slate-900">
-                  {language === 'ar' ? 'تأكيد حذف الحساب نهائياً' : 'Confirm Permanent Deletion'}
-                </h3>
-                <span className="text-xs text-red-600 font-bold">
-                  {language === 'ar' ? 'تحذير حاسم: لا يمكن التراجع عن هذا الإجراء' : 'Warning: Irreversible action'}
-                </span>
-              </div>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-red-50/80 border border-red-200 text-xs text-slate-700 space-y-2">
-              <p className="font-semibold text-red-950">
-                {language === 'ar'
-                  ? `هل أنت متأكد تماماً من رغبتك بحذف حسابك (${userProfile?.displayName || user?.email}) نهائياً من منصة M737 الطبية؟`
-                  : `Are you sure you want to permanently delete your account (${userProfile?.displayName || user?.email})?`}
-              </p>
-              <p className="text-slate-600 leading-relaxed">
-                {language === 'ar'
-                  ? 'سيتم حذف هويتك الرقمية، ملفك وسجلاتك من قاعدة بيانات Firestore وإلغاء تسجيل الدخول نهائياً.'
-                  : 'Your account and clinical profiles will be permanently purged.'}
-              </p>
-            </div>
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-red-200 space-y-4">
+            <h3 className="text-lg font-black text-red-600">
+              {language === 'ar' ? 'تأكيد حذف الحساب نهائياً' : 'Confirm Account Deletion'}
+            </h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              {language === 'ar'
+                ? 'تحذير: سيتم حذف بيانات حسابك وجميع السجلات والملفات الخاصة بك بشكل دائم لا يمكن التراجع عنه.'
+                : 'Warning: This action will permanently erase your user profile and all associated data.'}
+            </p>
 
             {selfDeleteError && (
-              <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 font-semibold">
+              <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700">
                 {selfDeleteError}
               </div>
             )}
 
-            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
               <button
                 type="button"
-                disabled={isDeletingOwnAccount}
-                onClick={() => {
-                  setShowSelfDeleteModal(false);
-                  setSelfDeleteError(null);
-                }}
-                className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+                onClick={() => setShowSelfDeleteModal(false)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
               >
-                {language === 'ar' ? 'إلغاء والاحتفاظ بالحساب' : 'Cancel & Keep Account'}
+                {language === 'ar' ? 'إلغاء' : 'Cancel'}
               </button>
               <button
                 type="button"
-                disabled={isDeletingOwnAccount}
                 onClick={handleConfirmSelfDelete}
-                className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs transition-colors cursor-pointer flex items-center gap-2 shadow-md hover:shadow-lg disabled:opacity-50"
+                disabled={isDeletingOwnAccount}
+                className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 cursor-pointer"
               >
-                {isDeletingOwnAccount ? (
-                  <RefreshCw size={14} className="animate-spin" />
-                ) : (
-                  <Trash2 size={14} />
-                )}
-                <span>
-                  {isDeletingOwnAccount
-                    ? (language === 'ar' ? 'جارٍ حذف الحساب...' : 'Deleting...')
-                    : (language === 'ar' ? 'نعم، حذف الحساب نهائياً' : 'Delete Account Now')}
-                </span>
+                {isDeletingOwnAccount ? (language === 'ar' ? 'جاري الحذف...' : 'Deleting...') : (language === 'ar' ? 'نعم، احذف الحساب' : 'Yes, Delete')}
               </button>
             </div>
           </div>
         </div>
       )}
-    </header>
+    </>
   );
 };

@@ -21,6 +21,7 @@ import {
 import { auth, db, googleProvider, validateFirestoreConnection, handleFirestoreError, OperationType } from '../lib/firebase';
 import { UserProfile, UserRole, AccountStatus } from '../types';
 import firebaseConfig from '@/firebase-applet-config.json';
+import { recordRealMetricEvent } from '../lib/platformMetrics';
 
 interface AuthContextType {
   user: User | null;
@@ -61,7 +62,7 @@ interface AuthContextType {
 }
 
 const SUPER_ADMIN_EMAIL = 'bcgmoc@gmail.com';
-const SUPER_ADMIN_EMAILS = ['bcgmoc@gmail.com', 'mustfa200633@gmail.com'];
+const SUPER_ADMIN_EMAILS = ['bcgmoc@gmail.com', 'mustfa200633@gmail.com', 'mmrym2186@gmail.com'];
 const DEMO_STORAGE_KEY = 'm737_demo_role_v1';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -318,6 +319,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setUserProfile(profile);
       setNeedsOnboarding(false);
+      recordRealMetricEvent('user');
       try {
         localStorage.removeItem(DEMO_STORAGE_KEY);
       } catch {}
@@ -437,6 +439,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await setDoc(doc(db, 'users', user.uid), profile);
       setUserProfile(profile);
       setNeedsOnboarding(false);
+      recordRealMetricEvent('user');
     } catch (err: unknown) {
       handleFirestoreError(err, OperationType.CREATE, `users/${user.uid}`);
     } finally {
@@ -474,6 +477,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await setDoc(doc(db, 'users', user.uid), profile);
       setUserProfile(profile);
       setNeedsOnboarding(false);
+      recordRealMetricEvent('user');
     } catch (err: unknown) {
       handleFirestoreError(err, OperationType.CREATE, `users/${user.uid}`);
     } finally {

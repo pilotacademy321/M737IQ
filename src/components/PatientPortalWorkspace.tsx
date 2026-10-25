@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { db, handleFirestoreError, OperationType, sanitizeForFirestore } from '../lib/firebase';
+import { recordRealMetricEvent } from '../lib/platformMetrics';
 import { 
   UserProfile,
   PatientProfile, 
@@ -1198,6 +1199,7 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
     if (!isDemoMode) {
       try {
         await setDoc(doc(db, 'appointments', aptId), sanitizeForFirestore(newApt));
+        recordRealMetricEvent('appointment');
         const notifId = `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
         await setDoc(doc(db, 'notifications', notifId), sanitizeForFirestore({
           id: notifId,
@@ -1287,6 +1289,7 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
     if (!isDemoMode) {
       try {
         await setDoc(doc(db, 'pharmacy_orders', ordId), sanitizeForFirestore(newOrder));
+        recordRealMetricEvent('prescription');
         const notifId = `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
         await setDoc(doc(db, 'notifications', notifId), sanitizeForFirestore({
           id: notifId,
@@ -1347,6 +1350,7 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
     if (!isDemoMode) {
       try {
         await setDoc(doc(db, 'lab_bookings', bookId), sanitizeForFirestore(newBooking));
+        recordRealMetricEvent('test');
       } catch (err: unknown) {
         console.warn('Book lab test firestore warning:', err);
       }
@@ -1393,6 +1397,7 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
     if (!isDemoMode) {
       try {
         await setDoc(doc(db, 'radiology_bookings', bookId), sanitizeForFirestore(newScanBooking));
+        recordRealMetricEvent('test');
       } catch (err: unknown) {
         console.warn('Book radiology scan firestore warning:', err);
       }
