@@ -686,7 +686,7 @@ export interface PatientProfile {
 export interface DoctorPatientVisit {
   visitId: string;
   date: string;
-  visitType: 'consultation' | 'followup' | 'urgent' | 'routine';
+  visitType: 'consultation' | 'followup' | 'urgent' | 'routine' | 'emergency';
   chiefComplaint: string;
   clinicalDiagnosis: string;
   doctorPrivateNotes: string;

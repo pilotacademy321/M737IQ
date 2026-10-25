@@ -16,7 +16,8 @@ export type AuditCategory =
   | 'accreditation'
   | 'profiles'
   | 'security'
-  | 'patient_records';
+  | 'patient_records'
+  | 'medical_records';
 
 export type AuditActionType =
   | 'prescription_created'
