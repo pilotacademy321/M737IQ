@@ -17,7 +17,10 @@ import {
   LabOrderStatus,
   RadiologyOrder,
   RadiologyOrderStatus,
-  RadiologyModality
+  RadiologyModality,
+  PatientProfile,
+  DoctorPatientChart,
+  DoctorPatientVisit
 } from '../types';
 import { SmartMedicineSearch, SearchMedicineResult } from './SmartMedicineSearch';
 import { PrescriptionPdfModal } from './PrescriptionPdfModal';
@@ -72,7 +75,15 @@ import {
   Layers,
   Lock,
   ShieldAlert,
-  Sparkles
+  Sparkles,
+  User,
+  Copy,
+  HeartPulse,
+  Thermometer,
+  Droplets,
+  FolderLock,
+  BadgeAlert,
+  AlertTriangle
 } from 'lucide-react';
 
 interface DoctorPortalWorkspaceProps {
@@ -121,6 +132,41 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
     details: '',
     sourceFacility: '',
     doctorNotes: '',
+  });
+
+  // ==============================================================
+  // PATIENT MEDICAL ID SEARCH & CONFIDENTIAL CLINICAL CHARTS STATE
+  // ==============================================================
+  const [patientSearchId, setPatientSearchId] = useState('');
+  const [isSearchingPatient, setIsSearchingPatient] = useState(false);
+  const [patientSearchFeedback, setPatientSearchFeedback] = useState<{
+    type: 'success' | 'error' | 'not_found';
+    message: string;
+  } | null>(null);
+
+  const [activePatientProfile, setActivePatientProfile] = useState<PatientProfile | null>(null);
+  const [activeDoctorChart, setActiveDoctorChart] = useState<DoctorPatientChart | null>(null);
+  const [doctorChartsList, setDoctorChartsList] = useState<DoctorPatientChart[]>([]);
+  const [isLoadingChart, setIsLoadingChart] = useState(false);
+  const [isSavingChartNotes, setIsSavingChartNotes] = useState(false);
+  const [chartNotesDraft, setChartNotesDraft] = useState('');
+  const [chartSummaryDiagDraft, setChartSummaryDiagDraft] = useState('');
+  const [recordViewMode, setRecordViewMode] = useState<'chart' | 'my_patients' | 'all_records'>('chart');
+
+  // New Visit Modal for Patient Chart
+  const [showNewVisitModal, setShowNewVisitModal] = useState(false);
+  const [newVisitData, setNewVisitData] = useState({
+    date: new Date().toISOString().split('T')[0],
+    visitType: 'consultation' as 'consultation' | 'followup' | 'urgent' | 'routine',
+    chiefComplaint: '',
+    clinicalDiagnosis: '',
+    doctorPrivateNotes: '',
+    bp: '120/80',
+    heartRate: '75',
+    temperature: '37.0',
+    bloodSugar: '100',
+    weightKg: '70',
+    treatmentPlan: '',
   });
 
   // Electronic Prescriptions State
@@ -389,6 +435,106 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
         setMedicalRecords(sampleRecords);
       } else {
         setMedicalRecords(recList);
+      }
+
+      // 3b. Fetch Confidential Doctor-Patient Charts for this Doctor
+      try {
+        const chartsQuery = query(
+          collection(db, 'doctor_patient_charts'),
+          where('doctorId', '==', user.uid)
+        );
+        const chartsSnap = await getDocs(chartsQuery);
+        const chartsList = chartsSnap.docs.map(d => ({ id: d.id, ...d.data() } as DoctorPatientChart));
+        chartsList.sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime());
+
+        if (isDemoMode && chartsList.length === 0) {
+          const sampleChart: DoctorPatientChart = {
+            id: `chart_${user.uid}_demo_patient_sara`,
+            doctorId: user.uid,
+            doctorName: doctorProfile?.fullName || userProfile?.displayName || 'د. أحمد الرافدين',
+            doctorSpecialty: doctorProfile?.specialty || 'استشاري أمراض باطنية وقلبية',
+            patientId: 'demo_patient_sara',
+            patientMedicalId: 'M737-PAT-SARA96',
+            patientName: 'سارة حيدر العراقي',
+            patientPhone: '07809988776',
+            patientGender: 'female',
+            patientBloodType: 'O+',
+            dateOfBirth: '1996-04-12',
+            emergencyContactName: 'حيدر العراقي (الأب)',
+            emergencyContactPhone: '07801122334',
+            allergies: ['البنسلين (Penicillin Allergy)'],
+            chronicDiseases: ['ارتفاع ضغط الدم الخفيف (Stage 1 HTN)'],
+            summaryDiagnosis: 'ارتفاع ضغط الدم الشرياني الأولي مع متابعة الدهون وضبط الحمية',
+            doctorPrivateNotes: 'المريضة منتظمة على دواء كونكور 5 ملغ صباحاً. الاستجابة جيدة مع انخفاض معدل النبض واستقرار الضغط عند 120/75 مم زئبق. يرجى الاستمرار على فحص وظائف الكلى دورياً كل 6 أشهر.',
+            firstVisitDate: '2026-02-10T10:00:00Z',
+            lastVisitDate: '2026-03-18T11:30:00Z',
+            status: 'active',
+            visits: [
+              {
+                visitId: 'vst_demo_1',
+                date: '2026-03-18',
+                visitType: 'followup',
+                chiefComplaint: 'مراجعة دورية لضغط الدم وفحص وظائف الكلى والدهون',
+                clinicalDiagnosis: 'ضغط دم مسيطر عليه جيداً (Controlled Hypertension)',
+                doctorPrivateNotes: 'ضغط الدم 120/75 مم زئبق. أصوات القلب طبيعية، لا توجد وذمة بالأطراف السفلية.',
+                vitals: {
+                  bloodPressure: '120/75',
+                  heartRate: '72',
+                  temperature: '36.8',
+                  bloodSugar: '95',
+                  weightKg: '62',
+                },
+                treatmentPlan: 'الاستمرار على كونكور 5 ملغ حبة صباحاً، تقليل ملح الطعام، مشي 30 دقيقة يومياً.',
+                createdAt: '2026-03-18T11:30:00Z',
+              },
+              {
+                visitId: 'vst_demo_2',
+                date: '2026-02-10',
+                visitType: 'consultation',
+                chiefComplaint: 'صداع خفيف في مؤخرة الرأس عند الاستيقاظ',
+                clinicalDiagnosis: 'ارتفاع ضغط الدم الخفيف الأولي (New onset stage 1 HTN)',
+                doctorPrivateNotes: 'ضغط الدم أثناء الزيارة الأولى 145/95 مم زئبق. لا توجد قصة عائلية لأمراض كلوية.',
+                vitals: {
+                  bloodPressure: '145/95',
+                  heartRate: '84',
+                  temperature: '37.0',
+                  bloodSugar: '102',
+                  weightKg: '63',
+                },
+                treatmentPlan: 'بدء كونكور 5 ملغ، طلب تخطيط قلب وفحوصات كلى وتحليل إدرار عام.',
+                createdAt: '2026-02-10T10:00:00Z',
+              }
+            ],
+            createdAt: '2026-02-10T10:00:00Z',
+            updatedAt: '2026-03-18T11:30:00Z',
+          };
+          setDoctorChartsList([sampleChart]);
+          setActiveDoctorChart(sampleChart);
+          setActivePatientProfile({
+            patientId: sampleChart.patientId,
+            fullName: sampleChart.patientName,
+            medicalId: sampleChart.patientMedicalId,
+            phone: sampleChart.patientPhone,
+            governorate: 'بغداد (Baghdad)',
+            address: 'العراق، بغداد، المنصور',
+            bloodType: 'O+',
+            emergencyContactName: sampleChart.emergencyContactName,
+            emergencyContactPhone: sampleChart.emergencyContactPhone,
+            allergies: sampleChart.allergies,
+            chronicDiseases: sampleChart.chronicDiseases,
+            dateOfBirth: sampleChart.dateOfBirth,
+            gender: sampleChart.patientGender,
+            createdAt: sampleChart.createdAt,
+            updatedAt: sampleChart.updatedAt,
+          });
+        } else {
+          setDoctorChartsList(chartsList);
+          if (chartsList.length > 0) {
+            setActiveDoctorChart(chartsList[0]);
+          }
+        }
+      } catch (err) {
+        console.warn('Error fetching doctor patient charts:', err);
       }
 
       // 4. Fetch Secretary Delegations
@@ -1492,6 +1638,435 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
     }
   };
 
+  // Sync draft notes when active doctor chart changes
+  useEffect(() => {
+    if (activeDoctorChart) {
+      setChartNotesDraft(activeDoctorChart.doctorPrivateNotes || '');
+      setChartSummaryDiagDraft(activeDoctorChart.summaryDiagnosis || '');
+    }
+  }, [activeDoctorChart]);
+
+  // ==============================================================
+  // SEARCH PATIENT BY MEDICAL ID
+  // ==============================================================
+  const handleSearchPatientByMedicalId = async (searchQueryId?: string) => {
+    const rawId = (searchQueryId !== undefined ? searchQueryId : patientSearchId).trim();
+    if (!rawId) {
+      setPatientSearchFeedback({
+        type: 'error',
+        message: language === 'ar' ? 'يرجى إدخال المعرف الطبي للمريض للبحث' : 'Please enter a Patient Medical ID'
+      });
+      return;
+    }
+
+    setIsSearchingPatient(true);
+    setPatientSearchFeedback(null);
+
+    try {
+      const cleanUpper = rawId.toUpperCase();
+      let foundProfile: PatientProfile | null = null;
+
+      if (!isDemoMode) {
+        // Query patient_profiles where medicalId equals cleanUpper or rawId
+        const q1 = query(collection(db, 'patient_profiles'), where('medicalId', '==', cleanUpper));
+        let snap = await getDocs(q1);
+
+        if (snap.empty && !cleanUpper.startsWith('M737-PAT-')) {
+          const qPrefix = query(collection(db, 'patient_profiles'), where('medicalId', '==', `M737-PAT-${cleanUpper}`));
+          snap = await getDocs(qPrefix);
+        }
+
+        if (snap.empty) {
+          const qCase = query(collection(db, 'patient_profiles'), where('medicalId', '==', rawId));
+          snap = await getDocs(qCase);
+        }
+
+        if (!snap.empty) {
+          foundProfile = { patientId: snap.docs[0].id, ...snap.docs[0].data() } as PatientProfile;
+        } else {
+          // Check if searched by direct patientId doc key
+          try {
+            const directSnap = await getDoc(doc(db, 'patient_profiles', rawId));
+            if (directSnap.exists()) {
+              foundProfile = { patientId: directSnap.id, ...directSnap.data() } as PatientProfile;
+            }
+          } catch {
+            // direct get failed or disallowed
+          }
+        }
+      }
+
+      // Check existing patient charts or demo fallback
+      if (!foundProfile) {
+        const inCharts = doctorChartsList.find(c => 
+          c.patientMedicalId.toUpperCase() === cleanUpper || 
+          c.patientMedicalId.toUpperCase() === `M737-PAT-${cleanUpper}` ||
+          c.patientId === rawId
+        );
+        if (inCharts) {
+          foundProfile = {
+            patientId: inCharts.patientId,
+            fullName: inCharts.patientName,
+            medicalId: inCharts.patientMedicalId,
+            phone: inCharts.patientPhone,
+            governorate: 'بغداد (Baghdad)',
+            address: 'العراق',
+            bloodType: (inCharts.patientBloodType as any) || 'O+',
+            gender: inCharts.patientGender || 'female',
+            dateOfBirth: inCharts.dateOfBirth || '1996-04-12',
+            emergencyContactName: inCharts.emergencyContactName,
+            emergencyContactPhone: inCharts.emergencyContactPhone,
+            allergies: inCharts.allergies,
+            chronicDiseases: inCharts.chronicDiseases,
+            createdAt: inCharts.createdAt,
+            updatedAt: inCharts.updatedAt,
+          };
+        }
+      }
+
+      // Predefined verified patient demo lookup
+      if (!foundProfile && (isDemoMode || cleanUpper === 'M737-PAT-SARA96' || cleanUpper === 'SARA96' || cleanUpper === 'DEMO_PATIENT_SARA')) {
+        foundProfile = {
+          patientId: 'demo_patient_sara',
+          fullName: 'سارة حيدر العراقي',
+          medicalId: 'M737-PAT-SARA96',
+          email: 'sara.iraq@m737.iq',
+          phone: '07809988776',
+          governorate: 'بغداد (Baghdad)',
+          address: 'العراق، بغداد، المنصور، حي دراغ',
+          bloodType: 'O+',
+          gender: 'female',
+          dateOfBirth: '1996-04-12',
+          emergencyContactName: 'حيدر العراقي (الأب)',
+          emergencyContactPhone: '07801122334',
+          allergies: ['البنسلين (Penicillin Allergy)', 'حبوب اللقاح الموسمية'],
+          chronicDiseases: ['ارتفاع ضغط الدم الخفيف (Stage 1 HTN)'],
+          currentMedications: ['Concor 5mg', 'Vitamin D 50,000 IU'],
+          createdAt: '2026-01-15T10:00:00Z',
+          updatedAt: '2026-03-20T12:00:00Z',
+        };
+      }
+
+      if (!foundProfile) {
+        setPatientSearchFeedback({
+          type: 'not_found',
+          message: language === 'ar'
+            ? `لم يتم العثور على أي مريض مسجل بالمعرف الطبي "${rawId}". يرجى التأكد من صحة الـ ID المطلوب.`
+            : `No registered patient found with Medical ID "${rawId}". Please verify the ID.`
+        });
+        return;
+      }
+
+      // Patient found
+      setActivePatientProfile(foundProfile);
+      setPatientSearchFeedback({
+        type: 'success',
+        message: language === 'ar'
+          ? `تم العثور على المريض: ${foundProfile.fullName} (${foundProfile.medicalId})`
+          : `Patient found: ${foundProfile.fullName} (${foundProfile.medicalId})`
+      });
+
+      // Load or auto-create doctor's confidential chart for this patient
+      await loadOrCreateDoctorChart(foundProfile);
+
+      // Switch to records tab and chart subview
+      setActiveTab('records');
+      setRecordViewMode('chart');
+
+      // Audit search access
+      await logAuditEvent({
+        action: 'patient_search_by_medical_id',
+        category: 'medical_records',
+        actorUid: user?.uid || doctorProfile?.doctorId || 'doctor',
+        actorName: doctorProfile?.fullName || 'الطبيب',
+        actorRole: 'doctor',
+        resourceId: foundProfile.patientId,
+        resourceNumber: foundProfile.medicalId,
+        status: 'authorized',
+        details: `بحث الطبيب عن المريض بواسطة المعرف الطبي ${foundProfile.medicalId}.`
+      });
+
+    } catch (err: unknown) {
+      console.error('Error searching patient by medical ID:', err);
+      setPatientSearchFeedback({
+        type: 'error',
+        message: language === 'ar' ? 'فشل البحث، يرجى المحاولة لاحقاً' : 'Search failed, please retry'
+      });
+    } finally {
+      setIsSearchingPatient(false);
+    }
+  };
+
+  // ==============================================================
+  // LOAD OR AUTO-CREATE DOCTOR-PATIENT CHART
+  // ==============================================================
+  const loadOrCreateDoctorChart = async (patient: PatientProfile) => {
+    if (!user) return;
+    setIsLoadingChart(true);
+    try {
+      const chartId = `chart_${user.uid}_${patient.patientId}`;
+      const chartRef = doc(db, 'doctor_patient_charts', chartId);
+
+      let existingChart: DoctorPatientChart | null = null;
+      if (!isDemoMode) {
+        try {
+          const snap = await getDoc(chartRef);
+          if (snap.exists()) {
+            existingChart = { id: snap.id, ...snap.data() } as DoctorPatientChart;
+          }
+        } catch (e) {
+          console.warn('Error reading chart from firestore:', e);
+        }
+      }
+
+      if (!existingChart) {
+        const local = doctorChartsList.find(c => c.id === chartId || (c.patientId === patient.patientId && c.doctorId === user.uid));
+        if (local) existingChart = local;
+      }
+
+      if (existingChart) {
+        setActiveDoctorChart(existingChart);
+        setChartNotesDraft(existingChart.doctorPrivateNotes || '');
+        setChartSummaryDiagDraft(existingChart.summaryDiagnosis || '');
+      } else {
+        // Auto-create new dedicated chart for this doctor and patient relationship
+        const now = new Date().toISOString();
+        const newChart: DoctorPatientChart = {
+          id: chartId,
+          doctorId: user.uid,
+          doctorName: doctorProfile?.fullName || userProfile?.displayName || 'الطبيب المعالج',
+          doctorSpecialty: doctorProfile?.specialty || '',
+          patientId: patient.patientId,
+          patientMedicalId: patient.medicalId,
+          patientName: patient.fullName,
+          patientPhone: patient.phone,
+          patientGender: patient.gender,
+          patientBloodType: patient.bloodType,
+          dateOfBirth: patient.dateOfBirth,
+          emergencyContactName: patient.emergencyContactName,
+          emergencyContactPhone: patient.emergencyContactPhone,
+          allergies: patient.allergies || [],
+          chronicDiseases: patient.chronicDiseases || [],
+          summaryDiagnosis: '',
+          doctorPrivateNotes: '',
+          firstVisitDate: now,
+          lastVisitDate: now,
+          visits: [],
+          status: 'active',
+          createdAt: now,
+          updatedAt: now,
+        };
+
+        if (!isDemoMode) {
+          try {
+            await setDoc(chartRef, newChart);
+          } catch (err) {
+            console.error('Failed to create new doctor chart in Firestore:', err);
+          }
+        }
+
+        setActiveDoctorChart(newChart);
+        setChartNotesDraft('');
+        setChartSummaryDiagDraft('');
+        setDoctorChartsList(prev => [newChart, ...prev.filter(c => c.id !== newChart.id)]);
+
+        showToast(language === 'ar'
+          ? `تم فتح وتوثيق ملف متابعة سريري جديد خاص بعيادتك للمريض ${patient.fullName}`
+          : `Created new independent clinical chart for ${patient.fullName}`
+        );
+      }
+    } catch (err: unknown) {
+      console.error('Error in loadOrCreateDoctorChart:', err);
+    } finally {
+      setIsLoadingChart(false);
+    }
+  };
+
+  // ==============================================================
+  // SAVE DOCTOR CONFIDENTIAL NOTES
+  // ==============================================================
+  const handleSaveDoctorPrivateNotes = async () => {
+    if (!user || !activeDoctorChart) return;
+    setIsSavingChartNotes(true);
+    try {
+      const chartId = activeDoctorChart.id;
+      const now = new Date().toISOString();
+      const updatedChart: DoctorPatientChart = {
+        ...activeDoctorChart,
+        doctorPrivateNotes: chartNotesDraft.trim(),
+        summaryDiagnosis: chartSummaryDiagDraft.trim(),
+        updatedAt: now,
+      };
+
+      if (!isDemoMode) {
+        await updateDoc(doc(db, 'doctor_patient_charts', chartId), {
+          doctorPrivateNotes: chartNotesDraft.trim(),
+          summaryDiagnosis: chartSummaryDiagDraft.trim(),
+          updatedAt: now,
+        });
+      }
+
+      setActiveDoctorChart(updatedChart);
+      setDoctorChartsList(prev => prev.map(c => c.id === chartId ? updatedChart : c));
+      showToast(language === 'ar' ? 'تم حفظ الملاحظات السريرية والتشخيص بنجاح' : 'Confidential clinical notes saved');
+
+      await logAuditEvent({
+        action: 'doctor_chart_notes_updated',
+        category: 'medical_records',
+        actorUid: user.uid,
+        actorName: doctorProfile?.fullName || 'الطبيب',
+        actorRole: 'doctor',
+        resourceId: chartId,
+        resourceNumber: activeDoctorChart.patientMedicalId,
+        status: 'updated',
+        details: `تحديث الملاحظات السريرية المستقلة للمريض ${activeDoctorChart.patientName}.`
+      });
+    } catch (err: unknown) {
+      handleFirestoreError(err, OperationType.UPDATE, `doctor_patient_charts/${activeDoctorChart.id}`);
+    } finally {
+      setIsSavingChartNotes(false);
+    }
+  };
+
+  // ==============================================================
+  // ADD VISIT TO INDEPENDENT CHART
+  // ==============================================================
+  const handleAddVisitToChart = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !activeDoctorChart) return;
+
+    try {
+      const visitId = `vst_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+      const now = new Date().toISOString();
+
+      const newVisit: DoctorPatientVisit = {
+        visitId,
+        date: newVisitData.date || now.split('T')[0],
+        visitType: newVisitData.visitType,
+        chiefComplaint: newVisitData.chiefComplaint.trim() || 'معاينة عيادة',
+        clinicalDiagnosis: newVisitData.clinicalDiagnosis.trim(),
+        doctorPrivateNotes: newVisitData.doctorPrivateNotes.trim(),
+        vitals: {
+          bloodPressure: newVisitData.bp.trim(),
+          heartRate: newVisitData.heartRate.trim(),
+          temperature: newVisitData.temperature.trim(),
+          bloodSugar: newVisitData.bloodSugar.trim(),
+          weightKg: newVisitData.weightKg.trim(),
+        },
+        treatmentPlan: newVisitData.treatmentPlan.trim(),
+        createdAt: now,
+      };
+
+      const updatedVisits = [newVisit, ...activeDoctorChart.visits];
+      const updatedChart: DoctorPatientChart = {
+        ...activeDoctorChart,
+        visits: updatedVisits,
+        lastVisitDate: newVisit.date,
+        summaryDiagnosis: newVisit.clinicalDiagnosis || activeDoctorChart.summaryDiagnosis,
+        updatedAt: now,
+      };
+
+      if (!isDemoMode) {
+        await updateDoc(doc(db, 'doctor_patient_charts', activeDoctorChart.id), {
+          visits: updatedVisits,
+          lastVisitDate: newVisit.date,
+          summaryDiagnosis: updatedChart.summaryDiagnosis,
+          updatedAt: now,
+        });
+      }
+
+      setActiveDoctorChart(updatedChart);
+      setDoctorChartsList(prev => prev.map(c => c.id === activeDoctorChart.id ? updatedChart : c));
+      setShowNewVisitModal(false);
+
+      // Reset form
+      setNewVisitData({
+        date: new Date().toISOString().split('T')[0],
+        visitType: 'consultation',
+        chiefComplaint: '',
+        clinicalDiagnosis: '',
+        doctorPrivateNotes: '',
+        bp: '120/80',
+        heartRate: '75',
+        temperature: '37.0',
+        bloodSugar: '100',
+        weightKg: '70',
+        treatmentPlan: '',
+      });
+
+      showToast(language === 'ar' ? 'تم توثيق الزيارة السريرية في سجل المريض بنجاح' : 'Visit documented successfully');
+      recordRealMetricEvent('appointment');
+
+      await logAuditEvent({
+        action: 'clinic_visit_logged',
+        category: 'medical_records',
+        actorUid: user.uid,
+        actorName: doctorProfile?.fullName || 'الطبيب',
+        actorRole: 'doctor',
+        resourceId: visitId,
+        resourceNumber: activeDoctorChart.patientMedicalId,
+        status: 'created',
+        details: `توثيق زيارة سريرية (${newVisit.visitType}) للمريض ${activeDoctorChart.patientName}.`
+      });
+
+    } catch (err: unknown) {
+      handleFirestoreError(err, OperationType.UPDATE, `doctor_patient_charts/${activeDoctorChart.id}`);
+    }
+  };
+
+  // Open existing chart from follow-up list
+  const handleOpenChartFromList = (chart: DoctorPatientChart) => {
+    setActiveDoctorChart(chart);
+    setChartNotesDraft(chart.doctorPrivateNotes || '');
+    setChartSummaryDiagDraft(chart.summaryDiagnosis || '');
+    setActivePatientProfile({
+      patientId: chart.patientId,
+      fullName: chart.patientName,
+      medicalId: chart.patientMedicalId,
+      phone: chart.patientPhone,
+      governorate: 'العراق',
+      address: '',
+      bloodType: (chart.patientBloodType as any) || 'O+',
+      gender: chart.patientGender || 'female',
+      dateOfBirth: chart.dateOfBirth,
+      emergencyContactName: chart.emergencyContactName,
+      emergencyContactPhone: chart.emergencyContactPhone,
+      allergies: chart.allergies,
+      chronicDiseases: chart.chronicDiseases,
+      createdAt: chart.createdAt,
+      updatedAt: chart.updatedAt,
+    });
+    setRecordViewMode('chart');
+    setActiveTab('records');
+  };
+
+  // Quick actions to prefill Rx / Referral for this patient
+  const handleStartRxForActivePatient = () => {
+    if (!activePatientProfile) return;
+    setNewRxPatientName(activePatientProfile.fullName);
+    setNewRxPatientPhone(activePatientProfile.phone);
+    setNewRxPatientId(activePatientProfile.patientId);
+    setNewRxDiagnosis(activeDoctorChart?.summaryDiagnosis || '');
+    setNewRxAllergies((activePatientProfile.allergies || []).join(', '));
+    setShowNewPrescriptionModal(true);
+  };
+
+  const handleStartLabForActivePatient = () => {
+    if (!activePatientProfile) return;
+    setNewLabPatientName(activePatientProfile.fullName);
+    setNewLabPatientPhone(activePatientProfile.phone);
+    setNewLabClinicalIndication(activeDoctorChart?.summaryDiagnosis || 'فحوصات استقصائية');
+    setShowNewLabOrderModal(true);
+  };
+
+  const handleStartRadForActivePatient = () => {
+    if (!activePatientProfile) return;
+    setNewRadPatientName(activePatientProfile.fullName);
+    setNewRadPatientPhone(activePatientProfile.phone);
+    setNewRadClinicalIndication(activeDoctorChart?.summaryDiagnosis || 'فحص تصويري استقصائي');
+    setShowNewRadOrderModal(true);
+  };
+
   // Filtered Appointments
   const filteredAppointments = appointments.filter((appt) => {
     if (appointmentFilter === 'all') return true;
@@ -1606,7 +2181,7 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
           { id: 'appointments', labelAr: `المواعيد (${appointments.length})`, labelEn: `Appointments (${appointments.length})`, icon: Calendar },
           { id: 'prescriptions', labelAr: `الوصفات الإلكترونية (${prescriptions.length})`, labelEn: `Prescriptions (${prescriptions.length})`, icon: Pill },
           { id: 'referrals', labelAr: `التحويلات والفحوصات (${labOrders.length + radiologyOrders.length})`, labelEn: `Referrals (${labOrders.length + radiologyOrders.length})`, icon: FlaskConical },
-          { id: 'records', labelAr: `السجلات والتقارير (${medicalRecords.length})`, labelEn: `Medical Records (${medicalRecords.length})`, icon: FileText },
+          { id: 'records', labelAr: `الهوية والملف الطبي (${doctorChartsList.length})`, labelEn: `Patient ID & Charts (${doctorChartsList.length})`, icon: FolderLock },
           { id: 'schedule', labelAr: 'الدوام ومعلومات العيادة', labelEn: 'Schedule & Clinic', icon: Clock },
           { id: 'secretary', labelAr: `السكرتارية (${delegations.length})`, labelEn: `Secretary (${delegations.length})`, icon: Users },
         ].map((tab) => {
@@ -1636,7 +2211,48 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
 
       {/* TAB 1: DASHBOARD OVERVIEW */}
       {activeTab === 'dashboard' && (
-        <div className="space-y-8">
+        <div className="space-y-6">
+          {/* Quick Patient Medical ID Search Widget */}
+          <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-[#002244] via-[#003366] to-[#004080] text-white flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md">
+            <div className="flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center font-bold text-red-300 shrink-0">
+                <FolderLock size={22} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-sm sm:text-base">
+                    {language === 'ar' ? 'البحث عن المريض بالمعرف الطبي (Medical ID) والملف السريري' : 'Patient Search by Medical ID & Charts'}
+                  </h3>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-bold">
+                    {language === 'ar' ? 'ملفات مستقلة محمية' : 'Independent Charts'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-200 mt-0.5">
+                  {language === 'ar' 
+                    ? 'ادخل الـ ID الموحد للمريض لعرض هويته وفتح ملف المتابعة السريرية الخاص بعيادتك وتوثيق الزيارات.' 
+                    : 'Search patient by unified Medical ID to open confidential chart and document visits.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('records');
+                  setRecordViewMode('chart');
+                  if (!activePatientProfile) {
+                    handleSearchPatientByMedicalId('M737-PAT-SARA96');
+                  }
+                }}
+                className="px-5 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-[#003366] font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer w-full sm:w-auto shrink-0"
+              >
+                <Search size={15} />
+                <span>{language === 'ar' ? 'بحث بالمعرف الطبي' : 'Search Medical ID'}</span>
+              </button>
+            </div>
+          </div>
+
           {/* Metrics Strip */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs">
@@ -2004,97 +2620,751 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
         </div>
       )}
 
-      {/* TAB 3: MEDICAL RECORDS & LAB RESULTS */}
+      {/* TAB 3: MEDICAL IDENTITY, PATIENT ID SEARCH & INDEPENDENT CLINICAL CHARTS */}
       {activeTab === 'records' && (
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
-            <div>
-              <h2 className="text-xl font-bold text-slate-900">
-                {language === 'ar' ? 'السجلات الطبية والتقارير المحالة' : 'Diagnostic Records & Patient Files'}
-              </h2>
-              <p className="text-xs text-slate-500 mt-1">
-                {language === 'ar'
-                  ? 'استعراض نتائج المختبرات السريرية، تقارير مراكز الأشعة والسونار، والوصفات الطبية المشفرة.'
-                  : 'Review certified pathology results, radiology scans, and electronic prescriptions.'}
-              </p>
+        <div className="space-y-6">
+          {/* SEARCH & MEDICAL IDENTITY STRIP */}
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-8 h-8 rounded-xl bg-[#003366] text-white flex items-center justify-center font-bold">
+                    <User size={18} />
+                  </div>
+                  <h2 className="text-xl font-black text-slate-900">
+                    {language === 'ar' ? 'الهوية الطبية والبحث عن المريض بواسطة ID' : 'Patient Medical Identity & ID Lookup'}
+                  </h2>
+                </div>
+                <p className="text-xs text-slate-500">
+                  {language === 'ar'
+                    ? 'لكل مريض معرف طبي موحد وثابت. يحتفظ كل طبيب بملف متابعة وملاحظات سريرية مستقلة تماماً ومحمية بصلاحيات الوصول في Firebase.'
+                    : 'Search patient by unique permanent Medical ID. Each doctor maintains an independent, confidential clinical follow-up chart.'}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowNewRecordModal(true)}
+                  className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Plus size={15} />
+                  <span>{language === 'ar' ? 'إضافة تقرير أرشيفي' : 'Add General Record'}</span>
+                </button>
+              </div>
             </div>
 
-            <button
-              onClick={() => setShowNewRecordModal(true)}
-              className="px-4 py-2.5 rounded-xl bg-[#003366] hover:bg-[#002244] text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-xs"
-            >
-              <Plus size={16} />
-              <span>{language === 'ar' ? 'إضافة تقرير / روشتة جديدة' : 'Add New Record'}</span>
-            </button>
-          </div>
+            {/* PATIENT ID SEARCH BAR */}
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
+              <label className="block text-xs font-bold text-slate-700">
+                {language === 'ar' ? 'البحث عن المريض بواسطة المعرف الطبي الموحد (Patient Medical ID):' : 'Search Patient by Permanent Medical ID:'}
+              </label>
 
-          {/* Record Filters */}
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            {[
-              { id: 'all', label: language === 'ar' ? 'كافة السجلات' : 'All Records' },
-              { id: 'lab_result', label: language === 'ar' ? 'تحاليل مخبرية' : 'Lab Tests' },
-              { id: 'radiology_report', label: language === 'ar' ? 'أشعة وسونار' : 'Radiology & Scans' },
-              { id: 'prescription', label: language === 'ar' ? 'روشتات إلكترونية' : 'e-Prescriptions' },
-              { id: 'clinical_note', label: language === 'ar' ? 'تشخيص وملاحظات' : 'Clinical Notes' },
-            ].map((f) => (
+              <form 
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleSearchPatientByMedicalId();
+                }}
+                className="flex flex-col sm:flex-row items-stretch gap-2"
+              >
+                <div className="relative flex-1">
+                  <div className="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none text-slate-400">
+                    <Search size={18} />
+                  </div>
+                  <input
+                    type="text"
+                    value={patientSearchId}
+                    onChange={(e) => {
+                      setPatientSearchId(e.target.value);
+                      if (patientSearchFeedback) setPatientSearchFeedback(null);
+                    }}
+                    placeholder={language === 'ar' ? 'أدخل المعرف الطبي (مثال: M737-PAT-SARA96)...' : 'Enter Patient ID (e.g. M737-PAT-SARA96)...'}
+                    className="w-full ps-10 pe-10 py-3 rounded-xl border border-slate-300 text-sm font-mono focus:ring-2 focus:ring-[#003366] focus:border-[#003366] bg-white uppercase placeholder:normal-case placeholder:font-sans"
+                  />
+                  {patientSearchId && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPatientSearchId('');
+                        setPatientSearchFeedback(null);
+                      }}
+                      className="absolute inset-y-0 end-0 flex items-center pe-3 text-slate-400 hover:text-slate-600"
+                    >
+                      <XCircle size={16} />
+                    </button>
+                  )}
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSearchingPatient || !patientSearchId.trim()}
+                  className="px-6 py-3 rounded-xl bg-[#003366] hover:bg-[#002244] disabled:bg-slate-300 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer shrink-0"
+                >
+                  {isSearchingPatient ? (
+                    <RefreshCw size={16} className="animate-spin" />
+                  ) : (
+                    <Search size={16} />
+                  )}
+                  <span>{language === 'ar' ? 'بحث عن المريض' : 'Search Patient'}</span>
+                </button>
+              </form>
+
+              {/* Quick Demo Search Chips */}
+              <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
+                <span className="text-slate-500 font-semibold">{language === 'ar' ? 'أمثلة سريعة للتجربة:' : 'Quick test ID:'}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPatientSearchId('M737-PAT-SARA96');
+                    handleSearchPatientByMedicalId('M737-PAT-SARA96');
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-white border border-slate-300 hover:border-[#003366] text-[#003366] font-mono text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
+                >
+                  <span>M737-PAT-SARA96</span>
+                  <span className="text-slate-400 font-sans text-[11px]">(سارة حيدر)</span>
+                </button>
+                {doctorChartsList.length > 0 && doctorChartsList[0].patientMedicalId !== 'M737-PAT-SARA96' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPatientSearchId(doctorChartsList[0].patientMedicalId);
+                      handleSearchPatientByMedicalId(doctorChartsList[0].patientMedicalId);
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-white border border-slate-300 hover:border-[#003366] text-[#003366] font-mono text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    {doctorChartsList[0].patientMedicalId} ({doctorChartsList[0].patientName})
+                  </button>
+                )}
+              </div>
+
+              {/* SEARCH FEEDBACK NOTICES */}
+              {patientSearchFeedback && (
+                <div
+                  className={`p-3.5 rounded-xl text-xs flex items-start gap-2.5 animate-in fade-in ${
+                    patientSearchFeedback.type === 'not_found'
+                      ? 'bg-amber-50 border border-amber-300 text-amber-900'
+                      : patientSearchFeedback.type === 'error'
+                      ? 'bg-red-50 border border-red-300 text-red-900'
+                      : 'bg-emerald-50 border border-emerald-300 text-emerald-900'
+                  }`}
+                >
+                  {patientSearchFeedback.type === 'not_found' ? (
+                    <AlertTriangle size={18} className="text-amber-600 shrink-0 mt-0.5" />
+                  ) : patientSearchFeedback.type === 'error' ? (
+                    <XCircle size={18} className="text-red-600 shrink-0 mt-0.5" />
+                  ) : (
+                    <CheckCircle2 size={18} className="text-emerald-600 shrink-0 mt-0.5" />
+                  )}
+                  <div className="flex-1 font-medium leading-relaxed">
+                    {patientSearchFeedback.message}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* SUB-NAVIGATION TABS */}
+            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 text-xs font-bold">
               <button
-                key={f.id}
-                onClick={() => setRecordFilter(f.id)}
-                className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
-                  recordFilter === f.id
+                type="button"
+                onClick={() => setRecordViewMode('chart')}
+                className={`px-4 py-2 rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
+                  recordViewMode === 'chart'
                     ? 'bg-[#003366] text-white shadow-xs'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
-                {f.label}
+                <FolderLock size={15} />
+                <span>
+                  {language === 'ar' ? 'الملف السريري المستقل للمريض' : 'Confidential Patient Chart'}
+                  {activePatientProfile && ` (${activePatientProfile.fullName})`}
+                </span>
               </button>
-            ))}
+
+              <button
+                type="button"
+                onClick={() => setRecordViewMode('my_patients')}
+                className={`px-4 py-2 rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
+                  recordViewMode === 'my_patients'
+                    ? 'bg-[#003366] text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                <Users size={15} />
+                <span>
+                  {language === 'ar' ? `مرضاي المتابعون في العيادة (${doctorChartsList.length})` : `My Follow-Up Patients (${doctorChartsList.length})`}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setRecordViewMode('all_records')}
+                className={`px-4 py-2 rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
+                  recordViewMode === 'all_records'
+                    ? 'bg-[#003366] text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                <FileText size={15} />
+                <span>
+                  {language === 'ar' ? `الأرشيف والسجلات العامة (${medicalRecords.length})` : `All Diagnostic Records (${medicalRecords.length})`}
+                </span>
+              </button>
+            </div>
           </div>
 
-          {/* Records Grid */}
-          {filteredRecords.length === 0 ? (
-            <div className="py-16 text-center text-slate-400">
-              <FileText size={48} className="mx-auto mb-3 opacity-30" />
-              <h3 className="font-bold text-base text-slate-700">{language === 'ar' ? 'لا توجد تقارير في هذا التصنيف' : 'No records found'}</h3>
-              <p className="text-xs text-slate-500 mt-1">{language === 'ar' ? 'يمكنك تسجيل التشخيص والوصفة لمرضاك وحفظها سحابياً' : 'Add notes or prescriptions for patients'}</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredRecords.map((rec) => (
-                <div
-                  key={rec.id}
-                  className="p-5 rounded-2xl border border-slate-200 hover:border-slate-300 bg-slate-50/50 flex flex-col justify-between"
-                >
+          {/* VIEW MODE 1: ACTIVE PATIENT CLINICAL CHART */}
+          {recordViewMode === 'chart' && (
+            <div className="space-y-6">
+              {!activePatientProfile || !activeDoctorChart ? (
+                <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 space-y-4">
+                  <div className="w-16 h-16 rounded-3xl bg-blue-50 text-[#003366] flex items-center justify-center mx-auto">
+                    <User size={32} />
+                  </div>
                   <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 capitalize">
-                        {rec.recordType.replace('_', ' ')}
-                      </span>
-                      <span className="text-[11px] text-slate-400">{rec.createdAt.split('T')[0]}</span>
-                    </div>
-
-                    <h4 className="font-bold text-base text-slate-900 mb-1">{rec.title}</h4>
-                    <div className="text-xs font-semibold text-slate-600 mb-2">
-                      {language === 'ar' ? 'المريض:' : 'Patient:'} {rec.patientName}
-                    </div>
-
-                    <p className="text-xs text-slate-600 leading-relaxed bg-white p-3 rounded-xl border border-slate-100 mb-3 whitespace-pre-line">
-                      {rec.details}
+                    <h3 className="text-lg font-bold text-slate-900">
+                      {language === 'ar' ? 'لم يتم تحديد مريض حتى الآن' : 'No Patient Selected Yet'}
+                    </h3>
+                    <p className="text-xs text-slate-500 max-w-md mx-auto mt-1">
+                      {language === 'ar'
+                        ? 'يرجى إدخال المعرف الطبي للمريض (Medical ID) في شريط البحث أعلاه، أو الاختيار من قائمة مرضاك المتابعين بالعيادة.'
+                        : 'Enter the patient permanent Medical ID above or choose from your follow-up patients list.'}
                     </p>
+                  </div>
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => handleSearchPatientByMedicalId('M737-PAT-SARA96')}
+                      className="px-5 py-2.5 rounded-xl bg-[#003366] text-white font-bold text-xs shadow-sm hover:bg-[#002244] transition-all cursor-pointer inline-flex items-center gap-2"
+                    >
+                      <Search size={14} />
+                      <span>{language === 'ar' ? 'فتح ملف المريض التجريبي (M737-PAT-SARA96)' : 'Open Demo Patient File'}</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-6 animate-in fade-in">
+                  {/* CARD 1: UNIFIED PATIENT IDENTITY PASSPORT */}
+                  <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-5">
+                    {/* Security Isolation Notice */}
+                    <div className="p-3.5 rounded-2xl bg-blue-50 border border-blue-200 text-blue-950 text-xs flex items-center gap-3">
+                      <ShieldCheck size={20} className="text-[#003366] shrink-0" />
+                      <div className="leading-relaxed">
+                        <strong className="block font-bold text-slate-900">
+                          {language === 'ar' ? 'ملف متابعة سريري مستقل ومحمي' : 'Independent Confidential Doctor Chart'}
+                        </strong>
+                        <span className="text-slate-600">
+                          {language === 'ar'
+                            ? `هذا الملف خاص بعيادة ${doctorProfile?.fullName || 'الطبيب المعالج'}. الملاحظات والزيارات المدونة هنا لا تظهر تلقائياً للأطباء الآخرين، بينما تظل الهوية الطبية موحدة.`
+                            : `This chart is partitioned strictly for your clinic. Clinical notes documented here are private and not visible to other doctors.`}
+                        </span>
+                      </div>
+                    </div>
 
-                    {rec.doctorNotes && (
-                      <div className="text-xs text-amber-900 bg-amber-50/70 p-2.5 rounded-xl border border-amber-100 mb-2">
-                        <strong>{language === 'ar' ? 'توصيات الطبيب:' : 'Doctor Commentary:'}</strong> {rec.doctorNotes}
+                    {/* Patient Header Card */}
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                      <div className="flex items-start gap-3.5">
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#003366] to-[#004080] text-white flex items-center justify-center font-bold text-xl shrink-0 shadow-sm">
+                          {activePatientProfile.fullName.charAt(0)}
+                        </div>
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="text-xl font-black text-slate-900">{activePatientProfile.fullName}</h3>
+                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-900 text-white font-mono text-xs font-black shadow-xs">
+                              <span>{activePatientProfile.medicalId}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(activePatientProfile.medicalId);
+                                  showToast(language === 'ar' ? 'تم نسخ الـ ID الطبي' : 'ID copied');
+                                }}
+                                className="text-slate-300 hover:text-white"
+                                title="نسخ المعرف الطبي"
+                              >
+                                <Copy size={12} />
+                              </button>
+                            </div>
+                            <span className="px-2.5 py-0.5 rounded-lg bg-emerald-100 text-emerald-800 text-[11px] font-bold">
+                              {language === 'ar' ? 'هوية طبية موحدة دائمة' : 'Permanent Medical ID'}
+                            </span>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 mt-1.5">
+                            <span className="flex items-center gap-1">
+                              <Phone size={13} />
+                              <span className="font-mono">{activePatientProfile.phone}</span>
+                            </span>
+                            <span>·</span>
+                            <span>{activePatientProfile.governorate}</span>
+                            {activePatientProfile.gender && (
+                              <>
+                                <span>·</span>
+                                <span>{activePatientProfile.gender === 'female' ? (language === 'ar' ? 'أنثى' : 'Female') : (language === 'ar' ? 'ذكر' : 'Male')}</span>
+                              </>
+                            )}
+                            {activePatientProfile.dateOfBirth && (
+                              <>
+                                <span>·</span>
+                                <span>{language === 'ar' ? 'تاريخ الميلاد:' : 'DOB:'} {activePatientProfile.dateOfBirth}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Fast Action Buttons for this patient */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleStartRxForActivePatient}
+                          className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                        >
+                          <Pill size={14} />
+                          <span>{language === 'ar' ? 'إصدار وصفة Rx' : 'Write Rx'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleStartLabForActivePatient}
+                          className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                        >
+                          <FlaskConical size={14} />
+                          <span>{language === 'ar' ? 'تحاليل مخبرية' : 'Lab Order'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleStartRadForActivePatient}
+                          className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                        >
+                          <Scan size={14} />
+                          <span>{language === 'ar' ? 'أشعة وسونار' : 'Imaging'}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Vitals & Clinical Indicators */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                      <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                        <span className="text-slate-500 block mb-0.5">{language === 'ar' ? 'فصيلة الدم' : 'Blood Group'}</span>
+                        <span className="font-black text-sm text-red-700 font-mono">
+                          {activePatientProfile.bloodType || 'غير محدد'}
+                        </span>
+                      </div>
+
+                      <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                        <span className="text-slate-500 block mb-0.5">{language === 'ar' ? 'جهة اتصال الطوارئ' : 'Emergency Contact'}</span>
+                        <span className="font-bold text-slate-800 truncate block">
+                          {activePatientProfile.emergencyContactName || 'غير مسجل'}
+                        </span>
+                        {activePatientProfile.emergencyContactPhone && (
+                          <span className="font-mono text-[11px] text-slate-500 block">{activePatientProfile.emergencyContactPhone}</span>
+                        )}
+                      </div>
+
+                      <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                        <span className="text-slate-500 block mb-0.5">{language === 'ar' ? 'الزيارات في عيادتك' : 'Visits with You'}</span>
+                        <span className="font-black text-sm text-[#003366] font-mono">
+                          {activeDoctorChart.visits.length} {language === 'ar' ? 'زيارة' : 'visits'}
+                        </span>
+                      </div>
+
+                      <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                        <span className="text-slate-500 block mb-0.5">{language === 'ar' ? 'تاريخ أول مراجعة' : 'First Visit'}</span>
+                        <span className="font-bold text-slate-800 text-xs">
+                          {activeDoctorChart.firstVisitDate.split('T')[0]}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Allergies & Chronic Conditions */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                      <div className="p-3.5 rounded-2xl bg-red-50/60 border border-red-200 space-y-1.5">
+                        <div className="flex items-center gap-1.5 text-red-900 font-bold">
+                          <AlertCircle size={15} className="text-red-600" />
+                          <span>{language === 'ar' ? 'حساسية الأدوية المسجلة:' : 'Known Allergies:'}</span>
+                        </div>
+                        {activePatientProfile.allergies && activePatientProfile.allergies.length > 0 ? (
+                          <div className="flex flex-wrap gap-1.5">
+                            {activePatientProfile.allergies.map((alg, i) => (
+                              <span key={i} className="px-2.5 py-0.5 rounded-md bg-red-100 text-red-800 font-bold text-[11px]">
+                                {alg}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-slate-500 italic">{language === 'ar' ? 'لا توجد حساسية دوائية مسجلة' : 'No recorded allergies'}</span>
+                        )}
+                      </div>
+
+                      <div className="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-1.5">
+                        <div className="flex items-center gap-1.5 text-amber-900 font-bold">
+                          <Activity size={15} className="text-amber-700" />
+                          <span>{language === 'ar' ? 'الأمراض المزمنة الموثقة:' : 'Chronic Conditions:'}</span>
+                        </div>
+                        {activePatientProfile.chronicDiseases && activePatientProfile.chronicDiseases.length > 0 ? (
+                          <div className="flex flex-wrap gap-1.5">
+                            {activePatientProfile.chronicDiseases.map((dis, i) => (
+                              <span key={i} className="px-2.5 py-0.5 rounded-md bg-amber-100 text-amber-800 font-bold text-[11px]">
+                                {dis}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-slate-500 italic">{language === 'ar' ? 'لا توجد أمراض مزمنة مسجلة' : 'No chronic conditions recorded'}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* CARD 2: CONFIDENTIAL DOCTOR CLINICAL NOTES & SUMMARY DIAGNOSIS */}
+                  <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
+                          <Lock size={16} />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-base text-slate-900">
+                            {language === 'ar' ? 'الملاحظات السريرية والتشخيصية المستقلة للطبيب المعالج' : 'Doctor Confidential Clinical Notes'}
+                          </h4>
+                          <span className="text-[11px] text-slate-500">
+                            {language === 'ar' ? 'هذه الملاحظات خاصة بك فقط ومحمية بقواعد Firestore، ولا تظهر للأطباء الآخرين.' : 'Private to you, protected by Firestore RBAC.'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleSaveDoctorPrivateNotes}
+                        disabled={isSavingChartNotes}
+                        className="px-5 py-2 rounded-xl bg-[#003366] hover:bg-[#002244] disabled:bg-slate-300 text-white font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-xs shrink-0"
+                      >
+                        {isSavingChartNotes ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
+                        <span>{language === 'ar' ? 'حفظ الملاحظات' : 'Save Notes'}</span>
+                      </button>
+                    </div>
+
+                    <div className="space-y-3 text-xs">
+                      <div>
+                        <label className="block font-bold text-slate-700 mb-1">
+                          {language === 'ar' ? 'التشخيص السريري الشامل للحالة (Clinical Diagnosis):' : 'Overall Clinical Diagnosis:'}
+                        </label>
+                        <input
+                          type="text"
+                          value={chartSummaryDiagDraft}
+                          onChange={(e) => setChartSummaryDiagDraft(e.target.value)}
+                          placeholder={language === 'ar' ? 'مثال: ارتفاع ضغط دم شرياني أولي + اضطراب دهون خفيف...' : 'e.g. Essential Hypertension'}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-[#003366] bg-white font-medium"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block font-bold text-slate-700 mb-1">
+                          {language === 'ar' ? 'ملاحظات الطبيب السريرية الخاصة والمتابعة الدورية:' : 'Confidential Doctor Observations & Follow-Up Plan:'}
+                        </label>
+                        <textarea
+                          rows={4}
+                          value={chartNotesDraft}
+                          onChange={(e) => setChartNotesDraft(e.target.value)}
+                          placeholder={language === 'ar' ? 'اكتب ملاحظاتك التشخيصية والسريرية الخاصة، استجابة المريض للأدوية، الفحوصات المستقبلية...' : 'Enter your private clinical observations, response to therapy, plans...'}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-[#003366] bg-white leading-relaxed"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* CARD 3: CLINIC VISITS HISTORY WITH THIS DOCTOR */}
+                  <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-100">
+                      <div>
+                        <h4 className="font-bold text-base text-slate-900">
+                          {language === 'ar' ? `سجل الزيارات والكشوفات بعيادتك (${activeDoctorChart.visits.length})` : `Clinic Visits with You (${activeDoctorChart.visits.length})`}
+                        </h4>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          {language === 'ar' ? 'توثيق كل معاينة وزيارة سريرية مع العلامات الحيوية والتشخيص والخطة العلاجية.' : 'Document each visit with vitals, complaint, and therapy plan.'}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowNewVisitModal(true)}
+                        className="px-4 py-2.5 rounded-xl bg-[#c4152e] hover:bg-[#a01125] text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0"
+                      >
+                        <Plus size={15} />
+                        <span>{language === 'ar' ? 'توثيق زيارة سريرية جديدة' : 'Log New Visit'}</span>
+                      </button>
+                    </div>
+
+                    {activeDoctorChart.visits.length === 0 ? (
+                      <div className="p-8 text-center text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                        <HeartPulse size={36} className="mx-auto mb-2 text-slate-300" />
+                        <h5 className="font-bold text-sm text-slate-700">{language === 'ar' ? 'لا توجد زيارات موثقة لهذا المريض حتى الآن' : 'No visits documented yet'}</h5>
+                        <p className="text-xs text-slate-500 mt-1 mb-3">{language === 'ar' ? 'انقر على "توثيق زيارة سريرية جديدة" لتسجيل الشكوى والعلامات الحيوية والتشخيص.' : 'Click "Log New Visit" to record findings.'}</p>
+                        <button
+                          type="button"
+                          onClick={() => setShowNewVisitModal(true)}
+                          className="px-4 py-1.5 rounded-xl bg-[#c4152e] text-white font-bold text-xs"
+                        >
+                          {language === 'ar' ? 'توثيق أول زيارة' : 'Log First Visit'}
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {activeDoctorChart.visits.map((vst, idx) => (
+                          <div
+                            key={vst.visitId || idx}
+                            className="p-5 rounded-2xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 transition-all space-y-3"
+                          >
+                            <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-200/60">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-xs font-bold bg-[#003366] text-white px-2.5 py-0.5 rounded-lg">
+                                  {vst.date}
+                                </span>
+                                <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold ${
+                                  vst.visitType === 'emergency' || vst.visitType === 'urgent'
+                                    ? 'bg-red-100 text-red-800'
+                                    : vst.visitType === 'followup'
+                                    ? 'bg-purple-100 text-purple-800'
+                                    : 'bg-blue-100 text-blue-800'
+                                }`}>
+                                  {vst.visitType === 'consultation' && (language === 'ar' ? 'معاينة جديدة' : 'Consultation')}
+                                  {vst.visitType === 'followup' && (language === 'ar' ? 'متابعة دورية' : 'Follow-up')}
+                                  {(vst.visitType === 'urgent' || vst.visitType === 'emergency') && (language === 'ar' ? 'حالة طارئة' : 'Urgent')}
+                                  {vst.visitType === 'routine' && (language === 'ar' ? 'فحص دوري' : 'Routine')}
+                                </span>
+                              </div>
+                              <span className="text-[11px] text-slate-400">
+                                {language === 'ar' ? `الزيارة رقم #${activeDoctorChart.visits.length - idx}` : `Visit #${activeDoctorChart.visits.length - idx}`}
+                              </span>
+                            </div>
+
+                            {/* Complaint & Diagnosis */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                              {vst.chiefComplaint && (
+                                <div className="bg-white p-3 rounded-xl border border-slate-200/80">
+                                  <strong className="block text-slate-700 font-bold mb-0.5">
+                                    {language === 'ar' ? 'الشكوى الرئيسية للمريض:' : 'Chief Complaint:'}
+                                  </strong>
+                                  <p className="text-slate-800">{vst.chiefComplaint}</p>
+                                </div>
+                              )}
+                              {vst.clinicalDiagnosis && (
+                                <div className="bg-white p-3 rounded-xl border border-emerald-200">
+                                  <strong className="block text-emerald-800 font-bold mb-0.5">
+                                    {language === 'ar' ? 'التشخيص السريري للطبيب:' : 'Clinical Diagnosis:'}
+                                  </strong>
+                                  <p className="text-emerald-950 font-bold">{vst.clinicalDiagnosis}</p>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Doctor Private Notes for this visit */}
+                            {vst.doctorPrivateNotes && (
+                              <div className="p-3 bg-amber-50/70 rounded-xl border border-amber-200 text-xs">
+                                <strong className="block text-amber-900 font-bold mb-0.5">
+                                  {language === 'ar' ? 'ملاحظات الطبيب الخاصة بهذه الزيارة:' : 'Doctor Private Visit Notes:'}
+                                </strong>
+                                <p className="text-amber-950 whitespace-pre-line">{vst.doctorPrivateNotes}</p>
+                              </div>
+                            )}
+
+                            {/* Vitals row */}
+                            {vst.vitals && Object.values(vst.vitals).some(Boolean) && (
+                              <div className="flex flex-wrap items-center gap-2 text-xs pt-1">
+                                {vst.vitals.bloodPressure && (
+                                  <span className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 font-mono">
+                                    BP: <strong>{vst.vitals.bloodPressure}</strong> mmHg
+                                  </span>
+                                )}
+                                {vst.vitals.heartRate && (
+                                  <span className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 font-mono">
+                                    HR: <strong>{vst.vitals.heartRate}</strong> bpm
+                                  </span>
+                                )}
+                                {vst.vitals.temperature && (
+                                  <span className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 font-mono">
+                                    Temp: <strong>{vst.vitals.temperature}</strong> °C
+                                  </span>
+                                )}
+                                {vst.vitals.bloodSugar && (
+                                  <span className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 font-mono">
+                                    Sugar: <strong>{vst.vitals.bloodSugar}</strong> mg/dL
+                                  </span>
+                                )}
+                                {vst.vitals.weightKg && (
+                                  <span className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 font-mono">
+                                    Weight: <strong>{vst.vitals.weightKg}</strong> kg
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Treatment plan */}
+                            {vst.treatmentPlan && (
+                              <div className="p-3 bg-white rounded-xl border border-slate-200 text-xs">
+                                <strong className="block text-slate-700 font-bold mb-0.5">
+                                  {language === 'ar' ? 'الخطة العلاجية والتوصيات:' : 'Treatment Plan & Recommendations:'}
+                                </strong>
+                                <p className="text-slate-800">{vst.treatmentPlan}</p>
+                              </div>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
-
-                  <div className="pt-3 border-t border-slate-200/80 flex items-center justify-between text-xs text-slate-500">
-                    <span className="truncate">{rec.sourceFacility || 'منشأة معتمدة'}</span>
-                    <span className="text-emerald-700 font-bold">{language === 'ar' ? 'موثق رسمياً' : 'Verified'}</span>
-                  </div>
                 </div>
-              ))}
+              )}
+            </div>
+          )}
+
+          {/* VIEW MODE 2: MY FOLLOW-UP PATIENTS LIST */}
+          {recordViewMode === 'my_patients' && (
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4">
+              <div className="pb-3 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-lg text-slate-900">
+                    {language === 'ar' ? `قائمة المرضى المتابعين في عيادتك (${doctorChartsList.length})` : `My Follow-Up Patients (${doctorChartsList.length})`}
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    {language === 'ar' ? 'المرضى الذين يمتلكون ملفات متابعة مستقلة وملاحظات سريرية محفوظة بعيادتك.' : 'Patients with active charts in your clinic.'}
+                  </p>
+                </div>
+              </div>
+
+              {doctorChartsList.length === 0 ? (
+                <div className="py-12 text-center text-slate-400">
+                  <Users size={40} className="mx-auto mb-2 text-slate-300" />
+                  <p className="text-xs">{language === 'ar' ? 'لا يوجد مرضى مسجلون في قائمتك بعد. ابحث عن مريض بواسطة الـ ID لإنشاء ملف له.' : 'No follow-up patients yet. Search by Medical ID.'}</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {doctorChartsList.map((chart) => (
+                    <div
+                      key={chart.id}
+                      className="p-5 rounded-2xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-300 transition-all flex flex-col justify-between space-y-3"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-mono text-xs font-black bg-[#003366] text-white px-2.5 py-0.5 rounded-lg">
+                            {chart.patientMedicalId}
+                          </span>
+                          <span className="text-[11px] text-slate-400">
+                            {chart.lastVisitDate ? chart.lastVisitDate.split('T')[0] : chart.createdAt.split('T')[0]}
+                          </span>
+                        </div>
+
+                        <h4 className="font-bold text-base text-slate-900">{chart.patientName}</h4>
+                        <div className="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
+                          <span className="font-mono">{chart.patientPhone}</span>
+                          <span>·</span>
+                          <span>{chart.visits.length} {language === 'ar' ? 'زيارات' : 'visits'}</span>
+                        </div>
+
+                        {chart.summaryDiagnosis && (
+                          <div className="mt-2 text-xs text-emerald-900 bg-emerald-50 p-2 rounded-lg border border-emerald-200 font-medium">
+                            <strong>{language === 'ar' ? 'التشخيص:' : 'Diagnosis:'}</strong> {chart.summaryDiagnosis}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-200/80 flex items-center justify-end">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenChartFromList(chart)}
+                          className="px-4 py-1.5 rounded-xl bg-[#003366] hover:bg-[#002244] text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <FolderLock size={14} />
+                          <span>{language === 'ar' ? 'فتح الملف السريري' : 'Open Chart'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* VIEW MODE 3: ALL DIAGNOSTIC RECORDS & REPORTS */}
+          {recordViewMode === 'all_records' && (
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                <div>
+                  <h3 className="font-bold text-lg text-slate-900">
+                    {language === 'ar' ? 'أرشيف السجلات الطبية والتقارير العامة' : 'General Diagnostic Records Archive'}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {language === 'ar' ? 'استعراض نتائج الفحوصات والتقارير المحالة المشتركة.' : 'Review general shared diagnostic reports.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Record Filters */}
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                {[
+                  { id: 'all', label: language === 'ar' ? 'كافة السجلات' : 'All Records' },
+                  { id: 'lab_result', label: language === 'ar' ? 'تحاليل مخبرية' : 'Lab Tests' },
+                  { id: 'radiology_report', label: language === 'ar' ? 'أشعة وسونار' : 'Radiology & Scans' },
+                  { id: 'prescription', label: language === 'ar' ? 'روشتات إلكترونية' : 'e-Prescriptions' },
+                  { id: 'clinical_note', label: language === 'ar' ? 'تشخيص وملاحظات' : 'Clinical Notes' },
+                ].map((f) => (
+                  <button
+                    key={f.id}
+                    onClick={() => setRecordFilter(f.id)}
+                    className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                      recordFilter === f.id
+                        ? 'bg-[#003366] text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Records Grid */}
+              {filteredRecords.length === 0 ? (
+                <div className="py-16 text-center text-slate-400">
+                  <FileText size={48} className="mx-auto mb-3 opacity-30" />
+                  <h4 className="font-bold text-base text-slate-700">{language === 'ar' ? 'لا توجد تقارير في هذا التصنيف' : 'No records found'}</h4>
+                  <p className="text-xs text-slate-500 mt-1">{language === 'ar' ? 'يمكنك تسجيل التشخيص والوصفة لمرضاك وحفظها سحابياً' : 'Add notes or prescriptions for patients'}</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {filteredRecords.map((rec) => (
+                    <div
+                      key={rec.id}
+                      className="p-5 rounded-2xl border border-slate-200 hover:border-slate-300 bg-slate-50/50 flex flex-col justify-between"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 capitalize">
+                            {rec.recordType.replace('_', ' ')}
+                          </span>
+                          <span className="text-[11px] text-slate-400">{rec.createdAt.split('T')[0]}</span>
+                        </div>
+
+                        <h4 className="font-bold text-base text-slate-900 mb-1">{rec.title}</h4>
+                        <div className="text-xs font-semibold text-slate-600 mb-2">
+                          {language === 'ar' ? 'المريض:' : 'Patient:'} {rec.patientName}
+                        </div>
+
+                        <p className="text-xs text-slate-600 leading-relaxed bg-white p-3 rounded-xl border border-slate-100 mb-3 whitespace-pre-line">
+                          {rec.details}
+                        </p>
+
+                        {rec.doctorNotes && (
+                          <div className="text-xs text-amber-900 bg-amber-50/70 p-2.5 rounded-xl border border-amber-100 mb-2">
+                            <strong>{language === 'ar' ? 'توصيات الطبيب:' : 'Doctor Commentary:'}</strong> {rec.doctorNotes}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="pt-3 border-t border-slate-200/80 flex items-center justify-between text-xs text-slate-500">
+                        <span className="truncate">{rec.sourceFacility || 'منشأة معتمدة'}</span>
+                        <span className="text-emerald-700 font-bold">{language === 'ar' ? 'موثق رسمياً' : 'Verified'}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -3903,6 +5173,197 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
                   className="px-5 py-2 rounded-xl bg-[#003366] text-white font-bold"
                 >
                   {language === 'ar' ? 'منح التفويض' : 'Grant Delegation'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ==================================================== */}
+      {/* MODAL: LOG NEW CLINICAL VISIT FOR PATIENT CHART     */}
+      {/* ==================================================== */}
+      {showNewVisitModal && activeDoctorChart && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 border border-slate-200 shadow-2xl my-8">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-red-100 text-[#c4152e] flex items-center justify-center font-bold">
+                  <HeartPulse size={22} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg text-slate-900">
+                    {language === 'ar' ? 'توثيق زيارة ومعاينة سريرية جديدة' : 'Log New Clinical Visit'}
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    {language === 'ar' 
+                      ? `للمريض: ${activeDoctorChart.patientName} (${activeDoctorChart.patientMedicalId})` 
+                      : `Patient: ${activeDoctorChart.patientName} (${activeDoctorChart.patientMedicalId})`}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowNewVisitModal(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleAddVisitToChart} className="space-y-4 text-xs">
+              {/* Date & Visit Type */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">{language === 'ar' ? 'تاريخ الزيارة *' : 'Visit Date *'}</label>
+                  <input
+                    type="date"
+                    required
+                    value={newVisitData.date}
+                    onChange={(e) => setNewVisitData({ ...newVisitData, date: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-[#003366]"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">{language === 'ar' ? 'نوع المعاينة *' : 'Visit Type *'}</label>
+                  <select
+                    value={newVisitData.visitType}
+                    onChange={(e) => setNewVisitData({ ...newVisitData, visitType: e.target.value as any })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white"
+                  >
+                    <option value="consultation">{language === 'ar' ? 'معاينة وكشف أولي' : 'Initial Consultation'}</option>
+                    <option value="followup">{language === 'ar' ? 'متابعة دورية وتدقيق علاج' : 'Follow-Up'}</option>
+                    <option value="urgent">{language === 'ar' ? 'حالة طارئة ومستعجلة' : 'Urgent Case'}</option>
+                    <option value="routine">{language === 'ar' ? 'فحص وقائي دوري' : 'Routine Checkup'}</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Chief Complaint */}
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">{language === 'ar' ? 'الشكوى والأعراض الرئيسية (Chief Complaint) *' : 'Chief Complaint *'}</label>
+                <input
+                  type="text"
+                  required
+                  value={newVisitData.chiefComplaint}
+                  onChange={(e) => setNewVisitData({ ...newVisitData, chiefComplaint: e.target.value })}
+                  placeholder={language === 'ar' ? 'مثال: صداع مستمر منذ يومين، ألم بالصدر عند بذل مجهود...' : 'Chief complaint...'}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm"
+                />
+              </div>
+
+              {/* Clinical Diagnosis */}
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">{language === 'ar' ? 'التشخيص السريري للطبيب (Clinical Diagnosis) *' : 'Clinical Diagnosis *'}</label>
+                <input
+                  type="text"
+                  required
+                  value={newVisitData.clinicalDiagnosis}
+                  onChange={(e) => setNewVisitData({ ...newVisitData, clinicalDiagnosis: e.target.value })}
+                  placeholder={language === 'ar' ? 'مثال: Essential Hypertension, Angina Pectoris...' : 'Clinical diagnosis...'}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-semibold"
+                />
+              </div>
+
+              {/* Doctor Private Notes for this visit */}
+              <div>
+                <label className="block font-bold text-amber-900 mb-1 flex items-center gap-1.5">
+                  <Lock size={13} className="text-amber-700" />
+                  <span>{language === 'ar' ? 'ملاحظات الطبيب الخاصة بهذه الزيارة (محمية وسرية):' : 'Doctor Private Visit Notes (Confidential):'}</span>
+                </label>
+                <textarea
+                  rows={2}
+                  value={newVisitData.doctorPrivateNotes}
+                  onChange={(e) => setNewVisitData({ ...newVisitData, doctorPrivateNotes: e.target.value })}
+                  placeholder={language === 'ar' ? 'ملاحظات فحص سريري، أصوات القلب، علامات استجابة، ملاحظات خاصة بك كطبيب...' : 'Private observations...'}
+                  className="w-full px-3 py-2 rounded-xl border border-amber-300 bg-amber-50/40 text-sm"
+                />
+              </div>
+
+              {/* Vital Signs Grid */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                <span className="font-bold text-slate-700 block text-xs">
+                  {language === 'ar' ? 'العلامات الحيوية (Vitals):' : 'Vital Signs:'}
+                </span>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                  <div>
+                    <label className="block text-[11px] text-slate-500 font-bold mb-0.5">{language === 'ar' ? 'الضغط (BP)' : 'BP'}</label>
+                    <input
+                      type="text"
+                      value={newVisitData.bp}
+                      onChange={(e) => setNewVisitData({ ...newVisitData, bp: e.target.value })}
+                      placeholder="120/80"
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-slate-500 font-bold mb-0.5">{language === 'ar' ? 'النبض (HR)' : 'HR (bpm)'}</label>
+                    <input
+                      type="text"
+                      value={newVisitData.heartRate}
+                      onChange={(e) => setNewVisitData({ ...newVisitData, heartRate: e.target.value })}
+                      placeholder="75"
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-slate-500 font-bold mb-0.5">{language === 'ar' ? 'الحرارة (°C)' : 'Temp (°C)'}</label>
+                    <input
+                      type="text"
+                      value={newVisitData.temperature}
+                      onChange={(e) => setNewVisitData({ ...newVisitData, temperature: e.target.value })}
+                      placeholder="37.0"
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-slate-500 font-bold mb-0.5">{language === 'ar' ? 'السكر (mg/dL)' : 'Sugar'}</label>
+                    <input
+                      type="text"
+                      value={newVisitData.bloodSugar}
+                      onChange={(e) => setNewVisitData({ ...newVisitData, bloodSugar: e.target.value })}
+                      placeholder="100"
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-slate-500 font-bold mb-0.5">{language === 'ar' ? 'الوزن (kg)' : 'Weight'}</label>
+                    <input
+                      type="text"
+                      value={newVisitData.weightKg}
+                      onChange={(e) => setNewVisitData({ ...newVisitData, weightKg: e.target.value })}
+                      placeholder="70"
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Treatment Plan */}
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">{language === 'ar' ? 'الخطة العلاجية والتوصيات (Treatment Plan):' : 'Treatment Plan:'}</label>
+                <textarea
+                  rows={2}
+                  value={newVisitData.treatmentPlan}
+                  onChange={(e) => setNewVisitData({ ...newVisitData, treatmentPlan: e.target.value })}
+                  placeholder={language === 'ar' ? 'الأدوية الموصوفة، التحاليل المطلوبة، موعد المراجعة القادمة...' : 'Therapy plan and advice...'}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm"
+                />
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowNewVisitModal(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 font-bold cursor-pointer"
+                >
+                  {language === 'ar' ? 'إلغاء' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-[#c4152e] hover:bg-[#a01125] text-white font-bold cursor-pointer shadow-md"
+                >
+                  {language === 'ar' ? 'حفظ وتوثيق الزيارة السريرية' : 'Save Clinical Visit'}
                 </button>
               </div>
             </form>

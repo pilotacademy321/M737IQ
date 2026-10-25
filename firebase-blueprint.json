@@ -1182,6 +1182,37 @@
         "updatedAt": { "type": "string" }
       },
       "required": ["appointmentsToday", "activeUsers", "diagnosticTests", "prescriptions", "updatedAt"]
+    },
+    "DoctorPatientChart": {
+      "title": "DoctorPatientChart",
+      "description": "Confidential independent clinical follow-up chart for a specific doctor-patient pair",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "doctorId": { "type": "string", "maxLength": 128 },
+        "doctorName": { "type": "string", "maxLength": 128 },
+        "doctorSpecialty": { "type": "string", "maxLength": 128 },
+        "patientId": { "type": "string", "maxLength": 128 },
+        "patientMedicalId": { "type": "string", "maxLength": 64 },
+        "patientName": { "type": "string", "maxLength": 128 },
+        "patientPhone": { "type": "string", "maxLength": 32 },
+        "patientGender": { "type": "string", "enum": ["male", "female"] },
+        "patientBloodType": { "type": "string", "maxLength": 16 },
+        "dateOfBirth": { "type": "string" },
+        "emergencyContactName": { "type": "string", "maxLength": 128 },
+        "emergencyContactPhone": { "type": "string", "maxLength": 32 },
+        "allergies": { "type": "array" },
+        "chronicDiseases": { "type": "array" },
+        "summaryDiagnosis": { "type": "string", "maxLength": 1000 },
+        "doctorPrivateNotes": { "type": "string", "maxLength": 5000 },
+        "firstVisitDate": { "type": "string" },
+        "lastVisitDate": { "type": "string" },
+        "visits": { "type": "array" },
+        "status": { "type": "string", "enum": ["active", "archived"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "doctorId", "doctorName", "patientId", "patientMedicalId", "patientName", "patientPhone", "visits", "status", "createdAt", "updatedAt"]
     }
   },
   "firestore": {
@@ -1204,6 +1235,10 @@
     "/medical_records/{recordId}": {
       "schema": "MedicalRecord",
       "description": "Confidential patient health documents and reports"
+    },
+    "/doctor_patient_charts/{chartId}": {
+      "schema": "DoctorPatientChart",
+      "description": "Confidential independent clinical charts partitioned strictly per doctor and patient"
     },
     "/secretary_delegations/{delegationId}": {
       "schema": "SecretaryDelegation",

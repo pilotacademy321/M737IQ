@@ -539,6 +539,13 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
         const pSnap = await getDoc(pRef);
         if (pSnap.exists()) {
           pData = pSnap.data() as PatientProfile;
+          if (!pData.medicalId) {
+            const assignedId = generateMedicalId(user.uid);
+            pData.medicalId = assignedId;
+            if (!isDemoMode) {
+              updateDoc(pRef, { medicalId: assignedId }).catch(console.warn);
+            }
+          }
         }
       } catch (e) {
         console.warn('Patient profile fetch fallback:', e);

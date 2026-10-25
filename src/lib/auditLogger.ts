@@ -15,7 +15,8 @@ export type AuditCategory =
   | 'wholesale_b2b'
   | 'accreditation'
   | 'profiles'
-  | 'security';
+  | 'security'
+  | 'patient_records';
 
 export type AuditActionType =
   | 'prescription_created'
@@ -50,7 +51,10 @@ export type AuditActionType =
   | 'profile_photo_updated'
   | 'profile_contact_updated'
   | 'profile_updated'
-  | 'wholesaler_profile_updated';
+  | 'wholesaler_profile_updated'
+  | 'patient_search_by_medical_id'
+  | 'doctor_chart_notes_updated'
+  | 'clinic_visit_logged';
 
 export interface SystemAuditLogEntry {
   id: string;

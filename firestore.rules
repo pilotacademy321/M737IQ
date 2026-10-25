@@ -192,6 +192,27 @@ service cloud.firestore {
       );
     }
 
+    // Doctor Patient Charts (Confidential Doctor-Patient Clinical Records): /doctor_patient_charts/{chartId}
+    match /doctor_patient_charts/{chartId} {
+      allow get: if isSignedIn() && (
+        resource.data.doctorId == request.auth.uid || 
+        isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        resource.data.doctorId == request.auth.uid || 
+        isAdmin()
+      );
+      allow create: if isSignedIn() && (
+        incoming().doctorId == request.auth.uid || 
+        isAdmin()
+      );
+      allow update: if isSignedIn() && (
+        existing().doctorId == request.auth.uid || 
+        isAdmin()
+      ) && incoming().doctorId == existing().doctorId;
+      allow delete: if isAdmin();
+    }
+
     // Secretary Delegations: /secretary_delegations/{delegationId}
     match /secretary_delegations/{delegationId} {
       allow get: if isSignedIn() && (
@@ -562,7 +583,9 @@ service cloud.firestore {
     match /patient_profiles/{patientId} {
       allow get: if isSignedIn() && (
         isOwner(patientId) || 
-        isAdmin()
+        isAdmin() ||
+        exists(/databases/$(database)/documents/doctor_profiles/$(request.auth.uid)) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['doctor', 'secretary', 'super_admin'])
       );
       allow list: if isSignedIn();
       allow create: if (isOwner(patientId) || isAdmin()) 

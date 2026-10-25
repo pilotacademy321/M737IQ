@@ -683,6 +683,53 @@ export interface PatientProfile {
   updatedAt: string;
 }
 
+export interface DoctorPatientVisit {
+  visitId: string;
+  date: string;
+  visitType: 'consultation' | 'followup' | 'urgent' | 'routine';
+  chiefComplaint: string;
+  clinicalDiagnosis: string;
+  doctorPrivateNotes: string;
+  vitals?: {
+    bloodPressure?: string;
+    heartRate?: string;
+    temperature?: string;
+    bloodSugar?: string;
+    weightKg?: string;
+  };
+  treatmentPlan?: string;
+  prescriptionsLinked?: string[];
+  referralsLinked?: string[];
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface DoctorPatientChart {
+  id: string; // chart_${doctorId}_${patientId}
+  doctorId: string;
+  doctorName: string;
+  doctorSpecialty?: string;
+  patientId: string;
+  patientMedicalId: string;
+  patientName: string;
+  patientPhone: string;
+  patientGender?: 'male' | 'female';
+  patientBloodType?: string;
+  dateOfBirth?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  allergies?: string[];
+  chronicDiseases?: string[];
+  summaryDiagnosis?: string;
+  doctorPrivateNotes?: string;
+  firstVisitDate: string;
+  lastVisitDate: string;
+  visits: DoctorPatientVisit[];
+  status: 'active' | 'archived';
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface SubscriptionPlan {
   id: string;
   nameAr: string;
