@@ -1,7 +1,7 @@
 import React from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { Logo } from './Logo';
-import { MessageSquare, Mail, Heart, Plane, ExternalLink } from 'lucide-react';
+import { MessageSquare, Mail, Heart, Plane, ExternalLink, Instagram } from 'lucide-react';
 
 interface FooterProps {
   onNavigate: (sectionId: string) => void;
@@ -13,6 +13,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenLegal }) => {
 
   const whatsappHref = 'https://wa.me/9647885663748';
   const emailHref = 'mailto:bcgmoc@gmail.com';
+  const instagramHref = 'https://www.instagram.com/m737iq';
 
   return (
     <footer className="bg-[#00172e] text-slate-300 pt-16 pb-12 border-t border-slate-800">
@@ -37,6 +38,20 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenLegal }) => {
               <div className="text-xs text-red-400 font-semibold mt-1">
                 {t.footer.subSlogan}
               </div>
+            </div>
+
+            {/* Social Channels */}
+            <div className="pt-2 flex items-center gap-2">
+              <a
+                href={instagramHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-pink-500/20 via-purple-500/20 to-amber-500/20 hover:from-pink-500/30 hover:via-purple-500/30 hover:to-amber-500/30 border border-pink-500/30 text-white text-xs font-bold transition-all shadow-xs group"
+                title="حساب إنستغرام: @m737iq"
+              >
+                <Instagram size={14} className="text-pink-400 group-hover:scale-110 transition-transform" />
+                <span className="font-mono">@m737iq</span>
+              </a>
             </div>
           </div>
 
@@ -129,6 +144,21 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenLegal }) => {
                 <div>
                   <div className="text-[11px] text-slate-400">{t.contact.emailTitle}</div>
                   <div className="font-semibold text-white font-mono break-all">{t.contact.emailAddress}</div>
+                </div>
+              </a>
+
+              <a
+                href={instagramHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 p-3 rounded-xl bg-slate-900/80 hover:bg-slate-900 border border-slate-800 hover:border-pink-500/40 transition-colors group"
+              >
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-amber-500/20 via-pink-500/20 to-purple-500/20 text-pink-400 flex items-center justify-center shrink-0">
+                  <Instagram size={16} />
+                </div>
+                <div>
+                  <div className="text-[11px] text-slate-400">{t.contact.instagramTitle}</div>
+                  <div className="font-bold text-white font-mono">@m737iq</div>
                 </div>
               </a>
             </div>

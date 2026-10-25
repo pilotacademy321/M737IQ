@@ -32,7 +32,8 @@ import {
   FileCheck2,
   Activity,
   Layers,
-  Sparkles
+  Sparkles,
+  Trash2
 } from 'lucide-react';
 
 // Lazy-loaded Workspaces for optimal bundle splitting and low memory footprint
@@ -81,16 +82,34 @@ export const PortalShellView: React.FC<PortalShellViewProps> = ({
     authError, 
     isAdmin, 
     signInWithGoogle, 
-    signInAsDemoUser,
     setShowDomainHelp,
     unauthorizedDomainDetected,
-    isDemoMode,
     signOut, 
     refreshProfile,
+    deleteOwnAccountPermanently,
   } = useAuth();
   const { t, isRTL, language } = useLanguage();
 
   const [refreshing, setRefreshing] = useState(false);
+  const [showSelfDeleteModal, setShowSelfDeleteModal] = useState(false);
+  const [isDeletingOwnAccount, setIsDeletingOwnAccount] = useState(false);
+  const [selfDeleteError, setSelfDeleteError] = useState<string | null>(null);
+
+  const handleConfirmSelfDelete = async () => {
+    setIsDeletingOwnAccount(true);
+    setSelfDeleteError(null);
+    try {
+      await deleteOwnAccountPermanently();
+      setShowSelfDeleteModal(false);
+      onBackToHome();
+    } catch (err: unknown) {
+      console.error('Error deleting account:', err);
+      const msg = err instanceof Error ? err.message : (language === 'ar' ? 'فشل حذف الحساب' : 'Failed to delete account');
+      setSelfDeleteError(msg);
+    } finally {
+      setIsDeletingOwnAccount(false);
+    }
+  };
 
   const portal = PORTALS_DATA.find((p) => p.id === portalId) || PORTALS_DATA[0];
 
@@ -322,14 +341,6 @@ export const PortalShellView: React.FC<PortalShellViewProps> = ({
                           <ExternalLink size={14} />
                           <span>{language === 'ar' ? 'عرض خطوات إضافة النطاق' : 'View Domain Fix Guide'}</span>
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => signInAsDemoUser(targetRole)}
-                          className="px-3.5 py-1.5 rounded-xl bg-[#003366] hover:bg-[#002244] text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
-                        >
-                          <Sparkles size={14} className="text-amber-300" />
-                          <span>{language === 'ar' ? `دخول تجريبي فوري لـ ${portal.titleAr}` : `Instant Demo as ${portal.titleEn}`}</span>
-                        </button>
                       </div>
                     </div>
                   )}
@@ -346,15 +357,6 @@ export const PortalShellView: React.FC<PortalShellViewProps> = ({
                           ? (language === 'ar' ? 'جاري الاتصال بـ Firebase...' : 'Connecting to Firebase...')
                           : (language === 'ar' ? 'تسجيل الدخول عبر Google' : 'Sign In with Google')}
                       </span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => signInAsDemoUser(targetRole)}
-                      className="w-full sm:w-auto px-6 py-3 rounded-xl text-xs sm:text-sm font-bold text-[#003366] bg-blue-50 hover:bg-blue-100 border border-blue-200 transition-colors flex items-center justify-center gap-2 cursor-pointer"
-                    >
-                      <Sparkles size={16} className="text-amber-500" />
-                      <span>{language === 'ar' ? `دخول تجريبي (${portal.titleAr})` : `Demo (${portal.titleEn})`}</span>
                     </button>
 
                     <button
@@ -422,16 +424,6 @@ export const PortalShellView: React.FC<PortalShellViewProps> = ({
                     className="px-6 py-3 rounded-xl text-xs sm:text-sm font-bold text-white brand-gradient-btn shadow-md hover:shadow-lg transition-all cursor-pointer"
                   >
                     {language === 'ar' ? 'الانتقال إلى بوابتك المعتمدة' : 'Go to Your Authorized Portal'}
-                  </button>
-
-                  {/* 1-Click switch to this portal in demo mode */}
-                  <button
-                    type="button"
-                    onClick={() => signInAsDemoUser(targetRole)}
-                    className="px-5 py-3 rounded-xl text-xs sm:text-sm font-bold text-[#003366] bg-blue-50 hover:bg-blue-100 border border-blue-200 transition-colors flex items-center gap-2 cursor-pointer"
-                  >
-                    <Sparkles size={16} className="text-amber-500" />
-                    <span>{language === 'ar' ? `التبديل إلى ${portal.titleAr} (تجربة)` : `Switch to ${portal.titleEn} (Demo)`}</span>
                   </button>
 
                   <button
@@ -505,6 +497,15 @@ export const PortalShellView: React.FC<PortalShellViewProps> = ({
                   >
                     {language === 'ar' ? 'تسريع الاعتماد عبر واتساب: 07885663748' : 'Expedite via WhatsApp: 07885663748'}
                   </a>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowSelfDeleteModal(true)}
+                    className="px-4 py-2.5 rounded-xl text-xs font-bold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Trash2 size={13} />
+                    <span>{language === 'ar' ? 'حذف الحساب نهائياً' : 'Delete Account Permanently'}</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -530,13 +531,22 @@ export const PortalShellView: React.FC<PortalShellViewProps> = ({
                 : 'Please contact M737 support via email or WhatsApp to resolve accreditation status.'}
             </p>
 
-            <div className="mt-6 flex justify-center gap-3">
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
               <a
                 href="mailto:bcgmoc@gmail.com"
                 className="px-6 py-2.5 rounded-xl text-xs font-bold text-white bg-[#003366] hover:bg-[#002244]"
               >
                 {language === 'ar' ? 'مراسلة الدعم: bcgmoc@gmail.com' : 'Email Support: bcgmoc@gmail.com'}
               </a>
+
+              <button
+                type="button"
+                onClick={() => setShowSelfDeleteModal(true)}
+                className="px-5 py-2.5 rounded-xl text-xs font-bold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors flex items-center gap-1.5 cursor-pointer"
+              >
+                <Trash2 size={13} />
+                <span>{language === 'ar' ? 'حذف الحساب نهائياً' : 'Delete Account Permanently'}</span>
+              </button>
             </div>
           </div>
         )}
@@ -562,10 +572,21 @@ export const PortalShellView: React.FC<PortalShellViewProps> = ({
                   </p>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
+                  {userProfile?.role !== 'super_admin' && (
+                    <button
+                      type="button"
+                      onClick={() => setShowSelfDeleteModal(true)}
+                      className="px-3 py-2 rounded-xl text-xs font-bold text-red-200 bg-red-950/40 hover:bg-red-900/60 border border-red-500/30 transition-colors flex items-center gap-1.5 cursor-pointer"
+                      title={language === 'ar' ? 'حذف حسابي نهائياً من المنصة' : 'Delete my account permanently'}
+                    >
+                      <Trash2 size={13} />
+                      <span className="hidden sm:inline">{language === 'ar' ? 'حذف الحساب' : 'Delete'}</span>
+                    </button>
+                  )}
                   <button
                     onClick={signOut}
-                    className="px-4 py-2 rounded-xl text-xs font-bold text-slate-200 bg-white/10 hover:bg-white/20 border border-white/20 transition-colors flex items-center gap-2"
+                    className="px-4 py-2 rounded-xl text-xs font-bold text-slate-200 bg-white/10 hover:bg-white/20 border border-white/20 transition-colors flex items-center gap-2 cursor-pointer"
                   >
                     <LogOut size={14} />
                     <span>{language === 'ar' ? 'تسجيل الخروج' : 'Sign Out'}</span>
@@ -670,6 +691,79 @@ export const PortalShellView: React.FC<PortalShellViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* ==================================================== */}
+      {/* MODAL: SELF-SERVICE PERMANENT ACCOUNT DELETION */}
+      {/* ==================================================== */}
+      {showSelfDeleteModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-red-200 space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                <Trash2 size={24} />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900">
+                  {language === 'ar' ? 'حذف الحساب نهائياً' : 'Delete Account Permanently'}
+                </h3>
+                <span className="text-xs text-red-600 font-bold">
+                  {language === 'ar' ? 'تحذير: هذا الإجراء لا يمكن التراجع عنه' : 'Warning: This cannot be undone'}
+                </span>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-red-50/80 border border-red-200 text-xs text-slate-700 space-y-2">
+              <p className="font-semibold text-red-950">
+                {language === 'ar'
+                  ? `هل أنت متأكد تماماً من رغبتك بحذف حسابك (${userProfile?.displayName || user?.email}) نهائياً من منصة M737 الطبية؟`
+                  : `Are you sure you want to permanently delete your account (${userProfile?.displayName || user?.email}) from M737?`}
+              </p>
+              <p className="text-slate-600 leading-relaxed">
+                {language === 'ar'
+                  ? 'سيتم حذف هويتك الرقمية، ملفك المهني، وسجلاتك فوراً من قاعدة البيانات وإلغاء تسجيل الدخول نهائياً.'
+                  : 'Your user profile, authorizations, and credentials will be purged permanently from Firestore and Firebase Authentication.'}
+              </p>
+            </div>
+
+            {selfDeleteError && (
+              <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 font-semibold">
+                {selfDeleteError}
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                disabled={isDeletingOwnAccount}
+                onClick={() => {
+                  setShowSelfDeleteModal(false);
+                  setSelfDeleteError(null);
+                }}
+                className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+              >
+                {language === 'ar' ? 'إلغاء والاحتفاظ بالحساب' : 'Cancel & Keep Account'}
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingOwnAccount}
+                onClick={handleConfirmSelfDelete}
+                className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs transition-colors cursor-pointer flex items-center gap-2 shadow-md hover:shadow-lg disabled:opacity-50"
+              >
+                {isDeletingOwnAccount ? (
+                  <RefreshCw size={14} className="animate-spin" />
+                ) : (
+                  <Trash2 size={14} />
+                )}
+                <span>
+                  {isDeletingOwnAccount
+                    ? (language === 'ar' ? 'جارٍ حذف الحساب...' : 'Deleting...')
+                    : (language === 'ar' ? 'نعم، حذف الحساب نهائياً' : 'Delete Account Now')}
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

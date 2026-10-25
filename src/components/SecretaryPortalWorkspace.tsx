@@ -63,12 +63,11 @@ export const SecretaryPortalWorkspace: React.FC<SecretaryPortalWorkspaceProps> =
     user, 
     userProfile, 
     signInWithGoogle, 
-    signInAsDemoUser,
     setShowDomainHelp,
     unauthorizedDomainDetected,
     isDemoMode,
     signOut, 
-    refreshProfile 
+    refreshProfile  
   } = useAuth();
   const { language, isRTL } = useLanguage();
 
@@ -787,14 +786,6 @@ export const SecretaryPortalWorkspace: React.FC<SecretaryPortalWorkspaceProps> =
             >
               <Users className="w-5 h-5" />
               <span>{language === 'ar' ? 'تسجيل الدخول عبر Google' : 'Sign in with Google'}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => signInAsDemoUser('secretary')}
-              className="w-full py-3 px-5 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 font-bold rounded-2xl transition-all flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer"
-            >
-              <span>{language === 'ar' ? 'دخول تجريبي فوري لسكرتارية العيادة (Sandbox Mode)' : 'Instant Demo as Clinic Secretary'}</span>
             </button>
 
             {unauthorizedDomainDetected && (

@@ -139,6 +139,7 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
   const [b2bNotes, setB2bNotes] = useState('');
   const [selectedB2bOrderDetails, setSelectedB2bOrderDetails] = useState<WholesaleOrder | null>(null);
   const [b2bSubmitting, setB2bSubmitting] = useState(false);
+  const [registeredWholesalers, setRegisteredWholesalers] = useState<Array<{ id: string; name: string; governorate?: string; phone?: string; licenseNumber?: string; bio?: string }>>([]);
 
   // New Order Form State
   const [newOrderData, setNewOrderData] = useState({
@@ -279,120 +280,7 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
         where('pharmacyId', '==', user.uid)
       );
       const medSnap = await getDocs(medQuery);
-      let medList = medSnap.docs.map(d => ({ id: d.id, ...d.data() } as MedicineItem));
-
-      // Seed standard Iraqi medicines if empty
-      if (medList.length === 0) {
-        const defaultMedicines: Omit<MedicineItem, 'id'>[] = [
-          {
-            pharmacyId: user.uid,
-            pharmacyName: userProfile?.facilityName || 'صيدلية النور النموذجية',
-            name: 'Panadol Extra (بانادول إكسترا)',
-            activeIngredient: 'Paracetamol 500mg + Caffeine 65mg',
-            brand: 'Panadol',
-            manufacturer: 'GSK GlaxoSmithKline',
-            strength: '500mg/65mg',
-            dosageForm: 'Tablets (أقراص)',
-            packageSize: '24 Tablets',
-            price: 3500,
-            quantity: 80,
-            minStockAlert: 15,
-            expiryDate: new Date(Date.now() + 500 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            requiresPrescription: false,
-            isAvailable: true,
-            notes: 'مسكن آلام وخافض حرارة.',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-          {
-            pharmacyId: user.uid,
-            pharmacyName: userProfile?.facilityName || 'صيدلية النور النموذجية',
-            name: 'Augmentin 1g (أوغمنتين 1 غرام)',
-            activeIngredient: 'Amoxicillin 875mg + Clavulanic Acid 125mg',
-            brand: 'Augmentin',
-            manufacturer: 'GSK',
-            strength: '1000mg (1g)',
-            dosageForm: 'Tablets (أقراص)',
-            packageSize: '14 Tablets',
-            price: 11000,
-            quantity: 25,
-            minStockAlert: 8,
-            expiryDate: new Date(Date.now() + 400 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            requiresPrescription: true,
-            isAvailable: true,
-            notes: 'مضاد حيوي واسع الطيف، يلزم وصفة طبية.',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-          {
-            pharmacyId: user.uid,
-            pharmacyName: userProfile?.facilityName || 'صيدلية النور النموذجية',
-            name: 'Lipitor 20mg (ليبيتور)',
-            activeIngredient: 'Atorvastatin Calcium',
-            brand: 'Lipitor',
-            manufacturer: 'Pfizer',
-            strength: '20mg',
-            dosageForm: 'Tablets (أقراص)',
-            packageSize: '30 Tablets',
-            price: 24000,
-            quantity: 18,
-            minStockAlert: 5,
-            expiryDate: new Date(Date.now() + 600 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            requiresPrescription: true,
-            isAvailable: true,
-            notes: 'خافض كوليسترول الدم ودهون الكبد.',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-          {
-            pharmacyId: user.uid,
-            pharmacyName: userProfile?.facilityName || 'صيدلية النور النموذجية',
-            name: 'Nexium 40mg (نيكسيوم)',
-            activeIngredient: 'Esomeprazole Magnesium',
-            brand: 'Nexium',
-            manufacturer: 'AstraZeneca',
-            strength: '40mg',
-            dosageForm: 'Tablets (أقراص)',
-            packageSize: '28 Tablets',
-            price: 22000,
-            quantity: 30,
-            minStockAlert: 8,
-            expiryDate: new Date(Date.now() + 300 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            requiresPrescription: false,
-            isAvailable: true,
-            notes: 'مثبط مضخة البروتون لعلاج حموضة المعدة والارتجاع المريئي.',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-          {
-            pharmacyId: user.uid,
-            pharmacyName: userProfile?.facilityName || 'صيدلية النور النموذجية',
-            name: 'Ventolin Evohaler (فنتولين بخاخ)',
-            activeIngredient: 'Salbutamol Sulfate',
-            brand: 'Ventolin',
-            manufacturer: 'GSK',
-            strength: '100mcg/dose',
-            dosageForm: 'Inhaler (بخاخ)',
-            packageSize: '200 Doses',
-            price: 8500,
-            quantity: 4,
-            minStockAlert: 10,
-            expiryDate: new Date(Date.now() + 450 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            requiresPrescription: true,
-            isAvailable: true,
-            notes: 'موسع قصبات لحالات الربو والضيق التنفسي الحاد.',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          }
-        ];
-
-        for (const m of defaultMedicines) {
-          const mId = `med_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-          await setDoc(doc(db, 'medicines', mId), { id: mId, ...m });
-        }
-        const refreshedMedSnap = await getDocs(medQuery);
-        medList = refreshedMedSnap.docs.map(d => ({ id: d.id, ...d.data() } as MedicineItem));
-      }
+      const medList = medSnap.docs.map(d => ({ id: d.id, ...d.data() } as MedicineItem));
       setMedicines(medList);
 
       // 3. Fetch Pharmacy Orders
@@ -415,6 +303,7 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
         const b2bList = b2bSnap.docs.map(d => ({ id: d.id, ...d.data() } as WholesaleOrder));
         b2bList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         setB2bOrders(b2bList);
+
         // 5. Fetch Electronic Prescriptions Targeted to this Pharmacy
         try {
           const rxQuery = query(
@@ -422,89 +311,35 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
             where('targetPharmacyId', '==', user.uid)
           );
           const rxSnap = await getDocs(rxQuery);
-          let rxList = rxSnap.docs.map(d => ({ id: d.id, ...d.data() } as ElectronicPrescription));
+          const rxList = rxSnap.docs.map(d => ({ id: d.id, ...d.data() } as ElectronicPrescription));
           rxList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
-          if (rxList.length === 0) {
-            const sampleRx: ElectronicPrescription[] = [
-              {
-                id: 'demo_rx_incoming_1',
-                prescriptionNumber: 'RX-2026-7712',
-                doctorId: 'demo_doctor_ahmed',
-                doctorName: 'د. أحمد الرافدين',
-                doctorSpecialty: 'استشاري أمراض باطنية وقلبية',
-                doctorLicense: 'IQ-MED-94812',
-                doctorPhone: '07801122334',
-                clinicName: 'عيادة الرافدين الاستشارية',
-                patientId: 'demo_patient_karrar',
-                patientName: 'كرار جاسم الشمري',
-                patientPhone: '07802233445',
-                diagnosis: 'حموضة وارتجاع مريئي مع تهيج بالمعدة (GERD)',
-                targetPharmacyId: user.uid,
-                targetPharmacyName: pharmacyProfile?.pharmacyName || userProfile?.facilityName || 'صيدليتنا المعتمدة',
-                patientAllergies: [],
-                generalInstructions: 'تجنب الأطعمة الدسمة والمسبكة والقهوة قبل النوم بساعتين.',
-                status: 'sent',
-                items: [
-                  {
-                    name: 'Nexium (نيكسيوم)',
-                    activeIngredient: 'Esomeprazole Magnesium',
-                    strength: '40 mg',
-                    dosageForm: 'Tablets (أقراص معوية)',
-                    dosage: 'حبة واحدة',
-                    frequency: 'مرة واحدة يومياً قبل وجبة الإفطار بنصف ساعة',
-                    duration: '14 يوماً',
-                    instructions: 'تبلع الحبة كاملة دون مضغ أو سحق',
-                  }
-                ],
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-              },
-              {
-                id: 'demo_rx_incoming_2',
-                prescriptionNumber: 'RX-2026-4891',
-                doctorId: 'demo_doctor_ahmed',
-                doctorName: 'د. أحمد الرافدين',
-                doctorSpecialty: 'استشاري أمراض باطنية وقلبية',
-                doctorLicense: 'IQ-MED-94812',
-                doctorPhone: '07801122334',
-                clinicName: 'عيادة الرافدين الاستشارية',
-                patientId: 'demo_patient_sara',
-                patientName: 'سارة حيدر العراقي',
-                patientPhone: '07705566778',
-                diagnosis: 'ارتفاع ضغط الدم الشرياني الخفيف إلى المتوسط (Stage 1 Hypertension)',
-                targetPharmacyId: user.uid,
-                targetPharmacyName: pharmacyProfile?.pharmacyName || userProfile?.facilityName || 'صيدليتنا المعتمدة',
-                patientAllergies: ['البنسلين (Penicillin Allergy)'],
-                generalInstructions: 'الالتزام بحمية قليلة الملح، قياس ضغط الدم يومياً في الصباح.',
-                status: 'dispensed',
-                items: [
-                  {
-                    name: 'Concor (كونكور)',
-                    activeIngredient: 'Bisoprolol Fumarate',
-                    strength: '5 mg',
-                    dosageForm: 'Tablets (أقراص)',
-                    dosage: 'حبة واحدة',
-                    frequency: 'مرة واحدة يومياً صباحاً قبل الإفطار',
-                    duration: '30 يوماً',
-                    instructions: 'مع نصف كوب ماء',
-                  }
-                ],
-                dispensedAt: new Date(Date.now() - 3600000 * 24).toISOString(),
-                dispensedByUid: user.uid,
-                dispensedByName: userProfile?.displayName || 'الصيدلي المسؤول',
-                dispensedPharmacyId: user.uid,
-                dispensedPharmacyName: pharmacyProfile?.pharmacyName || userProfile?.facilityName || 'صيدليتنا المعتمدة',
-                createdAt: new Date(Date.now() - 3600000 * 48).toISOString(),
-                updatedAt: new Date(Date.now() - 3600000 * 24).toISOString(),
-              }
-            ];
-            setIncomingPrescriptions(sampleRx);
-          } else {
-            setIncomingPrescriptions(rxList);
-          }
+          setIncomingPrescriptions(rxList);
         } catch {
-          // Fallback
+          setIncomingPrescriptions([]);
+        }
+
+        // 6. Fetch Real Accredited Wholesalers from Firestore
+        try {
+          const wQuery = query(
+            collection(db, 'users'),
+            where('role', '==', 'wholesaler'),
+            where('status', '==', 'approved')
+          );
+          const wSnap = await getDocs(wQuery);
+          const realWholesalers = wSnap.docs.map(d => {
+            const wData = d.data();
+            return {
+              id: d.id,
+              name: wData.facilityName || wData.displayName || 'مذخر أدوية معتمد',
+              governorate: wData.governorate || 'العراق',
+              phone: wData.phone || '',
+              licenseNumber: wData.licenseNumber || '',
+              bio: wData.bio || '',
+            };
+          });
+          setRegisteredWholesalers(realWholesalers);
+        } catch (wErr) {
+          console.warn('Could not load registered wholesalers:', wErr);
         }
 
       } catch {
@@ -893,10 +728,9 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
   };
 
   const handleDeleteMedicine = async (medId: string) => {
-    if (!window.confirm(language === 'ar' ? 'هل أنت متأكد من حذف هذا الدواء نهائياً من الصيدلية؟' : 'Delete this medicine from inventory?')) return;
     try {
       await deleteDoc(doc(db, 'medicines', medId));
-      showToast(language === 'ar' ? 'تم حذف الدواء من السجل' : 'Medicine removed');
+      showToast(language === 'ar' ? 'تم حذف الدواء من السجل بنجاح' : 'Medicine removed');
       await loadPharmacyData();
     } catch (err: unknown) {
       handleFirestoreError(err, OperationType.DELETE, `medicines/${medId}`);
@@ -1116,8 +950,8 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
 
       const wholesaleOrderPayload: WholesaleOrder = {
         id: orderId,
-        wholesalerId: primaryWholesaler.facilityId || 'demo_wholesaler_samarra',
-        wholesalerName: primaryWholesaler.facilityName || 'مذخر سامراء العلمي الحديث',
+        wholesalerId: primaryWholesaler.facilityId || '',
+        wholesalerName: primaryWholesaler.facilityName || 'مذخر أدوية معتمد',
         pharmacyId: user.uid,
         pharmacyName: pharmacyProfile?.pharmacyName || userProfile?.facilityName || 'صيدليتنا المعتمدة',
         pharmacyPhone: pharmacyProfile?.phone || userProfile?.phone || '07XXXXXXXXX',
@@ -2321,47 +2155,55 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
               {language === 'ar' ? 'المذاخر والمكاتب العلمية المعتمدة في الشبكة' : 'Verified Partner Warehouses & Scientific Bureaus'}
             </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-4 rounded-2xl border border-teal-200 bg-teal-50/40 flex items-start gap-3.5">
-                <div className="w-12 h-12 rounded-xl bg-teal-700 text-white flex items-center justify-center shrink-0 shadow-xs">
-                  <Building2 size={24} />
-                </div>
-                <div className="flex-1 min-w-0 text-xs">
-                  <div className="flex items-center justify-between gap-2">
-                    <h4 className="font-bold text-sm text-slate-900">مذخر سامراء العلمي الحديث للأدوية</h4>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-800">معتمد</span>
+            {registeredWholesalers.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {registeredWholesalers.map((w) => (
+                  <div key={w.id} className="p-4 rounded-2xl border border-teal-200 bg-teal-50/40 flex items-start gap-3.5">
+                    <div className="w-12 h-12 rounded-xl bg-teal-700 text-white flex items-center justify-center shrink-0 shadow-xs">
+                      <Building2 size={24} />
+                    </div>
+                    <div className="flex-1 min-w-0 text-xs">
+                      <div className="flex items-center justify-between gap-2">
+                        <h4 className="font-bold text-sm text-slate-900">{w.name}</h4>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-800">
+                          {language === 'ar' ? 'معتمد رسمياً' : 'Verified'}
+                        </span>
+                      </div>
+                      {w.bio && <p className="text-slate-500 mt-1">{w.bio}</p>}
+                      <div className="mt-2 text-slate-600 flex items-center gap-3 flex-wrap">
+                        {w.licenseNumber && (
+                          <span>{language === 'ar' ? 'الترخيص:' : 'License:'} <strong>{w.licenseNumber}</strong></span>
+                        )}
+                        {w.governorate && (
+                          <>
+                            <span>·</span>
+                            <span>{w.governorate}</span>
+                          </>
+                        )}
+                        {w.phone && (
+                          <>
+                            <span>·</span>
+                            <span>{language === 'ar' ? 'هاتف:' : 'Phone:'} <strong>{w.phone}</strong></span>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-slate-500 mt-1">تجهيز كافة أدوية الالتهابات والمسكنات وأدوية الأمراض المزمنة والمستلزمات.</p>
-                  <div className="mt-2 text-slate-600 flex items-center gap-3 flex-wrap">
-                    <span>الترخيص: <strong>IQ-WHOLE-88301</strong></span>
-                    <span>·</span>
-                    <span>بغداد، شارع فلسطين</span>
-                    <span>·</span>
-                    <span>هاتف: <strong>07709988776</strong></span>
-                  </div>
-                </div>
+                ))}
               </div>
-
-              <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 flex items-start gap-3.5">
-                <div className="w-12 h-12 rounded-xl bg-slate-800 text-white flex items-center justify-center shrink-0 shadow-xs">
-                  <Building2 size={24} />
-                </div>
-                <div className="flex-1 min-w-0 text-xs">
-                  <div className="flex items-center justify-between gap-2">
-                    <h4 className="font-bold text-sm text-slate-900">مذخر الرشيد التخصصي للأدوية والمحاليل</h4>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">مرخص نقابياً</span>
-                  </div>
-                  <p className="text-slate-500 mt-1">وكيل معتمد للأدوية الأوروبية والوطنية ومحاليل الغسيل الكلوي وسلسلة التبريد.</p>
-                  <div className="mt-2 text-slate-600 flex items-center gap-3 flex-wrap">
-                    <span>الترخيص: <strong>IQ-WHOLE-5021</strong></span>
-                    <span>·</span>
-                    <span>بغداد، السعدون</span>
-                    <span>·</span>
-                    <span>هاتف: <strong>07712349988</strong></span>
-                  </div>
-                </div>
+            ) : (
+              <div className="p-6 rounded-2xl border border-dashed border-slate-200 bg-slate-50 text-center text-xs text-slate-500 space-y-1">
+                <Building2 size={28} className="mx-auto text-slate-400 mb-1" />
+                <p className="font-bold text-slate-700">
+                  {language === 'ar' ? 'لا توجد مذاخر أدوية مسجلة في المنصة حالياً' : 'No drug wholesalers registered yet'}
+                </p>
+                <p>
+                  {language === 'ar'
+                    ? 'سيتم عرض المكاتب العلمية ومذاخر الأدوية المعتمدة فور تسجيلها وتفعيل حساباتها رسمياً.'
+                    : 'Accredited wholesalers will appear here once officially registered and approved.'}
+                </p>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Pharmacy's Placed B2B Orders & Shipments Tracker */}

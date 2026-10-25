@@ -89,7 +89,7 @@ interface PatientPortalWorkspaceProps {
 }
 
 export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ onBackToHome }) => {
-  const { user, userProfile, refreshProfile, signOut, isDemoMode } = useAuth();
+  const { user, userProfile, refreshProfile, signOut, deleteOwnAccountPermanently, isDemoMode } = useAuth();
   const { language, isRTL } = useLanguage();
 
   // Navigation tab
@@ -100,6 +100,27 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Self-service account deletion state
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
+
+  const handleConfirmAccountDeletion = async () => {
+    setIsDeletingAccount(true);
+    setDeleteAccountError(null);
+    try {
+      await deleteOwnAccountPermanently();
+      setShowDeleteAccountModal(false);
+      onBackToHome();
+    } catch (err: unknown) {
+      console.error('Error deleting patient account:', err);
+      const msg = err instanceof Error ? err.message : (language === 'ar' ? 'فشل حذف الحساب' : 'Failed to delete account');
+      setDeleteAccountError(msg);
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  };
 
   // Electronic Prescriptions State
   const [patientPrescriptions, setPatientPrescriptions] = useState<ElectronicPrescription[]>([]);
@@ -329,164 +350,7 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
     }
   ];
 
-  const FALLBACK_MEDICINES: MedicineItem[] = [
-    {
-      id: 'demo_med_1',
-      pharmacyId: 'demo_pharmacy_alnoor',
-      pharmacyName: 'صيدلية النور النموذجية',
-      pharmacyPhone: '07801122334',
-      pharmacyGovernorate: 'بغداد (Baghdad)',
-      pharmacyAddress: 'بغداد، الكرادة داخل، قرب مستشفى الراهبات',
-      name: 'Panadol Extra (بانادول إكسترا)',
-      activeIngredient: 'Paracetamol 500mg + Caffeine 65mg',
-      brand: 'Panadol',
-      manufacturer: 'GSK GlaxoSmithKline',
-      strength: '500mg/65mg',
-      dosageForm: 'Tablets (أقراص)',
-      packageSize: '24 Tablets',
-      price: 3500,
-      quantity: 120,
-      minStockAlert: 20,
-      expiryDate: '2027-08-30',
-      benefits: 'تسكين آلام الصداع والشقيقة، خفض الحرارة وتخفيف آلام الأسنان والعضلات.',
-      sideEffects: 'قد يسبب أرقاً طفيفاً لدى الحساسين للكافيين. لا تتجاوز 8 أقراص يومياً.',
-      requiresPrescription: false,
-      isAvailable: true,
-      notes: 'متوفر بكميات كافية وسلسلة تبريد معتمدة.',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: 'demo_med_2',
-      pharmacyId: 'demo_pharmacy_alnoor',
-      pharmacyName: 'صيدلية النور النموذجية',
-      pharmacyPhone: '07801122334',
-      pharmacyGovernorate: 'بغداد (Baghdad)',
-      pharmacyAddress: 'بغداد، الكرادة داخل، قرب مستشفى الراهبات',
-      name: 'Augmentin 1g (أوغمنتين 1 غرام)',
-      activeIngredient: 'Amoxicillin 875mg + Clavulanic Acid 125mg',
-      brand: 'Augmentin',
-      manufacturer: 'GSK',
-      strength: '1000mg (1g)',
-      dosageForm: 'Tablets (أقراص)',
-      packageSize: '14 Tablets',
-      price: 11000,
-      quantity: 45,
-      minStockAlert: 10,
-      expiryDate: '2027-04-15',
-      benefits: 'مضاد حيوي فعال لعلاج التهابات الجهاز التنفسي والجيوب الأنفية والمسالك البولية.',
-      sideEffects: 'اضطرابات خفيفة بالمعدة، يفضل تناوله في بداية الوجبة الغذائية.',
-      requiresPrescription: true,
-      isAvailable: true,
-      notes: 'صنف أصلي مسجل بوزارة الصحة العراقية.',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: 'demo_med_3',
-      pharmacyId: 'demo_pharmacy_alnoor',
-      pharmacyName: 'صيدلية النور النموذجية',
-      pharmacyPhone: '07801122334',
-      pharmacyGovernorate: 'بغداد (Baghdad)',
-      pharmacyAddress: 'بغداد، الكرادة داخل، قرب مستشفى الراهبات',
-      name: 'Lipitor 20mg (ليبيتور)',
-      activeIngredient: 'Atorvastatin Calcium',
-      brand: 'Lipitor',
-      manufacturer: 'Pfizer',
-      strength: '20mg',
-      dosageForm: 'Tablets (أقراص)',
-      packageSize: '30 Tablets',
-      price: 24000,
-      quantity: 35,
-      minStockAlert: 8,
-      expiryDate: '2027-11-20',
-      benefits: 'تخفيض كوليسترول الدم والدهون الثلاثية والوقاية من النوبات القلبية وتصلب الشرايين.',
-      sideEffects: 'آلام عضلية نادرة، يوصى بعمل فحص إنزيمات الكبد دورياً.',
-      requiresPrescription: true,
-      isAvailable: true,
-      notes: 'حبة واحدة يومياً مساءً حسب تعليمات الطبيب المعالج.',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: 'demo_med_4',
-      pharmacyId: 'demo_pharmacy_alnoor',
-      pharmacyName: 'صيدلية النور النموذجية',
-      pharmacyPhone: '07801122334',
-      pharmacyGovernorate: 'بغداد (Baghdad)',
-      pharmacyAddress: 'بغداد، الكرادة داخل، قرب مستشفى الراهبات',
-      name: 'Concor 5mg (كونكور)',
-      activeIngredient: 'Bisoprolol Fumarate',
-      brand: 'Concor',
-      manufacturer: 'Merck',
-      strength: '5mg',
-      dosageForm: 'Tablets (أقراص)',
-      packageSize: '30 Tablets',
-      price: 8500,
-      quantity: 50,
-      minStockAlert: 10,
-      expiryDate: '2027-10-10',
-      benefits: 'تنظيم ضربات القلب وخفض ضغط الدم الشرياني وعلاج القصور القلبي المستقر.',
-      sideEffects: 'بطء النبض، دوار خفيف عند بداية الاستخدام. لا يوقف فجأة دون استشارة الطبيب.',
-      requiresPrescription: true,
-      isAvailable: true,
-      notes: 'متوفر بنقاوة ألمانية أصلية.',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: 'demo_med_5',
-      pharmacyId: 'demo_pharmacy_alnoor',
-      pharmacyName: 'صيدلية النور النموذجية',
-      pharmacyPhone: '07801122334',
-      pharmacyGovernorate: 'بغداد (Baghdad)',
-      pharmacyAddress: 'بغداد، الكرادة داخل، قرب مستشفى الراهبات',
-      name: 'Glucophage 1000mg (كلوكوفاج)',
-      activeIngredient: 'Metformin Hydrochloride',
-      brand: 'Glucophage',
-      manufacturer: 'Merck',
-      strength: '1000mg',
-      dosageForm: 'Tablets (أقراص)',
-      packageSize: '60 Tablets',
-      price: 9000,
-      quantity: 60,
-      minStockAlert: 12,
-      expiryDate: '2028-01-25',
-      benefits: 'التحكم بمستوى سكر الدم للمصابين بالنوع الثاني من السكري وتحسين حساسية الإنسولين.',
-      sideEffects: 'غثيان خفيف عابر، يؤخذ مع أو بعد الوجبات مباشرة لتقليل تهيج المعدة.',
-      requiresPrescription: true,
-      isAvailable: true,
-      notes: 'معتمد من منظمة الغذاء والدواء ونقابة الصيادلة.',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: 'demo_med_6',
-      pharmacyId: 'demo_pharmacy_alnoor',
-      pharmacyName: 'صيدلية النور النموذجية',
-      pharmacyPhone: '07801122334',
-      pharmacyGovernorate: 'بغداد (Baghdad)',
-      pharmacyAddress: 'بغداد، الكرادة داخل، قرب مستشفى الراهبات',
-      name: 'Ventolin Evohaler (فنتولين بخاخ)',
-      activeIngredient: 'Salbutamol Sulfate',
-      brand: 'Ventolin',
-      manufacturer: 'GSK',
-      strength: '100mcg/dose',
-      dosageForm: 'Inhaler (بخاخ)',
-      packageSize: '200 Doses',
-      price: 6500,
-      quantity: 40,
-      minStockAlert: 10,
-      expiryDate: '2027-06-30',
-      benefits: 'توسيع القصبات الهوائية الفوري في نوبات الربو وضيق التنفس والانسداد الرئوي.',
-      sideEffects: 'رعشة خفيفة أو تسارع مؤقت في نبضات القلب بعد الاستنشاق المباشر.',
-      requiresPrescription: false,
-      isAvailable: true,
-      notes: 'بخاخ إنقاذ سريع مع مؤشر جرعات متقدم.',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-  ];
+  const FALLBACK_MEDICINES: MedicineItem[] = [];
 
   const FALLBACK_LABS: LabProfile[] = [
     {
@@ -800,7 +664,7 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
       } catch {
         // fallback
       }
-      setMedicinesList(medList.length > 0 ? medList : FALLBACK_MEDICINES);
+      setMedicinesList(medList);
 
       let pharmList: PharmacyProfile[] = [];
       try {
@@ -809,26 +673,7 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
       } catch {
         // fallback
       }
-      setPharmaciesList(pharmList.length > 0 ? pharmList : [
-        {
-          pharmacyId: 'demo_pharmacy_alnoor',
-          pharmacyName: 'صيدلية النور النموذجية',
-          ownerName: 'د. ليث العزاوي (صيدلي ممارس)',
-          licenseNumber: 'PHARM-IQ-5120',
-          phone: '07801122334',
-          whatsapp: '07801122334',
-          address: 'بغداد، الكرادة داخل، قرب مستشفى الراهبات',
-          governorate: 'بغداد (Baghdad)',
-          mapsUrl: '',
-          workingHours: '8:00 AM - 12:00 AM',
-          deliveryAvailable: true,
-          deliveryFee: 4000,
-          nightDuty: true,
-          bio: 'صيدلية نموذجية متكاملة تقدم خدمات الصرف الدوائي والاستشارات الصيدلانية وخدمة التوصيل السريع.',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }
-      ]);
+      setPharmaciesList(pharmList);
 
       let ordList: PharmacyOrder[] = [];
       try {
@@ -3541,7 +3386,8 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
       {/* TAB 8: PATIENT HEALTH PASSPORT PROFILE SETTINGS */}
       {/* ==================================================== */}
       {activeTab === 'profile' && (
-        <form onSubmit={handleSavePatientProfile} className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
+        <div className="space-y-6">
+          <form onSubmit={handleSavePatientProfile} className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
           <div className="pb-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h2 className="text-xl font-bold text-slate-900">
@@ -3766,6 +3612,36 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
             </button>
           </div>
         </form>
+
+        {/* DANGER ZONE: PERMANENT ACCOUNT DELETION */}
+        <div className="bg-red-50/70 rounded-3xl p-6 sm:p-8 border border-red-200 shadow-xs space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+              <Trash2 size={20} />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-red-950">
+                {language === 'ar' ? 'منطقة الخطر: حذف الحساب نهائياً' : 'Danger Zone: Permanent Account Deletion'}
+              </h3>
+              <p className="text-xs text-red-700 mt-0.5">
+                {language === 'ar'
+                  ? 'حذف حساب المريض وكافة بيانات الجواز الصحي والملفات الطبية نهائياً من قاعدة بيانات Firestore.'
+                  : 'Permanently remove patient credentials, health passport and associated records from Firestore.'}
+              </p>
+            </div>
+          </div>
+          <div className="pt-2 flex justify-end">
+            <button
+              type="button"
+              onClick={() => setShowDeleteAccountModal(true)}
+              className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-sm flex items-center gap-2 cursor-pointer transition-colors"
+            >
+              <Trash2 size={14} />
+              <span>{language === 'ar' ? 'حذف الحساب نهائياً' : 'Delete Account Permanently'}</span>
+            </button>
+          </div>
+          </div>
+        </div>
       )}
 
       {/* ==================================================== */}
@@ -4755,6 +4631,75 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
           prescription={selectedPrescriptionForPdf}
           onClose={() => setSelectedPrescriptionForPdf(null)}
         />
+      )}
+
+      {/* ==================================================== */}
+      {/* MODAL: PERMANENT PATIENT ACCOUNT DELETION */}
+      {/* ==================================================== */}
+      {showDeleteAccountModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-red-200 space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                <Trash2 size={24} />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900">
+                  {language === 'ar' ? 'حذف حساب المريض نهائياً' : 'Permanently Delete Patient Account'}
+                </h3>
+                <span className="text-xs text-red-600 font-bold">
+                  {language === 'ar' ? 'إجراء حاسم: لا يمكن التراجع عنه' : 'Irreversible Action'}
+                </span>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-red-50/80 border border-red-200 text-xs text-slate-700 space-y-2">
+              <p className="font-semibold text-red-950">
+                {language === 'ar'
+                  ? `هل أنت متأكد من رغبتك بحذف حسابك الطبي المعتمد (${userProfile?.displayName || user?.email}) نهائياً؟`
+                  : `Are you sure you want to permanently delete your medical account (${userProfile?.displayName || user?.email})?`}
+              </p>
+              <p className="text-slate-600 leading-relaxed">
+                {language === 'ar'
+                  ? 'سيتم حذف هويتك الرقمية، الجواز الصحي، التحسسات، وسجلات الطوارئ نهائياً من قاعدة بيانات Firestore.'
+                  : 'Your credentials, health passport and emergency records will be purged from Firestore and Firebase Authentication.'}
+              </p>
+            </div>
+
+            {deleteAccountError && (
+              <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 font-semibold">
+                {deleteAccountError}
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                disabled={isDeletingAccount}
+                onClick={() => {
+                  setShowDeleteAccountModal(false);
+                  setDeleteAccountError(null);
+                }}
+                className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+              >
+                {language === 'ar' ? 'إلغاء والاحتفاظ بالحساب' : 'Cancel & Keep Account'}
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingAccount}
+                onClick={handleConfirmAccountDeletion}
+                className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs transition-colors cursor-pointer flex items-center gap-2 shadow-md hover:shadow-lg disabled:opacity-50"
+              >
+                <Trash2 size={14} />
+                <span>
+                  {isDeletingAccount
+                    ? (language === 'ar' ? 'جارٍ حذف الحساب...' : 'Deleting...')
+                    : (language === 'ar' ? 'نعم، حذف الحساب نهائياً' : 'Delete Account Now')}
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

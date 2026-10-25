@@ -106,7 +106,7 @@ service cloud.firestore {
         )
       );
 
-      allow delete: if isAdmin();
+      allow delete: if isAdmin() || isOwner(userId);
     }
 
     // Admins Collection: /admins/{adminId}
@@ -125,7 +125,7 @@ service cloud.firestore {
         && incoming().doctorId == request.auth.uid;
       allow update: if (isOwner(doctorId) || isAdmin())
         && incoming().doctorId == existing().doctorId;
-      allow delete: if isAdmin();
+      allow delete: if isAdmin() || isOwner(doctorId);
     }
 
     function isSecretaryForDoctor(doctorId) {
@@ -281,7 +281,7 @@ service cloud.firestore {
         && incoming().centerId == request.auth.uid;
       allow update: if (isOwner(centerId) || isAdmin())
         && incoming().centerId == existing().centerId;
-      allow delete: if isAdmin();
+      allow delete: if isAdmin() || isOwner(centerId);
     }
 
     // Radiology Services: /radiology_services/{serviceId}
@@ -352,7 +352,7 @@ service cloud.firestore {
         && incoming().labId == request.auth.uid;
       allow update: if (isOwner(labId) || isAdmin())
         && incoming().labId == existing().labId;
-      allow delete: if isAdmin();
+      allow delete: if isAdmin() || isOwner(labId);
     }
 
     // Laboratory Tests: /lab_tests/{testId}
@@ -423,7 +423,7 @@ service cloud.firestore {
         && incoming().pharmacyId == request.auth.uid;
       allow update: if (isOwner(pharmacyId) || isAdmin())
         && incoming().pharmacyId == existing().pharmacyId;
-      allow delete: if isAdmin();
+      allow delete: if isAdmin() || isOwner(pharmacyId);
     }
 
     // Medicine Inventory: /medicines/{medicineId}
@@ -568,7 +568,7 @@ service cloud.firestore {
         && incoming().patientId == request.auth.uid;
       allow update: if (isOwner(patientId) || isAdmin())
         && incoming().patientId == existing().patientId;
-      allow delete: if isAdmin();
+      allow delete: if isAdmin() || isOwner(patientId);
     }
 
     // Subscriptions: /subscriptions/{subscriptionId}
@@ -602,7 +602,7 @@ service cloud.firestore {
         && incoming().wholesalerId == request.auth.uid;
       allow update: if (isOwner(wholesalerId) || isAdmin())
         && incoming().wholesalerId == existing().wholesalerId;
-      allow delete: if isAdmin();
+      allow delete: if isAdmin() || isOwner(wholesalerId);
     }
 
     // Wholesale Medicines: /wholesale_medicines/{medicineId}

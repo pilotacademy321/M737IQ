@@ -18,7 +18,8 @@ import {
   ShieldAlert,
   Headphones,
   HelpCircle,
-  FileCheck
+  FileCheck,
+  Instagram
 } from 'lucide-react';
 
 interface SupportContactPageProps {
@@ -48,6 +49,7 @@ export const SupportContactPage: React.FC<SupportContactPageProps> = ({
 
   const whatsappHref = 'https://wa.me/9647885663748';
   const emailHref = 'mailto:bcgmoc@gmail.com';
+  const instagramHref = 'https://www.instagram.com/m737iq';
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,8 +154,8 @@ export const SupportContactPage: React.FC<SupportContactPageProps> = ({
           </p>
         </div>
 
-        {/* 3 Verified Direct Channels Strip */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* 4 Verified Direct Channels Strip */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* WhatsApp Channel */}
           <a
             href={whatsappHref}
@@ -179,6 +181,35 @@ export const SupportContactPage: React.FC<SupportContactPageProps> = ({
             </div>
             <div className="pt-4 mt-4 border-t border-emerald-200/60 flex items-center justify-between text-xs font-bold text-emerald-700">
               <span>{language === 'ar' ? 'فتح المحادثة الآن' : 'Start WhatsApp Chat'}</span>
+              <ArrowUpRight size={16} />
+            </div>
+          </a>
+
+          {/* Instagram Channel */}
+          <a
+            href={instagramHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-6 rounded-3xl bg-pink-50/70 hover:bg-pink-100/70 border border-pink-200 transition-all flex flex-col justify-between group shadow-xs"
+          >
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 text-white flex items-center justify-center mb-4 shadow-sm group-hover:scale-105 transition-transform">
+                <Instagram size={24} />
+              </div>
+              <span className="text-xs font-bold text-pink-800 uppercase tracking-wide block">
+                {t.contact.instagramTitle}
+              </span>
+              <div className="text-lg font-mono font-black text-slate-900 mt-1">
+                @m737iq
+              </div>
+              <p className="text-xs text-pink-900 mt-2 leading-relaxed">
+                {language === 'ar'
+                  ? 'متابعة مستجدات المنصة، التحديثات الطبية، والتواصل المباشر مع فريق الإدارة.'
+                  : 'Follow clinical updates, verified medical posts, and platform announcements.'}
+              </p>
+            </div>
+            <div className="pt-4 mt-4 border-t border-pink-200/60 flex items-center justify-between text-xs font-bold text-pink-700">
+              <span>{t.contact.instagramAction}</span>
               <ArrowUpRight size={16} />
             </div>
           </a>

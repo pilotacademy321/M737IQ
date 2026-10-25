@@ -389,22 +389,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </svg>
                 <span>{language === 'ar' ? 'المتابعة بحساب Google' : 'Continue with Google'}</span>
               </button>
-
-              {/* Instant Sandbox / Demo trigger */}
-              <div className="pt-2 text-center">
-                <button
-                  type="button"
-                  onClick={handleOpenSandbox}
-                  className="text-xs text-amber-700 hover:text-amber-900 font-bold inline-flex items-center gap-1.5 p-1 rounded-lg hover:bg-amber-50 transition-colors cursor-pointer"
-                >
-                  <Sparkles size={14} className="text-amber-600" />
-                  <span>
-                    {language === 'ar' 
-                      ? 'تجربة فورية لجميع البوابات (Sandbox Demo)' 
-                      : 'Try All Portals Instantly (Sandbox Mode)'}
-                  </span>
-                </button>
-              </div>
             </form>
           )}
         </div>

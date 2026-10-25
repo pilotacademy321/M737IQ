@@ -173,20 +173,10 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
   const [newRadClinicalIndication, setNewRadClinicalIndication] = useState('');
   const [newRadPrepInstructions, setNewRadPrepInstructions] = useState('شرب كمية وفيرة من الماء قبل الفحص');
 
-  // Facilities lists
-  const [facilitiesPharmacies, setFacilitiesPharmacies] = useState<Array<{ id: string; name: string; governorate: string; phone: string }>>([
-    { id: 'demo_pharmacy_amal', name: 'صيدلية الأمل المركزية', governorate: 'بغداد (Baghdad)', phone: '07814455667' },
-    { id: 'demo_pharmacy_dijla', name: 'صيدلية دجلة التخصصية', governorate: 'بغداد (Baghdad)', phone: '07701122334' },
-    { id: 'demo_pharmacy_rafidain', name: 'صيدلية الرافدين الأهلية', governorate: 'البصرة (Basra)', phone: '07809988776' },
-  ]);
-  const [facilitiesLabs, setFacilitiesLabs] = useState<Array<{ id: string; name: string; governorate: string; phone: string }>>([
-    { id: 'demo_lab_baghdad', name: 'مختبر بغداد المركزي التخصصي', governorate: 'بغداد (Baghdad)', phone: '07712233445' },
-    { id: 'demo_lab_hayat', name: 'مختبر الحياة للتحليلات المرضية', governorate: 'النجف الأشرف (Najaf)', phone: '07812233445' },
-  ]);
-  const [facilitiesRadCenters, setFacilitiesRadCenters] = useState<Array<{ id: string; name: string; governorate: string; phone: string }>>([
-    { id: 'demo_radiology_dijla', name: 'مركز دجلة للأشعة والمفراس والرنين', governorate: 'بغداد (Baghdad)', phone: '07723344556' },
-    { id: 'demo_radiology_shifaa', name: 'مركز الشفاء التخصصي للتصوير الشعاعي', governorate: 'أربيل (Erbil)', phone: '07501122334' },
-  ]);
+  // Registered Facilities lists
+  const [facilitiesPharmacies, setFacilitiesPharmacies] = useState<Array<{ id: string; name: string; governorate: string; phone: string }>>([]);
+  const [facilitiesLabs, setFacilitiesLabs] = useState<Array<{ id: string; name: string; governorate: string; phone: string }>>([]);
+  const [facilitiesRadCenters, setFacilitiesRadCenters] = useState<Array<{ id: string; name: string; governorate: string; phone: string }>>([]);
 
   // Secretary Delegations State
   const [delegations, setDelegations] = useState<SecretaryDelegation[]>([]);
@@ -643,10 +633,7 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
               phone: data.phone || '',
             };
           });
-          setFacilitiesPharmacies(prev => {
-            const ids = new Set(livePharmacies.map(p => p.id));
-            return [...livePharmacies, ...prev.filter(p => !ids.has(p.id))];
-          });
+          setFacilitiesPharmacies(livePharmacies);
         }
       } catch {}
 
@@ -662,10 +649,7 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
               phone: data.phone || '',
             };
           });
-          setFacilitiesLabs(prev => {
-            const ids = new Set(liveLabs.map(l => l.id));
-            return [...liveLabs, ...prev.filter(l => !ids.has(l.id))];
-          });
+          setFacilitiesLabs(liveLabs);
         }
       } catch {}
 
@@ -681,10 +665,7 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
               phone: data.phone || '',
             };
           });
-          setFacilitiesRadCenters(prev => {
-            const ids = new Set(liveRad.map(r => r.id));
-            return [...liveRad, ...prev.filter(r => !ids.has(r.id))];
-          });
+          setFacilitiesRadCenters(liveRad);
         }
       } catch {}
 

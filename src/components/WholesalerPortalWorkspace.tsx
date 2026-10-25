@@ -61,129 +61,7 @@ interface WholesalerPortalWorkspaceProps {
   onBackToHome: () => void;
 }
 
-// Preset Iraqi Wholesale Catalog for Initial Seeding & Demo Simulation
-const DEFAULT_WHOLESALE_ITEMS: Omit<WholesaleMedicineItem, 'wholesalerId' | 'wholesalerName'>[] = [
-  {
-    id: 'wmed_aug_1g',
-    name: 'Augmentin 1g (أوجمنتين)',
-    nameAr: 'أوجمنتين 1 غرام أقراص',
-    activeIngredient: 'Amoxicillin + Clavulanic Acid',
-    manufacturer: 'GSK (GlaxoSmithKline)',
-    originCountry: 'United Kingdom (المملكة المتحدة)',
-    strength: '1000 mg (875/125)',
-    dosageForm: 'Tablets (أقراص)',
-    packSize: '14 Tablets / Box',
-    cartonCapacity: 30,
-    batchNumber: 'AUG-2026-B81',
-    productionDate: '2025-01-10',
-    expiryDate: '2027-01-10',
-    wholesalePriceIqd: 6500,
-    cartonPriceIqd: 180000,
-    stockPacks: 450,
-    minOrderQuantity: 10,
-    isAvailable: true,
-    category: 'Antibiotics (مضادات حيوية)',
-    notes: 'وجبة مستوردة أصلية مرخصة من وزارة الصحة',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'wmed_pan_ext',
-    name: 'Panadol Extra (بنادول إكسترا)',
-    nameAr: 'بنادول إكسترا الأحمر',
-    activeIngredient: 'Paracetamol + Caffeine',
-    manufacturer: 'Haleon / GSK',
-    originCountry: 'Ireland (إيرلندا)',
-    strength: '500mg / 65mg',
-    dosageForm: 'Tablets (أقراص)',
-    packSize: '24 Tablets / Box',
-    cartonCapacity: 40,
-    batchNumber: 'PAN-2025-E44',
-    productionDate: '2025-03-01',
-    expiryDate: '2027-03-01',
-    wholesalePriceIqd: 2500,
-    cartonPriceIqd: 95000,
-    stockPacks: 800,
-    minOrderQuantity: 20,
-    isAvailable: true,
-    category: 'Analgesics (مسكنات ألم)',
-    notes: 'متوفر بكثرة في المستودع المركزي',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'wmed_nex_40',
-    name: 'Nexium 40mg (نيكسيوم)',
-    nameAr: 'نيكسيوم 40 ملغم للمعدة',
-    activeIngredient: 'Esomeprazole Magnesium',
-    manufacturer: 'AstraZeneca',
-    originCountry: 'Sweden (السويد)',
-    strength: '40 mg',
-    dosageForm: 'Tablets (أقراص معوية)',
-    packSize: '28 Tablets / Box',
-    cartonCapacity: 30,
-    batchNumber: 'NEX-2025-K12',
-    productionDate: '2025-02-15',
-    expiryDate: '2027-02-15',
-    wholesalePriceIqd: 14000,
-    cartonPriceIqd: 390000,
-    stockPacks: 190,
-    minOrderQuantity: 5,
-    isAvailable: true,
-    category: 'Gastrointestinal (جهاز هضمي)',
-    notes: 'تخزين بدرجة حرارة أقل من 25 مئوية',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'wmed_sam_amox',
-    name: 'Amoxicillin SDI 500mg (أموكسيسيلين سامراء)',
-    nameAr: 'أموكسيسيلين كبسول سامراء',
-    activeIngredient: 'Amoxicillin Trihydrate',
-    manufacturer: 'SDI Samarra (أدوية سامراء)',
-    originCountry: 'Iraq (العراق)',
-    strength: '500 mg',
-    dosageForm: 'Capsules (كبسولات)',
-    packSize: '20 Capsules / Box',
-    cartonCapacity: 50,
-    batchNumber: 'SDI-2026-A09',
-    productionDate: '2025-04-01',
-    expiryDate: '2027-04-01',
-    wholesalePriceIqd: 2000,
-    cartonPriceIqd: 90000,
-    stockPacks: 950,
-    minOrderQuantity: 25,
-    isAvailable: true,
-    category: 'Antibiotics (مضادات حيوية)',
-    notes: 'إنتاج وطني عراقي معتمد',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'wmed_con_5',
-    name: 'Concor 5mg (كونكور)',
-    nameAr: 'كونكور 5 ملغم لضغط الدم',
-    activeIngredient: 'Bisoprolol Fumarate',
-    manufacturer: 'Merck KGaA',
-    originCountry: 'Germany (ألمانيا)',
-    strength: '5 mg',
-    dosageForm: 'Tablets (أقراص)',
-    packSize: '30 Tablets / Box',
-    cartonCapacity: 30,
-    batchNumber: 'CON-2025-M99',
-    productionDate: '2025-01-20',
-    expiryDate: '2027-01-20',
-    wholesalePriceIqd: 9500,
-    cartonPriceIqd: 270000,
-    stockPacks: 240,
-    minOrderQuantity: 10,
-    isAvailable: true,
-    category: 'Cardiovascular (قلبية وضغط)',
-    notes: 'دفعة سريعة التوزيع للصيدليات',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  }
-];
+
 
 export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps> = ({ onBackToHome }) => {
   const { user, userProfile, isAdmin, refreshProfile } = useAuth();
@@ -316,18 +194,18 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
         // Initialize Default Profile
         const initialProfile: WholesalerProfile = {
           wholesalerId: user.uid,
-          warehouseName: userProfile?.facilityName || 'مذخر سامراء العلمي الحديث للأدوية',
-          ownerName: userProfile?.displayName || 'المكتب العلمي المعتمد',
-          licenseNumber: userProfile?.licenseNumber || 'IQ-WHOLE-88301',
-          commercialRegNumber: 'CR-BAG-9921',
-          phone: userProfile?.phone || '07709988776',
-          whatsapp: userProfile?.phone || '07709988776',
-          address: 'شارع فلسطين، قرب ساحة بيروت، بغداد',
+          warehouseName: userProfile?.facilityName || 'مذخر أدوية معتمد',
+          ownerName: userProfile?.displayName || 'المكتب العلمي',
+          licenseNumber: userProfile?.licenseNumber || '',
+          commercialRegNumber: '',
+          phone: userProfile?.phone || '',
+          whatsapp: userProfile?.phone || '',
+          address: userProfile?.governorate || 'العراق، بغداد',
           governorate: userProfile?.governorate || 'بغداد (Baghdad)',
-          deliveryCoverageGovernorates: ['بغداد (Baghdad)', 'بابل / الحلة (Babylon)', 'ديالى (Diyala)', 'الأنبار (Anbar)'],
+          deliveryCoverageGovernorates: ['بغداد (Baghdad)'],
           minimumOrderValueIqd: 100000,
           workingHours: '8:00 AM - 5:00 PM',
-          bio: 'مذخر ومكتب علمي لتوريد الأدوية المعتمدة والمستلزمات الطبية لكافة صيدليات ومستشفيات العراق وفق معايير نقابة الصيادلة ووزارة الصحة.',
+          bio: 'مذخر ومكتب علمي لتوريد الأدوية والمستلزمات الطبية المعتمدة وفق معايير نقابة الصيادلة ووزارة الصحة.',
           isVerified: true,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -336,7 +214,7 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
         try {
           await setDoc(profRef, sanitizeForFirestore(initialProfile));
         } catch {
-          // Allowed fallback in demo mode
+          // Fallback
         }
         setWholesalerProfile(initialProfile);
       }
@@ -355,27 +233,7 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
         fetchedMeds = [];
       }
 
-      if (fetchedMeds.length === 0) {
-        // Seed default items for this wholesaler
-        const seeded: WholesaleMedicineItem[] = DEFAULT_WHOLESALE_ITEMS.map((item, index) => ({
-          ...item,
-          id: `wmed_${user.uid.slice(0, 5)}_${index}_${Date.now()}`,
-          wholesalerId: user.uid,
-          wholesalerName: userProfile?.facilityName || 'مذخر سامراء العلمي الحديث',
-          wholesalerPhone: userProfile?.phone || '07709988776',
-        }));
-
-        for (const item of seeded) {
-          try {
-            await setDoc(doc(db, 'wholesale_medicines', item.id), sanitizeForFirestore(item));
-          } catch {
-            // in sandbox preview, keep in-memory
-          }
-        }
-        setMedicines(seeded);
-      } else {
-        setMedicines(fetchedMeds);
-      }
+      setMedicines(fetchedMeds);
 
       // 3. Fetch Incoming B2B Wholesale Orders from Pharmacies
       const ordersQuery = query(
@@ -386,57 +244,7 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
       try {
         const ordersSnap = await getDocs(ordersQuery);
         const fetchedOrders = ordersSnap.docs.map((d) => ({ id: d.id, ...d.data() } as WholesaleOrder));
-        if (fetchedOrders.length === 0) {
-          // Create initial demo order from a verified pharmacy
-          const sampleOrder: WholesaleOrder = {
-            id: `word_${Date.now()}_samp`,
-            wholesalerId: user.uid,
-            wholesalerName: userProfile?.facilityName || 'مذخر سامراء العلمي الحديث',
-            pharmacyId: 'demo_pharmacy_amal',
-            pharmacyName: 'صيدلية الأمل المعتمدة',
-            pharmacyPhone: '07814455667',
-            pharmacyAddress: 'شارع المنصور الرئيسي، محلة 602، بغداد',
-            pharmacyGovernorate: 'بغداد (Baghdad)',
-            items: [
-              {
-                medicineId: 'wmed_aug_1g',
-                name: 'Augmentin 1g (أوجمنتين)',
-                activeIngredient: 'Amoxicillin + Clavulanic Acid',
-                strength: '1000 mg',
-                batchNumber: 'AUG-2026-B81',
-                packQuantity: 30,
-                unitWholesalePriceIqd: 6500,
-                totalPriceIqd: 195000,
-              },
-              {
-                medicineId: 'wmed_pan_ext',
-                name: 'Panadol Extra (بنادول إكسترا)',
-                activeIngredient: 'Paracetamol + Caffeine',
-                strength: '500mg/65mg',
-                batchNumber: 'PAN-2025-E44',
-                packQuantity: 40,
-                unitWholesalePriceIqd: 2500,
-                totalPriceIqd: 100000,
-              }
-            ],
-            totalAmountIqd: 295000,
-            status: 'pending',
-            paymentMethod: 'cash_on_delivery',
-            pharmacyNotes: 'يرجى التوصيل قبل الساعة 4 مساءً مع فاتورة ضريبية رسمية',
-            invoiceNumber: 'INV-2026-0914',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          };
-
-          try {
-            await setDoc(doc(db, 'wholesale_orders', sampleOrder.id), sanitizeForFirestore(sampleOrder));
-          } catch {
-            // sandbox fallback
-          }
-          setOrders([sampleOrder]);
-        } else {
-          setOrders(fetchedOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
-        }
+        setOrders(fetchedOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
       } catch {
         setOrders([]);
       }
@@ -576,8 +384,6 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
 
   // Delete Medicine
   const handleDeleteMedicine = async (medId: string) => {
-    if (!confirm(language === 'ar' ? 'هل أنت متأكد من حذف هذا المستحضر من الكتالوج؟' : 'Delete this product from catalog?')) return;
-
     try {
       try {
         await deleteDoc(doc(db, 'wholesale_medicines', medId));

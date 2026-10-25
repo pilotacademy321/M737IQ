@@ -1,39 +1,26 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { UserRole } from '../types';
 import { 
   ShieldAlert, 
   Copy, 
   Check, 
   ExternalLink, 
   X, 
-  Sparkles, 
-  Stethoscope, 
-  FlaskConical, 
-  Scan, 
-  Pill, 
-  Users, 
-  Building2,
-  ShieldCheck, 
-  User as UserIcon,
-  HelpCircle,
   LogIn,
-  ArrowLeft,
-  ArrowRight
+  HelpCircle 
 } from 'lucide-react';
 
 interface AuthDomainGuideModalProps {
   onSelectPortal?: (portalId: any) => void;
 }
 
-export const AuthDomainGuideModal: React.FC<AuthDomainGuideModalProps> = ({ onSelectPortal }) => {
+export const AuthDomainGuideModal: React.FC<AuthDomainGuideModalProps> = () => {
   const { 
     showDomainHelp, 
     setShowDomainHelp, 
     currentHostname, 
     firebaseProjectId, 
-    signInAsDemoUser,
     signInWithGoogle,
     loading 
   } = useAuth();
@@ -56,119 +43,7 @@ export const AuthDomainGuideModal: React.FC<AuthDomainGuideModalProps> = ({ onSe
     }
   };
 
-  const handleSelectDemoRole = async (role: UserRole) => {
-    await signInAsDemoUser(role);
-    setShowDomainHelp(false);
-
-    // Map role to portal ID if callback provided
-    const roleToPortalMap: Record<UserRole, string> = {
-      doctor: 'doctor',
-      radiology_center: 'radiology',
-      laboratory: 'laboratory',
-      pharmacy: 'pharmacy',
-      wholesaler: 'wholesaler',
-      patient: 'patient',
-      super_admin: 'super_admin',
-      secretary: 'secretary',
-    };
-
-    if (onSelectPortal && roleToPortalMap[role]) {
-      onSelectPortal(roleToPortalMap[role]);
-    }
-  };
-
   const consoleSettingsUrl = `https://console.firebase.google.com/project/${firebaseProjectId}/authentication/settings`;
-
-  const demoRoles = [
-    {
-      role: 'super_admin' as UserRole,
-      titleAr: 'المدير العام المعتمد',
-      titleEn: 'Super Administrator',
-      descAr: 'حساب bcgmoc@gmail.com بكامل صلاحيات الاعتماد ومراجعة التراخيص وخطط الاشتراكات',
-      descEn: 'Full access for bcgmoc@gmail.com to approve licenses & manage subscriptions',
-      icon: ShieldCheck,
-      color: 'bg-red-600',
-      badgeAr: 'المدير العام المعتمد',
-      badgeEn: 'Full Admin',
-    },
-    {
-      role: 'doctor' as UserRole,
-      titleAr: 'طبيب استشاري',
-      titleEn: 'Consultant Doctor',
-      descAr: 'د. أحمد الرافدين - إدارة المواعيد، السجلات الطبية، والوصفات السريرية',
-      descEn: 'Dr. Ahmed - Appointment scheduling, EMR, clinical prescriptions',
-      icon: Stethoscope,
-      color: 'bg-[#003366]',
-      badgeAr: 'طبيب معتمد',
-      badgeEn: 'Certified Doctor',
-    },
-    {
-      role: 'laboratory' as UserRole,
-      titleAr: 'مختبر التحليلات المرضية',
-      titleEn: 'Clinical Laboratory',
-      descAr: 'مختبر بغداد المركزي - طلبات الفحوصات والباركود وإصدار النتائج الرسمية',
-      descEn: 'Baghdad Lab - Test orders, barcode processing, certified reports',
-      icon: FlaskConical,
-      color: 'bg-emerald-600',
-      badgeAr: 'مختبر سريري',
-      badgeEn: 'Clinical Lab',
-    },
-    {
-      role: 'radiology_center' as UserRole,
-      titleAr: 'مركز الأشعة والتصوير',
-      titleEn: 'Radiology Center',
-      descAr: 'مركز دجلة التخصصي - جدولة المفراس والرنين وتقارير التشخيص الإشعاعي',
-      descEn: 'Dijla Imaging - CT/MRI scheduling and digital radiological reports',
-      icon: Scan,
-      color: 'bg-indigo-600',
-      badgeAr: 'مركز تصوير',
-      badgeEn: 'Imaging Center',
-    },
-    {
-      role: 'pharmacy' as UserRole,
-      titleAr: 'صيدلية معتمدة',
-      titleEn: 'Certified Pharmacy',
-      descAr: 'صيدلية الأمل المركزية - صرف الوصفات والتحقق من التداخلات الدوائية',
-      descEn: 'Al-Amal Pharmacy - Prescription dispensing and drug verification',
-      icon: Pill,
-      color: 'bg-teal-600',
-      badgeAr: 'صيدلية مرخصة',
-      badgeEn: 'Licensed Pharmacy',
-    },
-    {
-      role: 'wholesaler' as UserRole,
-      titleAr: 'مذخر ومكتب علمي',
-      titleEn: 'Pharmaceutical Wholesaler',
-      descAr: 'مذخر سامراء العلمي - توريد الأدوية والمستلزمات الطبية بالجملة للصيدليات',
-      descEn: 'Samarra Drug Warehouse - B2B pharmaceutical catalog & wholesale orders',
-      icon: Building2,
-      color: 'bg-emerald-700',
-      badgeAr: 'مكتب علمي معتمد',
-      badgeEn: 'Drug Warehouse',
-    },
-    {
-      role: 'secretary' as UserRole,
-      titleAr: 'سكرتارية واستقبال العيادة',
-      titleEn: 'Clinic Secretary',
-      descAr: 'استقبال المرضى وتنظيم طابور الانتظار وتثبيت المواعيد اليومية',
-      descEn: 'Patient reception, queue check-in, daily appointments',
-      icon: Users,
-      color: 'bg-amber-600',
-      badgeAr: 'استقبال العيادة',
-      badgeEn: 'Clinic Desk',
-    },
-    {
-      role: 'patient' as UserRole,
-      titleAr: 'مريض مسجل',
-      titleEn: 'Registered Patient',
-      descAr: 'سارة العراقي - حجز المواعيد والاطلاع على الفحوصات والوصفات الطبية',
-      descEn: 'Sara Al-Iraqi - Booking visits, viewing test results & prescriptions',
-      icon: UserIcon,
-      color: 'bg-sky-600',
-      badgeAr: 'مريض معتمد',
-      badgeEn: 'Patient',
-    },
-  ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
@@ -184,10 +59,10 @@ export const AuthDomainGuideModal: React.FC<AuthDomainGuideModalProps> = ({ onSe
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-bold tracking-tight">
-                {language === 'ar' ? 'تصريح نطاق Firebase أو الدخول السريع للتجربة' : 'Authorize Firebase Domain or Quick Demo'}
+                {language === 'ar' ? 'تصريح نطاق مصادقة Firebase' : 'Authorize Firebase Authentication Domain'}
               </h2>
               <p className="text-xs text-slate-300">
-                {language === 'ar' ? 'حل خطأ (auth/unauthorized-domain) وخيارات المعاينة' : 'Fix (auth/unauthorized-domain) error & preview options'}
+                {language === 'ar' ? 'دليل حل خطأ (auth/unauthorized-domain) لتسجيل الدخول الحقيقي' : 'Guide to fix auth/unauthorized-domain for real authentication'}
               </p>
             </div>
           </div>
@@ -284,56 +159,6 @@ export const AuthDomainGuideModal: React.FC<AuthDomainGuideModalProps> = ({ onSe
                 <LogIn size={14} />
                 <span>{language === 'ar' ? 'إعادة المحاولة عبر Google' : 'Retry Sign In'}</span>
               </button>
-            </div>
-          </div>
-
-          {/* Section 2: Instant Sandbox / Demo Access */}
-          <div className="border-t border-slate-200 pt-5 space-y-3">
-            <div className="flex items-center gap-2">
-              <div className="p-1 rounded-lg bg-emerald-100 text-emerald-700">
-                <Sparkles size={16} />
-              </div>
-              <h3 className="font-bold text-slate-900 text-sm">
-                {language === 'ar' 
-                  ? 'أو التجربة الفورية لجميع البوابات (Sandbox Demo Mode)' 
-                  : 'Or Instant Preview for All 7 Portals (Sandbox Mode)'}
-              </h3>
-            </div>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              {language === 'ar'
-                ? 'لا داعي لانتظار إعدادات النطاق الآن! يمكنك فوراً اختيار أي دور واختبار بيئات العمل بالكامل مع بيانات عراقية سريرية متكاملة:'
-                : 'No need to wait for domain configuration! Select any role below to immediately test the workspaces with comprehensive Iraqi clinical mock data:'}
-            </p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2">
-              {demoRoles.map((item) => {
-                const IconComponent = item.icon;
-                return (
-                  <button
-                    key={item.role}
-                    type="button"
-                    onClick={() => handleSelectDemoRole(item.role)}
-                    className="p-3 rounded-2xl border border-slate-200 hover:border-[#003366] hover:bg-blue-50/50 text-start flex items-start gap-3 transition-all cursor-pointer group shadow-xs hover:shadow-sm"
-                  >
-                    <div className={`w-9 h-9 rounded-xl ${item.color} text-white flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform`}>
-                      <IconComponent size={18} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-1 mb-0.5">
-                        <span className="font-bold text-xs text-slate-900 group-hover:text-[#003366]">
-                          {language === 'ar' ? item.titleAr : item.titleEn}
-                        </span>
-                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600">
-                          {language === 'ar' ? item.badgeAr : item.badgeEn}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">
-                        {language === 'ar' ? item.descAr : item.descEn}
-                      </p>
-                    </div>
-                  </button>
-                );
-              })}
             </div>
           </div>
         </div>

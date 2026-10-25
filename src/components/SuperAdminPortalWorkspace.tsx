@@ -72,19 +72,35 @@ interface SuperAdminPortalWorkspaceProps {
 }
 
 export const SuperAdminPortalWorkspace: React.FC<SuperAdminPortalWorkspaceProps> = ({ onBackToHome }) => {
-  const { user, userProfile, isAdmin, refreshProfile, signOut, updateUserStatusByAdmin } = useAuth();
+  const { 
+    user, 
+    userProfile, 
+    isAdmin, 
+    refreshProfile, 
+    signOut, 
+    updateUserStatusByAdmin,
+    deleteUserByAdmin,
+    deletePendingUsersByAdmin
+  } = useAuth();
   const { language, isRTL } = useLanguage();
 
   const [activeTab, setActiveTab] = useState<'accreditation' | 'analytics' | 'audit_logs' | 'subscriptions'>('accreditation');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const [isPurgingPending, setIsPurgingPending] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Users from Firestore
   const [usersList, setUsersList] = useState<UserProfile[]>([]);
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [showInspectorModal, setShowInspectorModal] = useState(false);
+
+  // In-App Deletion Confirmation Modals (safe from iframe sandbox confirm blocking)
+  const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
+  const [showPurgePendingModal, setShowPurgePendingModal] = useState(false);
+  const [planToDeleteId, setPlanToDeleteId] = useState<string | null>(null);
+  const [subToDeleteId, setSubToDeleteId] = useState<string | null>(null);
 
   // Audit Logs & Stats
   const [auditLogs, setAuditLogs] = useState<ClinicAuditLog[]>([]);
@@ -486,12 +502,17 @@ export const SuperAdminPortalWorkspace: React.FC<SuperAdminPortalWorkspaceProps>
     }
   };
 
-  // Delete Plan
-  const handleDeletePlan = async (planId: string) => {
-    if (!confirm(language === 'ar' ? 'هل أنت متأكد من رغبتك بحذف هذه الباقة؟' : 'Are you sure you want to delete this plan?')) return;
+  // Delete Plan trigger & execution
+  const handleDeletePlan = (planId: string) => {
+    setPlanToDeleteId(planId);
+  };
+
+  const confirmDeletePlanExecution = async () => {
+    if (!planToDeleteId) return;
     try {
-      await deleteDoc(doc(db, 'subscription_plans', planId));
-      setSubscriptionPlans(prev => prev.filter(p => p.id !== planId));
+      await deleteDoc(doc(db, 'subscription_plans', planToDeleteId));
+      setSubscriptionPlans(prev => prev.filter(p => p.id !== planToDeleteId));
+      setPlanToDeleteId(null);
       showToast(language === 'ar' ? 'تم حذف الباقة بنجاح' : 'Plan deleted successfully');
     } catch (err) {
       console.error('Error deleting plan:', err);
@@ -602,12 +623,17 @@ export const SuperAdminPortalWorkspace: React.FC<SuperAdminPortalWorkspaceProps>
     }
   };
 
-  // Delete Subscription
-  const handleDeleteSubscription = async (subId: string) => {
-    if (!confirm(language === 'ar' ? 'هل أنت متأكد من حذف هذا الاشتراك؟' : 'Delete this subscription?')) return;
+  // Delete Subscription trigger & execution
+  const handleDeleteSubscription = (subId: string) => {
+    setSubToDeleteId(subId);
+  };
+
+  const confirmDeleteSubExecution = async () => {
+    if (!subToDeleteId) return;
     try {
-      await deleteDoc(doc(db, 'subscriptions', subId));
-      setUserSubscriptions(prev => prev.filter(s => s.id !== subId));
+      await deleteDoc(doc(db, 'subscriptions', subToDeleteId));
+      setUserSubscriptions(prev => prev.filter(s => s.id !== subToDeleteId));
+      setSubToDeleteId(null);
       showToast(language === 'ar' ? 'تم حذف سجل الاشتراك بنجاح' : 'Subscription deleted');
     } catch (err) {
       console.error('Error deleting sub:', err);
@@ -640,6 +666,73 @@ export const SuperAdminPortalWorkspace: React.FC<SuperAdminPortalWorkspaceProps>
       showToast(language === 'ar' ? 'فشل تحديث الحالة: يرجى التحقق من أذونات المدير' : 'Failed to update status', 'error');
     } finally {
       setActionLoadingId(null);
+    }
+  };
+
+  // Permanently Delete a Single User Account - Trigger modal
+  const handleDeleteUser = (targetUser: UserProfile) => {
+    if (targetUser.role === 'super_admin') {
+      showToast(language === 'ar' ? 'لا يمكن حذف حساب المشرف العام' : 'Cannot delete Super Admin account', 'error');
+      return;
+    }
+    setUserToDelete(targetUser);
+  };
+
+  // Execute User Deletion after modal confirmation
+  const confirmDeleteUserExecution = async () => {
+    if (!userToDelete) return;
+    const targetUid = userToDelete.uid;
+    const targetName = userToDelete.displayName || userToDelete.email;
+
+    setActionLoadingId(targetUid);
+    try {
+      await deleteUserByAdmin(targetUid);
+      setUsersList(prev => prev.filter(u => u.uid !== targetUid));
+      if (selectedUser?.uid === targetUid) {
+        setShowInspectorModal(false);
+        setSelectedUser(null);
+      }
+      setUserToDelete(null);
+      showToast(
+        language === 'ar'
+          ? `تم حذف حساب (${targetName}) نهائياً من قاعدة البيانات`
+          : 'User account permanently deleted'
+      );
+    } catch (err) {
+      console.error('Error deleting user:', err);
+      showToast(language === 'ar' ? 'فشل حذف الحساب: يرجى التحقق من أذونات المدير' : 'Failed to delete account', 'error');
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  // Permanently Batch Purge All Pending / Incomplete Accounts - Trigger modal
+  const handlePurgePendingUsers = () => {
+    const pendingCount = metrics.pending;
+    if (pendingCount === 0) {
+      showToast(language === 'ar' ? 'لا توجد حسابات معلقة أو قيد التدقيق لحذفها' : 'No pending accounts to purge');
+      return;
+    }
+    setShowPurgePendingModal(true);
+  };
+
+  // Execute Batch Purge of Pending Accounts after modal confirmation
+  const confirmPurgePendingExecution = async () => {
+    setIsPurgingPending(true);
+    try {
+      const purgedCount = await deletePendingUsersByAdmin();
+      setUsersList(prev => prev.filter(u => u.status !== 'pending' && u.status !== 'incomplete'));
+      setShowPurgePendingModal(false);
+      showToast(
+        language === 'ar'
+          ? `تم حذف ${purgedCount} حساب معلق نهائياً وتطهير النظام بنجاح`
+          : `Successfully purged ${purgedCount} pending accounts`
+      );
+    } catch (err) {
+      console.error('Error purging pending accounts:', err);
+      showToast(language === 'ar' ? 'فشل حذف الحسابات المعلقة' : 'Failed to purge pending accounts', 'error');
+    } finally {
+      setIsPurgingPending(false);
     }
   };
 
@@ -993,6 +1086,22 @@ export const SuperAdminPortalWorkspace: React.FC<SuperAdminPortalWorkspaceProps>
                       : (language === 'ar' ? 'معلق' : 'Suspended')}
                   </button>
                 ))}
+
+                {metrics.pending > 0 && (
+                  <button
+                    onClick={handlePurgePendingUsers}
+                    disabled={isPurgingPending}
+                    className="ms-auto px-3 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 hover:text-red-800 border border-red-200 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                    title={language === 'ar' ? 'حذف كافة الحسابات المعلقة وقيد التدقيق دفعة واحدة' : 'Purge all pending accounts'}
+                  >
+                    {isPurgingPending ? <RefreshCw size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                    <span>
+                      {language === 'ar'
+                        ? `حذف كافة المعلقة (${metrics.pending})`
+                        : `Purge Pending (${metrics.pending})`}
+                    </span>
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -1104,6 +1213,21 @@ export const SuperAdminPortalWorkspace: React.FC<SuperAdminPortalWorkspaceProps>
                                   className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-red-50 hover:text-red-700 text-slate-700 font-bold text-[11px] border border-slate-200 transition-colors cursor-pointer"
                                 >
                                   {language === 'ar' ? 'تعليق' : 'Suspend'}
+                                </button>
+                              )}
+
+                              {usr.role !== 'super_admin' && (
+                                <button
+                                  onClick={() => handleDeleteUser(usr)}
+                                  disabled={isActing}
+                                  className="p-1.5 rounded-lg bg-slate-100 hover:bg-red-100 text-slate-400 hover:text-red-600 transition-colors cursor-pointer"
+                                  title={language === 'ar' ? 'حذف الحساب نهائياً' : 'Delete user permanently'}
+                                >
+                                  {isActing ? (
+                                    <RefreshCw size={13} className="animate-spin" />
+                                  ) : (
+                                    <Trash2 size={13} />
+                                  )}
                                 </button>
                               )}
                             </div>
@@ -1941,9 +2065,19 @@ export const SuperAdminPortalWorkspace: React.FC<SuperAdminPortalWorkspaceProps>
               {selectedUser.status !== 'suspended' && selectedUser.role !== 'super_admin' && (
                 <button
                   onClick={() => handleStatusChange(selectedUser.uid, 'suspended')}
-                  className="px-4 py-2 rounded-xl bg-red-100 hover:bg-red-200 text-red-700 font-bold text-xs transition-colors cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-xs transition-colors cursor-pointer"
                 >
                   {language === 'ar' ? 'تعليق الحساب' : 'Suspend Account'}
+                </button>
+              )}
+
+              {selectedUser.role !== 'super_admin' && (
+                <button
+                  onClick={() => handleDeleteUser(selectedUser)}
+                  className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  <Trash2 size={13} />
+                  <span>{language === 'ar' ? 'حذف الحساب نهائياً' : 'Delete Account Permanently'}</span>
                 </button>
               )}
 
@@ -2382,6 +2516,194 @@ export const SuperAdminPortalWorkspace: React.FC<SuperAdminPortalWorkspaceProps>
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* ==================================================== */}
+      {/* MODAL: CONFIRM PERMANENT USER ACCOUNT DELETION */}
+      {/* ==================================================== */}
+      {userToDelete && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-red-100 space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                <Trash2 size={24} />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900">
+                  {language === 'ar' ? 'تأكيد حذف الحساب نهائياً' : 'Permanently Delete User Account'}
+                </h3>
+                <span className="text-xs text-red-600 font-bold">
+                  {language === 'ar' ? 'إجراء لا يمكن التراجع عنه' : 'Irreversible Administrative Action'}
+                </span>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-red-50/70 border border-red-200 text-xs text-slate-700 space-y-2">
+              <p className="font-semibold text-red-950">
+                {language === 'ar'
+                  ? 'هل أنت متأكد من رغبتك بحذف هذا الحساب نهائياً من قاعدة البيانات والسجلات الطبية؟'
+                  : 'Are you sure you want to permanently delete this user account from Firestore?'}
+              </p>
+              <div className="bg-white p-3 rounded-xl border border-red-200 font-mono space-y-1 text-slate-800">
+                <div><span className="text-slate-400">{language === 'ar' ? 'الاسم:' : 'Name:'}</span> <strong>{userToDelete.displayName || 'غير محدد'}</strong></div>
+                <div><span className="text-slate-400">{language === 'ar' ? 'البريد:' : 'Email:'}</span> <strong>{userToDelete.email}</strong></div>
+                <div><span className="text-slate-400">{language === 'ar' ? 'الدور المهني:' : 'Role:'}</span> <strong>{userToDelete.role}</strong> ({userToDelete.status})</div>
+                <div><span className="text-slate-400">UID:</span> <span className="text-[11px] text-slate-500">{userToDelete.uid}</span></div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                disabled={actionLoadingId === userToDelete.uid}
+                onClick={() => setUserToDelete(null)}
+                className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+              >
+                {language === 'ar' ? 'إلغاء' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                disabled={actionLoadingId === userToDelete.uid}
+                onClick={confirmDeleteUserExecution}
+                className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs transition-colors cursor-pointer flex items-center gap-2 shadow-md hover:shadow-lg disabled:opacity-50"
+              >
+                {actionLoadingId === userToDelete.uid ? (
+                  <RefreshCw size={14} className="animate-spin" />
+                ) : (
+                  <Trash2 size={14} />
+                )}
+                <span>
+                  {actionLoadingId === userToDelete.uid
+                    ? (language === 'ar' ? 'جارٍ الحذف نهائياً...' : 'Deleting permanently...')
+                    : (language === 'ar' ? 'تأكيد الحذف النهائي' : 'Confirm Permanent Deletion')}
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================================================== */}
+      {/* MODAL: CONFIRM BATCH PURGE OF PENDING ACCOUNTS */}
+      {/* ==================================================== */}
+      {showPurgePendingModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-amber-200 space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                <Trash2 size={24} />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900">
+                  {language === 'ar' ? 'حذف وتطهير كافة الحسابات المعلقة' : 'Purge All Pending Accounts'}
+                </h3>
+                <span className="text-xs text-amber-700 font-bold">
+                  {language === 'ar' ? `العدد الإجمالي: ${metrics.pending} حساب معلق` : `${metrics.pending} Pending Accounts Total`}
+                </span>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200 text-xs text-amber-950 space-y-2">
+              <p className="font-semibold">
+                {language === 'ar'
+                  ? `هل أنت متأكد من حذف وإزالة كافة الحسابات المعلقة وغير المكتملة (${metrics.pending} حساب) نهائياً من قاعدة بيانات Firestore؟`
+                  : `Are you sure you want to permanently purge all ${metrics.pending} pending and incomplete user registrations?`}
+              </p>
+              <p className="text-slate-600">
+                {language === 'ar'
+                  ? 'سيتم تحرير النظام وإزالة أي تسجيلات تجريبية أو وهمية أو غير معتمدة بصورة فورية ونهائية.'
+                  : 'This permanently purges unapproved/pending draft registrations from the system.'}
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                disabled={isPurgingPending}
+                onClick={() => setShowPurgePendingModal(false)}
+                className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+              >
+                {language === 'ar' ? 'إلغاء' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                disabled={isPurgingPending}
+                onClick={confirmPurgePendingExecution}
+                className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition-colors cursor-pointer flex items-center gap-2 shadow-md hover:shadow-lg disabled:opacity-50"
+              >
+                {isPurgingPending ? (
+                  <RefreshCw size={14} className="animate-spin" />
+                ) : (
+                  <Trash2 size={14} />
+                )}
+                <span>
+                  {isPurgingPending
+                    ? (language === 'ar' ? 'جارٍ تطهير الحسابات...' : 'Purging...')
+                    : (language === 'ar' ? `حذف ${metrics.pending} حساب الآن` : 'Purge All Now')}
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================================================== */}
+      {/* MODAL: CONFIRM PLAN DELETION */}
+      {/* ==================================================== */}
+      {planToDeleteId && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-150">
+            <h3 className="text-base font-black text-slate-900">
+              {language === 'ar' ? 'تأكيد حذف الباقة' : 'Confirm Plan Deletion'}
+            </h3>
+            <p className="text-xs text-slate-600">
+              {language === 'ar' ? 'هل أنت متأكد من رغبتك بحذف هذه الباقة نهائياً؟' : 'Are you sure you want to delete this subscription plan?'}
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                onClick={() => setPlanToDeleteId(null)}
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer"
+              >
+                {language === 'ar' ? 'إلغاء' : 'Cancel'}
+              </button>
+              <button
+                onClick={confirmDeletePlanExecution}
+                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs cursor-pointer"
+              >
+                {language === 'ar' ? 'حذف الباقة' : 'Delete Plan'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================================================== */}
+      {/* MODAL: CONFIRM SUBSCRIPTION DELETION */}
+      {/* ==================================================== */}
+      {subToDeleteId && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-150">
+            <h3 className="text-base font-black text-slate-900">
+              {language === 'ar' ? 'تأكيد حذف سجل الاشتراك' : 'Confirm Subscription Deletion'}
+            </h3>
+            <p className="text-xs text-slate-600">
+              {language === 'ar' ? 'هل أنت متأكد من رغبتك بحذف سجل هذا الاشتراك؟' : 'Are you sure you want to delete this subscription record?'}
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                onClick={() => setSubToDeleteId(null)}
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer"
+              >
+                {language === 'ar' ? 'إلغاء' : 'Cancel'}
+              </button>
+              <button
+                onClick={confirmDeleteSubExecution}
+                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs cursor-pointer"
+              >
+                {language === 'ar' ? 'حذف السجل' : 'Delete Record'}
+              </button>
+            </div>
           </div>
         </div>
       )}

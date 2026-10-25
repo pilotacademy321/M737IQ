@@ -17,7 +17,10 @@ import {
   Stethoscope,
   ShieldAlert,
   Plus,
-  Trash2
+  Trash2,
+  HelpCircle,
+  Lightbulb,
+  CornerDownRight
 } from 'lucide-react';
 import { DrugInteractionPanel } from './DrugInteractionPanel';
 
@@ -44,261 +47,198 @@ export interface SearchMedicineResult {
   requiresPrescription?: boolean;
 }
 
-// Curated verified catalog of widely prescribed and procured medications in Iraq
-const IRAQI_MEDICINE_CATALOG: SearchMedicineResult[] = [
-  {
-    id: 'med_aug_1g',
-    name: 'Augmentin 1g (أوجمنتين)',
-    nameAr: 'أوجمنتين 1 غرام',
-    activeIngredient: 'Amoxicillin + Clavulanic Acid (أموكسيسيلين + كلافولانيك)',
-    manufacturer: 'GSK (GlaxoSmithKline)',
-    brand: 'Augmentin',
-    strength: '1000 mg (875/125)',
-    dosageForm: 'Tablets (أقراص)',
-    packageSize: '14 Tablets / Pack',
-    priceIqd: 6500,
-    cartonPriceIqd: 180000,
-    stockCount: 140,
-    minOrderQuantity: 10,
-    sourceType: 'wholesale',
-    facilityName: 'مذخر سامراء العلمي الحديث',
-    facilityGovernorate: 'بغداد (Baghdad)',
-    facilityPhone: '07709988776',
-    facilityId: 'demo_wholesaler_samarra',
-    requiresPrescription: true,
-  },
-  {
-    id: 'med_curam_1g',
-    name: 'Curam 1g (كورام)',
-    nameAr: 'كورام 1 غرام بديل مكافئ',
-    activeIngredient: 'Amoxicillin + Clavulanic Acid (أموكسيسيلين + كلافولانيك)',
-    manufacturer: 'Sandoz / Novartis',
-    brand: 'Curam',
-    strength: '1000 mg (875/125)',
-    dosageForm: 'Tablets (أقراص)',
-    packageSize: '14 Tablets / Pack',
-    priceIqd: 5500,
-    cartonPriceIqd: 160000,
-    stockCount: 90,
-    minOrderQuantity: 5,
-    sourceType: 'wholesale',
-    facilityName: 'مذخر الرشيد التخصصي للأدوية',
-    facilityGovernorate: 'بغداد (Baghdad)',
-    facilityPhone: '07712349988',
-    facilityId: 'demo_wholesaler_rashid',
-    requiresPrescription: true,
-  },
-  {
-    id: 'med_pan_ext',
-    name: 'Panadol Extra (بنادول إكسترا)',
-    nameAr: 'بنادول إكسترا الأحمر',
-    activeIngredient: 'Paracetamol 500mg + Caffeine 65mg (باراسيتامول + كافيين)',
-    manufacturer: 'Haleon / GSK',
-    brand: 'Panadol',
-    strength: '500mg / 65mg',
-    dosageForm: 'Tablets (أقراص)',
-    packageSize: '24 Tablets / Pack',
-    priceIqd: 2500,
-    cartonPriceIqd: 65000,
-    stockCount: 300,
-    minOrderQuantity: 20,
-    sourceType: 'wholesale',
-    facilityName: 'مذخر سامراء العلمي الحديث',
-    facilityGovernorate: 'بغداد (Baghdad)',
-    facilityPhone: '07709988776',
-    facilityId: 'demo_wholesaler_samarra',
-    requiresPrescription: false,
-  },
-  {
-    id: 'med_con_5',
-    name: 'Concor 5mg (كونكور)',
-    nameAr: 'كونكور 5 ملغم لعلاج الضغط',
-    activeIngredient: 'Bisoprolol Fumarate (بيسوبرولول)',
-    manufacturer: 'Merck KGaA',
-    brand: 'Concor',
-    strength: '5 mg',
-    dosageForm: 'Tablets (أقراص)',
-    packageSize: '30 Tablets / Box',
-    priceIqd: 9500,
-    cartonPriceIqd: 270000,
-    stockCount: 85,
-    minOrderQuantity: 10,
-    sourceType: 'wholesale',
-    facilityName: 'مذخر الرشيد التخصصي للأدوية',
-    facilityGovernorate: 'بغداد (Baghdad)',
-    facilityPhone: '07712349988',
-    facilityId: 'demo_wholesaler_rashid',
-    requiresPrescription: true,
-  },
-  {
-    id: 'med_nex_40',
-    name: 'Nexium 40mg (نيكسيوم)',
-    nameAr: 'نيكسيوم 40 ملغم',
-    activeIngredient: 'Esomeprazole Magnesium (إيزوميبرازول)',
-    manufacturer: 'AstraZeneca',
-    brand: 'Nexium',
-    strength: '40 mg',
-    dosageForm: 'Tablets (أقراص معوية)',
-    packageSize: '28 Tablets / Box',
-    priceIqd: 14000,
-    cartonPriceIqd: 390000,
-    stockCount: 60,
-    minOrderQuantity: 5,
-    sourceType: 'wholesale',
-    facilityName: 'مذخر سامراء العلمي الحديث',
-    facilityGovernorate: 'بغداد (Baghdad)',
-    facilityPhone: '07709988776',
-    facilityId: 'demo_wholesaler_samarra',
-    requiresPrescription: true,
-  },
-  {
-    id: 'med_esom_40',
-    name: 'Esoget 40mg (إيزوجيت)',
-    nameAr: 'إيزوجيت 40 ملغم بديل مكافئ',
-    activeIngredient: 'Esomeprazole Magnesium (إيزوميبرازول)',
-    manufacturer: 'Getz Pharma',
-    brand: 'Esoget',
-    strength: '40 mg',
-    dosageForm: 'Tablets (أقراص معوية)',
-    packageSize: '14 Tablets / Box',
-    priceIqd: 7500,
-    cartonPriceIqd: 210000,
-    stockCount: 110,
-    minOrderQuantity: 10,
-    sourceType: 'wholesale',
-    facilityName: 'مذخر الرشيد التخصصي للأدوية',
-    facilityGovernorate: 'بغداد (Baghdad)',
-    facilityPhone: '07712349988',
-    facilityId: 'demo_wholesaler_rashid',
-    requiresPrescription: true,
-  },
-  {
-    id: 'med_lip_20',
-    name: 'Lipitor 20mg (ليبيتور)',
-    nameAr: 'ليبيتور 20 ملغم خافض كولسترول',
-    activeIngredient: 'Atorvastatin Calcium (أتورفاستاتين)',
-    manufacturer: 'Pfizer',
-    brand: 'Lipitor',
-    strength: '20 mg',
-    dosageForm: 'Tablets (أقراص)',
-    packageSize: '30 Tablets / Box',
-    priceIqd: 11000,
-    cartonPriceIqd: 310000,
-    stockCount: 95,
-    minOrderQuantity: 10,
-    sourceType: 'wholesale',
-    facilityName: 'مذخر الرشيد التخصصي للأدوية',
-    facilityGovernorate: 'بغداد (Baghdad)',
-    facilityPhone: '07712349988',
-    facilityId: 'demo_wholesaler_rashid',
-    requiresPrescription: true,
-  },
-  {
-    id: 'med_glu_850',
-    name: 'Glucophage 850mg (كلوكوفاج)',
-    nameAr: 'كلوكوفاج 850 منظم سكر',
-    activeIngredient: 'Metformin Hydrochloride (ميتفورمين)',
-    manufacturer: 'Merck Santé',
-    brand: 'Glucophage',
-    strength: '850 mg',
-    dosageForm: 'Tablets (أقراص)',
-    packageSize: '30 Tablets / Box',
-    priceIqd: 4500,
-    cartonPriceIqd: 125000,
-    stockCount: 220,
-    minOrderQuantity: 15,
-    sourceType: 'wholesale',
-    facilityName: 'مذخر سامراء العلمي الحديث',
-    facilityGovernorate: 'بغداد (Baghdad)',
-    facilityPhone: '07709988776',
-    facilityId: 'demo_wholesaler_samarra',
-    requiresPrescription: true,
-  },
-  {
-    id: 'med_sam_amox',
-    name: 'Amoxicillin SDI 500mg (أموكسيسيلين سامراء)',
-    nameAr: 'أموكسيسيلين سامراء كبسول',
-    activeIngredient: 'Amoxicillin Trihydrate (أموكسيسيلين)',
-    manufacturer: 'SDI Samarra (الشركة العامة لصناعة الأدوية سامراء)',
-    brand: 'SDI',
-    strength: '500 mg',
-    dosageForm: 'Capsules (كبسولات)',
-    packageSize: '20 Capsules / Pack',
-    priceIqd: 2000,
-    cartonPriceIqd: 50000,
-    stockCount: 450,
-    minOrderQuantity: 25,
-    sourceType: 'wholesale',
-    facilityName: 'مذخر سامراء العلمي الحديث',
-    facilityGovernorate: 'بغداد (Baghdad)',
-    facilityPhone: '07709988776',
-    facilityId: 'demo_wholesaler_samarra',
-    requiresPrescription: true,
-  },
-  {
-    id: 'med_pioneer_prof',
-    name: 'Piofen 400mg (بيوفين بايونير)',
-    nameAr: 'بيوفين 400 مسكن ومضاد التهاب',
-    activeIngredient: 'Ibuprofen (إيبوبروفين)',
-    manufacturer: 'Pioneer Pharmaceuticals (شركة بايونير الدوائية)',
-    brand: 'Piofen',
-    strength: '400 mg',
-    dosageForm: 'Tablets (أقراص)',
-    packageSize: '20 Tablets / Pack',
-    priceIqd: 1800,
-    cartonPriceIqd: 45000,
-    stockCount: 380,
-    minOrderQuantity: 20,
-    sourceType: 'wholesale',
-    facilityName: 'مذخر الرشيد التخصصي للأدوية',
-    facilityGovernorate: 'بغداد (Baghdad)',
-    facilityPhone: '07712349988',
-    facilityId: 'demo_wholesaler_rashid',
-    requiresPrescription: false,
-  },
-  {
-    id: 'med_vent_inhal',
-    name: 'Ventolin Inhaler 100mcg (فنتولين بخاخ)',
-    nameAr: 'بخاخ فنتولين موسع قصبات',
-    activeIngredient: 'Salbutamol Sulfate (سالبوتامول)',
-    manufacturer: 'GlaxoSmithKline (GSK)',
-    brand: 'Ventolin',
-    strength: '100 mcg / dose',
-    dosageForm: 'Inhaler (بخاخ)',
-    packageSize: '200 Actuations',
-    priceIqd: 5500,
-    cartonPriceIqd: 155000,
-    stockCount: 110,
-    minOrderQuantity: 10,
-    sourceType: 'wholesale',
-    facilityName: 'مذخر سامراء العلمي الحديث',
-    facilityGovernorate: 'بغداد (Baghdad)',
-    facilityPhone: '07709988776',
-    facilityId: 'demo_wholesaler_samarra',
-    requiresPrescription: true,
-  },
-  {
-    id: 'med_ceft_1g',
-    name: 'Rocephin 1g (روسيفين حقن)',
-    nameAr: 'إبرة روسيفين 1 غرام فيال',
-    activeIngredient: 'Ceftriaxone Sodium (سفترياكسون)',
-    manufacturer: 'Roche',
-    brand: 'Rocephin',
-    strength: '1 g IM/IV',
-    dosageForm: 'Injection (فيال حقن)',
-    packageSize: '1 Vial + Solvent',
-    priceIqd: 5000,
-    cartonPriceIqd: 140000,
-    stockCount: 160,
-    minOrderQuantity: 10,
-    sourceType: 'wholesale',
-    facilityName: 'مذخر الرشيد التخصصي للأدوية',
-    facilityGovernorate: 'بغداد (بغداد)',
-    facilityPhone: '07712349988',
-    facilityId: 'demo_wholesaler_rashid',
-    requiresPrescription: true,
+// Arabic text normalizer (strips diacritics, unifies alef/yeh/teh marbuta/tatweel)
+export function normalizeArabicText(text: string): string {
+  if (!text) return '';
+  return text
+    // Remove Arabic diacritics / tashkeel
+    .replace(/[\u064B-\u065F\u0670]/g, '')
+    // Normalize Alefs (أ, إ, آ, ٱ -> ا)
+    .replace(/[أإآٱ]/g, 'ا')
+    // Normalize Yeh (ى -> ي, ئ -> ي)
+    .replace(/[ىئ]/g, 'ي')
+    // Normalize Teh Marbuta (ة -> ه)
+    .replace(/ة/g, 'ه')
+    // Normalize Waw with Hamza (ؤ -> و)
+    .replace(/ؤ/g, 'و')
+    // Remove Tatweel (ـ)
+    .replace(/ـ+/g, '')
+    // Remove extra punctuation and multiple spaces
+    .replace(/[^\u0621-\u064A\u0660-\u0669a-zA-Z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+// English text normalizer (lowercase, alphanumeric + space only)
+export function normalizeEnglishText(text: string): string {
+  if (!text) return '';
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Levenshtein edit distance for typo detection
+export function calculateLevenshtein(a: string, b: string): number {
+  const al = a.length;
+  const bl = b.length;
+  if (al === 0) return bl;
+  if (bl === 0) return al;
+
+  const matrix: number[][] = [];
+  for (let i = 0; i <= al; i++) {
+    matrix[i] = [i];
   }
-];
+  for (let j = 0; j <= bl; j++) {
+    matrix[0][j] = j;
+  }
+
+  for (let i = 1; i <= al; i++) {
+    for (let j = 1; j <= bl; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,       // deletion
+        matrix[i][j - 1] + 1,       // insertion
+        matrix[i - 1][j - 1] + cost // substitution
+      );
+    }
+  }
+  return matrix[al][bl];
+}
+
+// Bigram / Sørensen–Dice similarity coefficient for fuzzy match
+export function calculateBigramSimilarity(str1: string, str2: string): number {
+  const s1 = str1.replace(/\s+/g, '');
+  const s2 = str2.replace(/\s+/g, '');
+  if (!s1 || !s2) return 0;
+  if (s1 === s2) return 1.0;
+  if (s1.length < 2 || s2.length < 2) return 0;
+
+  const bigrams1 = new Map<string, number>();
+  for (let i = 0; i < s1.length - 1; i++) {
+    const bg = s1.substring(i, i + 2);
+    bigrams1.set(bg, (bigrams1.get(bg) || 0) + 1);
+  }
+
+  let intersection = 0;
+  for (let i = 0; i < s2.length - 1; i++) {
+    const bg = s2.substring(i, i + 2);
+    const count = bigrams1.get(bg) || 0;
+    if (count > 0) {
+      bigrams1.set(bg, count - 1);
+      intersection++;
+    }
+  }
+
+  return (2.0 * intersection) / ((s1.length - 1) + (s2.length - 1));
+}
+
+export interface ApproximateMatch {
+  item: SearchMedicineResult;
+  score: number;
+  matchedField: string;
+  suggestedTerm: string;
+}
+
+// Computes match score against real item
+export function evaluateMedicineMatch(
+  queryNormAr: string,
+  queryNormEn: string,
+  item: SearchMedicineResult
+): { isExact: boolean; isApproximate: boolean; score: number; matchedField: string; suggestedTerm: string } {
+  const nameArNorm = normalizeArabicText(item.nameAr || '');
+  const nameEnNorm = normalizeEnglishText(item.name || '');
+  const activeArNorm = normalizeArabicText(item.activeIngredient || '');
+  const activeEnNorm = normalizeEnglishText(item.activeIngredient || '');
+  const brandArNorm = normalizeArabicText(item.brand || '');
+  const brandEnNorm = normalizeEnglishText(item.brand || '');
+  const mfgNorm = normalizeEnglishText(item.manufacturer || '');
+
+  // 1. Direct Substring Match
+  const exactAr = queryNormAr.length >= 2 && (
+    (nameArNorm && nameArNorm.includes(queryNormAr)) ||
+    (activeArNorm && activeArNorm.includes(queryNormAr)) ||
+    (brandArNorm && brandArNorm.includes(queryNormAr))
+  );
+
+  const exactEn = queryNormEn.length >= 2 && (
+    (nameEnNorm && nameEnNorm.includes(queryNormEn)) ||
+    (activeEnNorm && activeEnNorm.includes(queryNormEn)) ||
+    (brandEnNorm && brandEnNorm.includes(queryNormEn)) ||
+    (mfgNorm && mfgNorm.includes(queryNormEn))
+  );
+
+  if (exactAr || exactEn) {
+    return {
+      isExact: true,
+      isApproximate: false,
+      score: 1.0,
+      matchedField: exactAr ? (item.nameAr || item.name) : item.name,
+      suggestedTerm: exactAr ? (item.nameAr || item.name) : item.name,
+    };
+  }
+
+  // 2. Approximate / Fuzzy Matching (Levenshtein + Bigram)
+  const candidatePool: Array<{ text: string; raw: string; lang: 'ar' | 'en' }> = [
+    { text: nameArNorm, raw: item.nameAr || '', lang: 'ar' },
+    { text: nameEnNorm, raw: item.name, lang: 'en' },
+    { text: activeArNorm, raw: item.activeIngredient || '', lang: 'ar' },
+    { text: activeEnNorm, raw: item.activeIngredient || '', lang: 'en' },
+    { text: brandArNorm, raw: item.brand || '', lang: 'ar' },
+    { text: brandEnNorm, raw: item.brand || '', lang: 'en' },
+  ];
+
+  let highestScore = 0;
+  let bestMatchedRaw = item.name;
+
+  for (const candidate of candidatePool) {
+    if (!candidate.text) continue;
+    const q = candidate.lang === 'ar' ? queryNormAr : queryNormEn;
+    if (!q || q.length < 2) continue;
+
+    // Check against individual tokens and full candidate string
+    const tokens = candidate.text.split(' ').filter((t) => t.length >= 2);
+    tokens.push(candidate.text);
+
+    for (const token of tokens) {
+      const bigram = calculateBigramSimilarity(q, token);
+      const lev = calculateLevenshtein(q, token);
+      const maxLen = Math.max(q.length, token.length);
+      const levScore = 1 - (lev / maxLen);
+
+      // Thresholds: length >= 4 allows distance <= 2; length 3 allows distance <= 1
+      const isLevClose = (q.length >= 4 && lev <= 2) || (q.length === 3 && lev <= 1);
+      const isBigramClose = bigram >= 0.45;
+
+      const score = Math.max(bigram, isLevClose ? levScore : 0);
+
+      if ((isLevClose || isBigramClose) && score > highestScore) {
+        highestScore = score;
+        bestMatchedRaw = candidate.raw || item.name;
+      }
+    }
+  }
+
+  if (highestScore >= 0.45) {
+    return {
+      isExact: false,
+      isApproximate: true,
+      score: highestScore,
+      matchedField: bestMatchedRaw,
+      suggestedTerm: bestMatchedRaw,
+    };
+  }
+
+  return {
+    isExact: false,
+    isApproximate: false,
+    score: 0,
+    matchedField: '',
+    suggestedTerm: '',
+  };
+}
 
 interface SmartMedicineSearchProps {
   placeholder?: string;
@@ -320,6 +260,8 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
   const { language, isRTL } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [results, setResults] = useState<SearchMedicineResult[]>([]);
+  const [approximateSuggestions, setApproximateSuggestions] = useState<ApproximateMatch[]>([]);
+  const [suggestedQuery, setSuggestedQuery] = useState<string | null>(null);
   const [similarAlternatives, setSimilarAlternatives] = useState<SearchMedicineResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
@@ -340,11 +282,13 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, []);
 
-  // 250ms debounced search requiring strictly >= 3 characters
+  // 200ms debounced search using normalized matching and approximate suggestions
   useEffect(() => {
-    const trimmed = searchTerm.trim().toLowerCase();
-    if (trimmed.length < 3) {
+    const trimmed = searchTerm.trim();
+    if (trimmed.length < 2) {
       setResults([]);
+      setApproximateSuggestions([]);
+      setSuggestedQuery(null);
       setSimilarAlternatives([]);
       setIsOpen(false);
       setIsSearching(false);
@@ -357,110 +301,129 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
 
     const timer = setTimeout(async () => {
       try {
-        let liveResults: SearchMedicineResult[] = [];
+        const liveResults: SearchMedicineResult[] = [];
 
-        // 1. Fetch from live Firestore database
-        try {
-          if (sourceType === 'wholesale' || sourceType === 'all') {
-            const wholesaleSnap = await getDocs(query(collection(db, 'wholesale_medicines'), limit(40)));
-            wholesaleSnap.docs.forEach((d) => {
-              const data = d.data();
-              liveResults.push({
-                id: d.id,
-                name: data.name || '',
-                nameAr: data.nameAr || '',
-                activeIngredient: data.activeIngredient || '',
-                brand: data.brand || '',
-                manufacturer: data.manufacturer || '',
-                strength: data.strength || '',
-                dosageForm: data.dosageForm || '',
-                packageSize: data.packSize || data.packageSize || '1 Pack',
-                photoUrl: data.photoUrl,
-                priceIqd: data.wholesalePriceIqd || 0,
-                cartonPriceIqd: data.cartonPriceIqd,
-                stockCount: data.stockPacks || 0,
-                minOrderQuantity: data.minOrderQuantity || 1,
-                sourceType: 'wholesale',
-                facilityName: data.wholesalerName || 'مذخر أدوية معتمد',
-                facilityPhone: data.wholesalerPhone,
-                facilityId: data.wholesalerId || '',
-                requiresPrescription: false,
-              });
+        // 1. Fetch strictly from real Firestore database collections
+        if (sourceType === 'wholesale' || sourceType === 'all') {
+          const wholesaleSnap = await getDocs(query(collection(db, 'wholesale_medicines'), limit(60)));
+          wholesaleSnap.docs.forEach((d) => {
+            const data = d.data();
+            liveResults.push({
+              id: d.id,
+              name: data.name || '',
+              nameAr: data.nameAr || '',
+              activeIngredient: data.activeIngredient || '',
+              brand: data.brand || '',
+              manufacturer: data.manufacturer || '',
+              strength: data.strength || '',
+              dosageForm: data.dosageForm || '',
+              packageSize: data.packSize || data.packageSize || '1 Pack',
+              photoUrl: data.photoUrl,
+              priceIqd: data.wholesalePriceIqd || 0,
+              cartonPriceIqd: data.cartonPriceIqd,
+              stockCount: data.stockPacks || 0,
+              minOrderQuantity: data.minOrderQuantity || 1,
+              sourceType: 'wholesale',
+              facilityName: data.wholesalerName || 'مذخر أدوية معتمد',
+              facilityPhone: data.wholesalerPhone,
+              facilityId: data.wholesalerId || '',
+              requiresPrescription: false,
             });
-          }
-
-          if (sourceType === 'retail' || sourceType === 'all') {
-            const retailSnap = await getDocs(query(collection(db, 'medicines'), limit(40)));
-            retailSnap.docs.forEach((d) => {
-              const data = d.data();
-              liveResults.push({
-                id: d.id,
-                name: data.name || '',
-                nameAr: data.nameAr || '',
-                activeIngredient: data.activeIngredient || '',
-                brand: data.brand || '',
-                manufacturer: data.manufacturer || '',
-                strength: data.strength || '',
-                dosageForm: data.dosageForm || '',
-                packageSize: data.packageSize || '1 Pack',
-                photoUrl: data.photoUrl,
-                priceIqd: data.price || 0,
-                stockCount: data.quantity || 0,
-                sourceType: 'retail',
-                facilityName: data.pharmacyName || 'صيدلية معتمدة',
-                facilityPhone: data.pharmacyPhone,
-                facilityGovernorate: data.pharmacyGovernorate,
-                facilityId: data.pharmacyId || '',
-                requiresPrescription: !!data.requiresPrescription,
-              });
-            });
-          }
-        } catch {
-          // Graceful fallback to verified Iraqi catalog
+          });
         }
 
-        // Combine live results with validated Iraqi medicine catalog
-        const combinedPool = [...liveResults, ...IRAQI_MEDICINE_CATALOG];
+        if (sourceType === 'retail' || sourceType === 'all') {
+          const retailSnap = await getDocs(query(collection(db, 'medicines'), limit(60)));
+          retailSnap.docs.forEach((d) => {
+            const data = d.data();
+            liveResults.push({
+              id: d.id,
+              name: data.name || '',
+              nameAr: data.nameAr || '',
+              activeIngredient: data.activeIngredient || '',
+              brand: data.brand || '',
+              manufacturer: data.manufacturer || '',
+              strength: data.strength || '',
+              dosageForm: data.dosageForm || '',
+              packageSize: data.packageSize || '1 Pack',
+              photoUrl: data.photoUrl,
+              priceIqd: data.price || 0,
+              stockCount: data.quantity || 0,
+              sourceType: 'retail',
+              facilityName: data.pharmacyName || 'صيدلية معتمدة',
+              facilityPhone: data.pharmacyPhone,
+              facilityGovernorate: data.pharmacyGovernorate,
+              facilityId: data.pharmacyId || '',
+              requiresPrescription: !!data.requiresPrescription,
+            });
+          });
+        }
 
-        // Deduplicate and filter by query
-        const matched = combinedPool.filter((item) => {
+        // 2. Perform normalized matching & approximate typo/similarity analysis
+        const queryNormAr = normalizeArabicText(trimmed);
+        const queryNormEn = normalizeEnglishText(trimmed);
+
+        const directMatches: SearchMedicineResult[] = [];
+        const fuzzyMatches: ApproximateMatch[] = [];
+        const seenDirect = new Set<string>();
+        const seenFuzzy = new Set<string>();
+
+        for (const item of liveResults) {
           if (filterFacilityId && item.facilityId === filterFacilityId) {
-            return false;
+            continue;
           }
           if (sourceType !== 'all' && item.sourceType !== sourceType) {
-            return false;
+            continue;
           }
 
-          const matchName = item.name.toLowerCase().includes(trimmed);
-          const matchNameAr = item.nameAr?.toLowerCase().includes(trimmed) || false;
-          const matchActive = item.activeIngredient.toLowerCase().includes(trimmed);
-          const matchBrand = item.brand?.toLowerCase().includes(trimmed) || false;
-          const matchManufacturer = item.manufacturer.toLowerCase().includes(trimmed);
+          const match = evaluateMedicineMatch(queryNormAr, queryNormEn, item);
+          const dedupeKey = `${item.name}-${item.strength}-${item.facilityId}`;
 
-          return matchName || matchNameAr || matchActive || matchBrand || matchManufacturer;
-        });
+          if (match.isExact) {
+            if (!seenDirect.has(dedupeKey)) {
+              seenDirect.add(dedupeKey);
+              directMatches.push(item);
+            }
+          } else if (match.isApproximate) {
+            if (!seenFuzzy.has(dedupeKey)) {
+              seenFuzzy.add(dedupeKey);
+              fuzzyMatches.push({
+                item,
+                score: match.score,
+                matchedField: match.matchedField,
+                suggestedTerm: match.suggestedTerm,
+              });
+            }
+          }
+        }
 
-        // Unique by ID or Name + Strength + Facility
-        const seen = new Set<string>();
-        const unique = matched.filter((item) => {
-          const key = `${item.name}-${item.strength}-${item.facilityId}`;
-          if (seen.has(key)) return false;
-          seen.add(key);
-          return true;
-        });
+        // Sort approximate suggestions descending by closeness score
+        fuzzyMatches.sort((a, b) => b.score - a.score);
 
-        setResults(unique.slice(0, 8));
+        setResults(directMatches.slice(0, 8));
+        setApproximateSuggestions(fuzzyMatches.slice(0, 6));
 
-        // Find similar alternatives sharing EXACT active ingredient and strength (without mixing strengths)
-        if (unique.length > 0) {
-          const primaryActive = unique[0].activeIngredient.toLowerCase();
-          const primaryStrength = unique[0].strength.toLowerCase();
-          const alternatives = combinedPool.filter((alt) => 
-            alt.id !== unique[0].id &&
-            alt.activeIngredient.toLowerCase() === primaryActive &&
-            alt.strength.toLowerCase() === primaryStrength
-          );
-          setSimilarAlternatives(alternatives.slice(0, 3));
+        // Did you mean prompt if direct matches are empty but approximate ones exist
+        if (directMatches.length === 0 && fuzzyMatches.length > 0) {
+          setSuggestedQuery(fuzzyMatches[0].suggestedTerm);
+        } else {
+          setSuggestedQuery(null);
+        }
+
+        // Find similar active-ingredient alternatives among live items if direct match exists
+        if (directMatches.length > 0) {
+          const primaryActive = directMatches[0].activeIngredient.trim().toLowerCase();
+          const primaryStrength = directMatches[0].strength.trim().toLowerCase();
+          if (primaryActive) {
+            const alternatives = liveResults.filter((alt) =>
+              alt.id !== directMatches[0].id &&
+              alt.activeIngredient.trim().toLowerCase() === primaryActive &&
+              alt.strength.trim().toLowerCase() === primaryStrength
+            );
+            setSimilarAlternatives(alternatives.slice(0, 3));
+          } else {
+            setSimilarAlternatives([]);
+          }
         } else {
           setSimilarAlternatives([]);
         }
@@ -469,10 +432,12 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
         setSelectedIndex(-1);
       } catch (err: unknown) {
         setSearchError(err instanceof Error ? err.message : 'Search failed');
+        setResults([]);
+        setApproximateSuggestions([]);
       } finally {
         setIsSearching(false);
       }
-    }, 250);
+    }, 200);
 
     return () => clearTimeout(timer);
   }, [searchTerm, sourceType, filterFacilityId]);
@@ -522,13 +487,13 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
           onChange={(e) => setSearchTerm(e.target.value)}
           onKeyDown={handleKeyDown}
           onFocus={() => {
-            if (results.length > 0 || searchTerm.trim().length >= 3) setIsOpen(true);
+            if (results.length > 0 || approximateSuggestions.length > 0 || searchTerm.trim().length >= 2) setIsOpen(true);
           }}
           placeholder={
             placeholder ||
             (language === 'ar'
-              ? 'ابحث بالاسم التجاري، المادة الفعالة أو الشركة (3 أحرف فأكثر)...'
-              : 'Search trade name, active ingredient or manufacturer (3+ chars)...')
+              ? 'ابحث بالاسم التجاري، المادة الفعالة أو الشركة (حرفين فأكثر)...'
+              : 'Search trade name, active ingredient or manufacturer (2+ chars)...')
           }
           className={`w-full py-2.5 rounded-xl border border-slate-300 bg-white text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#003366] transition-all shadow-xs ${
             isRTL ? 'pr-10 pl-10' : 'pl-10 pr-10'
@@ -541,6 +506,8 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
             onClick={() => {
               setSearchTerm('');
               setResults([]);
+              setApproximateSuggestions([]);
+              setSuggestedQuery(null);
               setSimilarAlternatives([]);
               setIsOpen(false);
               inputRef.current?.focus();
@@ -553,7 +520,7 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
       </div>
 
       {/* Autocomplete Dropdown */}
-      {isOpen && searchTerm.trim().length >= 3 && (
+      {isOpen && searchTerm.trim().length >= 2 && (
         <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden divide-y divide-slate-100 animate-in fade-in-50 duration-150">
           
           {/* Header Summary */}
@@ -562,14 +529,16 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
               <Sparkles size={13} className="text-amber-500" />
               <span>
                 {isSearching
-                  ? (language === 'ar' ? 'جاري البحث في قاعدة البيانات الطبية...' : 'Searching medical database...')
+                  ? (language === 'ar' ? 'جاري البحث الذكي في قاعدة البيانات الطبية...' : 'Searching medical database...')
                   : results.length > 0
-                  ? (language === 'ar' ? `تم العثور على ${results.length} دواء / مستحضر` : `Found ${results.length} registered products`)
-                  : (language === 'ar' ? 'نتائج البحث' : 'Search Results')}
+                  ? (language === 'ar' ? `نتائج مطابقة: ${results.length} مستحضر معتمد` : `Exact matches: ${results.length} products`)
+                  : approximateSuggestions.length > 0
+                  ? (language === 'ar' ? `مقترحات مقاربة: ${approximateSuggestions.length} مستحضر` : `Approximate suggestions: ${approximateSuggestions.length}`)
+                  : (language === 'ar' ? 'نتائج البحث الطبي' : 'Search Results')}
               </span>
             </span>
             <span className="text-[10px] text-slate-400">
-              {language === 'ar' ? 'بحث ذكي بحسب الاسم والتركيز' : 'Indexed by name & strength'}
+              {language === 'ar' ? 'قاعدة بيانات حقيقية معتمدة' : 'Verified Database'}
             </span>
           </div>
 
@@ -577,23 +546,50 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
           {isSearching && (
             <div className="p-8 text-center text-slate-500 text-xs flex flex-col items-center justify-center gap-2">
               <RefreshCw size={20} className="animate-spin text-[#003366]" />
-              <span>{language === 'ar' ? 'جاري مطابقة الأسماء والمواد الفعالة...' : 'Matching chemical & brand names...'}</span>
+              <span>{language === 'ar' ? 'جاري مطابقة الأسماء والمواد الفعالة والمقترحات المقاربة...' : 'Matching chemical & brand names...'}</span>
             </div>
           )}
 
-          {/* Empty State */}
-          {!isSearching && results.length === 0 && !searchError && (
+          {/* Did You Mean Suggestion Banner */}
+          {!isSearching && suggestedQuery && results.length === 0 && (
+            <div className="p-3 bg-amber-50/90 border-b border-amber-200/80 flex items-center justify-between text-xs text-amber-950">
+              <div className="flex items-center gap-2 min-w-0">
+                <Lightbulb size={16} className="text-amber-600 shrink-0" />
+                <span className="truncate">
+                  {language === 'ar' ? 'هل تقصد: ' : 'Did you mean: '}
+                  <button
+                    type="button"
+                    onClick={() => setSearchTerm(suggestedQuery)}
+                    className="font-bold underline text-[#003366] hover:text-[#002244] cursor-pointer inline-block"
+                  >
+                    {suggestedQuery}
+                  </button>
+                  ؟
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSearchTerm(suggestedQuery)}
+                className="px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] shrink-0 cursor-pointer transition-colors shadow-xs"
+              >
+                {language === 'ar' ? 'تطبيق المقترح' : 'Use Suggestion'}
+              </button>
+            </div>
+          )}
+
+          {/* Clean Empty State (Only when both exact and approximate are 0) */}
+          {!isSearching && results.length === 0 && approximateSuggestions.length === 0 && !searchError && (
             <div className="p-8 text-center text-slate-500 text-xs space-y-1.5">
               <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-2">
                 <Search size={18} />
               </div>
               <p className="font-bold text-slate-800 text-sm">
-                {language === 'ar' ? 'لم يتم العثور على أدوية مطابقة' : 'No matching medications found'}
+                {language === 'ar' ? 'لم يتم العثور على أدوية مسجلة' : 'No registered medications found'}
               </p>
               <p className="text-slate-500 max-w-xs mx-auto text-[11px]">
                 {language === 'ar'
-                  ? 'يرجى التأكد من صحة الاسم التجاري أو المادة الفعالة باللغة العربية أو الإنجليزية.'
-                  : 'Verify the spelling of the brand or generic active compound in Arabic or English.'}
+                  ? 'لا توجد أدوية أو مستحضرات حقيقية مسجلة في المنصة تطابق كلمة البحث حالياً.'
+                  : 'No verified medicines matching your query are currently in the database.'}
               </p>
             </div>
           )}
@@ -606,9 +602,12 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
             </div>
           )}
 
-          {/* Results List */}
+          {/* Direct Matching Results List */}
           {!isSearching && results.length > 0 && (
-            <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
+            <div className="max-h-72 overflow-y-auto divide-y divide-slate-100">
+              <div className="px-3.5 py-1.5 bg-slate-50 text-[10px] font-bold text-slate-600 uppercase tracking-wider">
+                {language === 'ar' ? 'نتائج مطابقة مباشرة:' : 'Exact Matches:'}
+              </div>
               {results.map((item, idx) => {
                 const isSelected = idx === selectedIndex;
                 return (
@@ -645,6 +644,11 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
                           <span className="font-bold text-sm text-slate-900 leading-tight">
                             {item.name}
                           </span>
+                          {item.nameAr && item.nameAr !== item.name && (
+                            <span className="text-xs text-slate-600 font-medium">
+                              ({item.nameAr})
+                            </span>
+                          )}
                           <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
                             {item.strength}
                           </span>
@@ -663,8 +667,12 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
                             {language === 'ar' ? 'المادة الفعالة: ' : 'Active: '}
                           </span>
                           <span className="font-semibold text-slate-700">{item.activeIngredient}</span>
-                          <span className="mx-1.5 text-slate-300">|</span>
-                          <span>{item.manufacturer}</span>
+                          {item.manufacturer && (
+                            <>
+                              <span className="mx-1.5 text-slate-300">|</span>
+                              <span>{item.manufacturer}</span>
+                            </>
+                          )}
                         </div>
 
                         <div className="text-[11px] text-slate-400 mt-1 flex items-center gap-1.5 flex-wrap">
@@ -709,6 +717,74 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
                   </div>
                 );
               })}
+            </div>
+          )}
+
+          {/* Approximate Suggestions Section ("مقترحات مقاربة لبحثك: هل تقصد...؟") */}
+          {!isSearching && approximateSuggestions.length > 0 && (
+            <div className="border-t border-amber-200/70 bg-amber-50/30">
+              <div className="p-2.5 bg-amber-100/60 flex items-center justify-between text-[11px] font-bold text-amber-950">
+                <span className="flex items-center gap-1.5">
+                  <Lightbulb size={13} className="text-amber-600" />
+                  <span>
+                    {language === 'ar' 
+                      ? 'مقترحات ومستحضرات مقاربة لبحثك (هل تقصد...؟):' 
+                      : 'Approximate Suggestions (Did you mean?):'}
+                  </span>
+                </span>
+                <span className="text-[10px] font-normal text-amber-800">
+                  {language === 'ar' ? 'تشابه لغوي وإملائي' : 'Fuzzy matching'}
+                </span>
+              </div>
+              <div className="divide-y divide-amber-100/70 max-h-60 overflow-y-auto">
+                {approximateSuggestions.map((suggestion, sIdx) => {
+                  const sItem = suggestion.item;
+                  return (
+                    <div
+                      key={`approx-${sItem.id}-${sIdx}`}
+                      onClick={() => handleSelectItem(sItem)}
+                      className="p-3 flex items-center justify-between gap-3 hover:bg-amber-100/40 cursor-pointer transition-colors"
+                    >
+                      <div className="flex items-start gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center shrink-0 mt-0.5">
+                          <CornerDownRight size={15} />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-bold text-xs sm:text-sm text-slate-900">
+                              {sItem.name}
+                            </span>
+                            {sItem.nameAr && sItem.nameAr !== sItem.name && (
+                              <span className="text-xs text-slate-600">
+                                ({sItem.nameAr})
+                              </span>
+                            )}
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-200 text-amber-900">
+                              {language === 'ar' ? 'مقترح مقارب' : 'Suggested'}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-slate-500 mt-0.5 truncate">
+                            <span className="font-semibold text-slate-700">{sItem.activeIngredient}</span>
+                            <span className="mx-1">·</span>
+                            <span>{sItem.facilityName}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-end shrink-0 ps-2">
+                        {typeof sItem.priceIqd === 'number' && sItem.priceIqd > 0 && (
+                          <div className="text-xs font-bold text-slate-800 font-mono">
+                            {sItem.priceIqd.toLocaleString()} <span className="text-[9px] text-slate-500">{language === 'ar' ? 'د.ع' : 'IQD'}</span>
+                          </div>
+                        )}
+                        <span className="text-[10px] text-[#003366] font-bold hover:underline">
+                          {language === 'ar' ? 'اختيار' : 'Select'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
 
