@@ -1200,12 +1200,25 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
       try {
         await setDoc(doc(db, 'appointments', aptId), sanitizeForFirestore(newApt));
         recordRealMetricEvent('appointment');
+        // Doctor Notification
         const notifId = `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
         await setDoc(doc(db, 'notifications', notifId), sanitizeForFirestore({
           id: notifId,
           recipientUid: selectedDoctorForBooking.doctorId,
           title: 'طلب موعد كشفية جديد',
           message: `طلب مريض (${patientProfile?.fullName || 'مراجع'}) حجز موعد جديد في ${appointmentBookingForm.date} - ${appointmentBookingForm.timeSlot}.`,
+          type: 'booking_update',
+          read: false,
+          createdAt: now,
+        }));
+
+        // Patient Confirmation Notification
+        const patNotifId = `notif_pat_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+        await setDoc(doc(db, 'notifications', patNotifId), sanitizeForFirestore({
+          id: patNotifId,
+          recipientUid: user.uid,
+          title: 'تم تسجيل طلب حجز موعدك',
+          message: `تم إرسال طلب حجز كشفية لدى ${selectedDoctorForBooking.fullName} بتاريخ ${appointmentBookingForm.date}، وستصلك رسالة فور اعتماده.`,
           type: 'booking_update',
           read: false,
           createdAt: now,
@@ -1297,6 +1310,18 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
           title: 'طلب دواء جديد من مراجع',
           message: `طلب مريض (${newOrder.patientName}) صنف: ${selectedMedicineForOrder.name} (${orderQuantity} عبوة).`,
           type: 'booking_update',
+          read: false,
+          createdAt: now,
+        }));
+
+        // Patient Confirmation Notification
+        const patNotifId = `notif_pat_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+        await setDoc(doc(db, 'notifications', patNotifId), sanitizeForFirestore({
+          id: patNotifId,
+          recipientUid: user.uid,
+          title: 'تم إرسال طلب الدواء',
+          message: `تم إرسال طلبك (${selectedMedicineForOrder.name}) إلى ${newOrder.pharmacyName} بنجاح.`,
+          type: 'prescription',
           read: false,
           createdAt: now,
         }));
@@ -1481,6 +1506,20 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
         });
       } catch (e) {
         console.warn('Mark notif read error:', e);
+      }
+    }
+  };
+
+  const handleMarkAllNotificationsRead = async () => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    if (!isDemoMode) {
+      try {
+        const unread = notifications.filter(n => !n.read);
+        for (const n of unread) {
+          await updateDoc(doc(db, 'notifications', n.id), { read: true });
+        }
+      } catch (e) {
+        console.warn('Mark all notifs read error:', e);
       }
     }
   };
@@ -3340,8 +3379,24 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
               </p>
             </div>
 
-            <div className="text-xs font-bold px-3 py-1.5 rounded-xl bg-red-50 text-red-800">
-              {unreadNotifsCount} {language === 'ar' ? 'تنبيهات جديدة' : 'unread'}
+            <div className="flex items-center gap-2">
+              {unreadNotifsCount > 0 ? (
+                <>
+                  <div className="text-xs font-bold px-3 py-1.5 rounded-xl bg-red-50 text-red-800 border border-red-200">
+                    {unreadNotifsCount} {language === 'ar' ? 'تنبيهات غير مقروءة' : 'unread'}
+                  </div>
+                  <button
+                    onClick={handleMarkAllNotificationsRead}
+                    className="text-xs font-bold px-3 py-1.5 rounded-xl bg-sky-50 text-sky-800 hover:bg-sky-100 border border-sky-200 transition-colors cursor-pointer"
+                  >
+                    {language === 'ar' ? 'تحديد الكل كمقروء' : 'Mark all read'}
+                  </button>
+                </>
+              ) : (
+                <div className="text-xs font-bold px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200">
+                  {language === 'ar' ? 'كافة الإشعارات مقروءة' : 'All read'}
+                </div>
+              )}
             </div>
           </div>
 
@@ -3355,8 +3410,7 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
               {notifications.map((n) => (
                 <div
                   key={n.id}
-                  onClick={() => handleMarkNotificationRead(n.id)}
-                  className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-start justify-between gap-3 ${
+                  className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
                     n.read 
                       ? 'bg-slate-50/60 border-slate-200 text-slate-700' 
                       : 'bg-sky-50/80 border-sky-300 text-slate-900 shadow-xs'
@@ -3377,9 +3431,22 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
                     </div>
                   </div>
 
-                  {!n.read && (
-                    <span className="w-2.5 h-2.5 rounded-full bg-sky-500 shrink-0 mt-2" />
-                  )}
+                  <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                    {!n.read ? (
+                      <button
+                        onClick={() => handleMarkNotificationRead(n.id)}
+                        className="px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                      >
+                        <Check size={14} />
+                        <span>{language === 'ar' ? 'تمت القراءة' : 'Mark as Read'}</span>
+                      </button>
+                    ) : (
+                      <span className="px-3 py-1 rounded-xl bg-emerald-50 text-emerald-700 font-semibold text-xs flex items-center gap-1 border border-emerald-200">
+                        <Check size={13} />
+                        <span>{language === 'ar' ? 'تمت القراءة' : 'Read'}</span>
+                      </span>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

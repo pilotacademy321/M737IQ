@@ -19,9 +19,41 @@ import {
   ShieldCheck, 
   CheckCircle2,
   Calendar,
-  ExternalLink
+  ExternalLink,
+  Check,
+  CheckCheck,
+  FileText,
+  Stethoscope,
+  Sparkles,
+  Inbox,
+  FlaskConical,
+  Pill
 } from 'lucide-react';
 import { PortalId } from '../types';
+import { 
+  AppNotification, 
+  subscribeToUserNotifications, 
+  markNotificationAsRead, 
+  markAllNotificationsAsRead,
+  sendRealInAppNotification
+} from '../lib/notificationService';
+
+function formatRelativeTime(dateString: string, lang: 'ar' | 'en'): string {
+  try {
+    const diffMs = Date.now() - new Date(dateString).getTime();
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHr = Math.floor(diffMin / 60);
+    const diffDays = Math.floor(diffHr / 24);
+
+    if (diffSec < 60) return lang === 'ar' ? 'الآن' : 'Just now';
+    if (diffMin < 60) return lang === 'ar' ? `منذ ${diffMin} دقيقة` : `${diffMin}m ago`;
+    if (diffHr < 24) return lang === 'ar' ? `منذ ${diffHr} ساعة` : `${diffHr}h ago`;
+    return lang === 'ar' ? `منذ ${diffDays} يوم` : `${diffDays}d ago`;
+  } catch {
+    return dateString;
+  }
+}
 
 interface HeaderProps {
   activeSection: string;
@@ -56,6 +88,53 @@ export const Header: React.FC<HeaderProps> = ({
   const [authModalInitialMode, setAuthModalInitialMode] = useState<'signin' | 'reset'>('signin');
   const [showAccountDropdown, setShowAccountDropdown] = useState(false);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [isMarkingAll, setIsMarkingAll] = useState(false);
+
+  // Subscribe to real-time user notifications
+  useEffect(() => {
+    const unsubscribe = subscribeToUserNotifications(user?.uid, (items) => {
+      setNotifications(items);
+    });
+    return () => unsubscribe();
+  }, [user?.uid]);
+
+  // Derived unread count (Starts strictly at 0, no badge if 0)
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  const handleMarkOneAsRead = async (notifId: string) => {
+    // Optimistic local state update for instant badge clearing
+    setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, read: true } : n));
+    await markNotificationAsRead(notifId);
+  };
+
+  const handleMarkAllAsRead = async () => {
+    if (unreadCount === 0) return;
+    setIsMarkingAll(true);
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    try {
+      await markAllNotificationsAsRead(notifications);
+    } finally {
+      setIsMarkingAll(false);
+    }
+  };
+
+  const handleSendTestNotification = async () => {
+    if (!user) {
+      setAuthModalInitialMode('signin');
+      setAuthModalOpen(true);
+      return;
+    }
+    await sendRealInAppNotification({
+      recipientUid: user.uid,
+      title: language === 'ar' ? 'تأكيد حجز موعد طبي' : 'Medical Appointment Confirmed',
+      message: language === 'ar' 
+        ? 'تم استلام وتأكيد موعدك بالمنصة بنجاح. يمكنك الضغط على "تمت القراءة" لإخفاء الشارة الحمراء فوراً.' 
+        : 'Your appointment was confirmed. Click "Mark Read" to clear the red badge.',
+      type: 'booking_update',
+    });
+  };
+
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [showSelfDeleteModal, setShowSelfDeleteModal] = useState(false);
   const [isDeletingOwnAccount, setIsDeletingOwnAccount] = useState(false);
@@ -183,49 +262,158 @@ export const Header: React.FC<HeaderProps> = ({
                 <Mail size={18} />
               </button>
 
-              {/* Notifications Bell with Red Badge count */}
+              {/* Notifications Bell with Dynamic Red Badge count */}
               <div className="relative" ref={notifRef}>
                 <button
                   onClick={() => setShowNotificationsDropdown((prev) => !prev)}
-                  className="p-2 rounded-full text-slate-500 hover:text-slate-800 hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-colors cursor-pointer relative"
-                  title={language === 'ar' ? 'الإشعارات' : 'Notifications'}
+                  className={`p-2 rounded-full border transition-all cursor-pointer relative ${
+                    showNotificationsDropdown 
+                      ? 'bg-blue-50 text-blue-800 border-blue-200' 
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border-transparent hover:border-slate-200'
+                  }`}
+                  title={language === 'ar' ? 'الإشعارات والتنبيهات' : 'Notifications'}
+                  aria-label="Notifications"
                 >
                   <Bell size={18} />
-                  <span className="absolute top-1 end-1 w-4 h-4 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white">
-                    1
-                  </span>
+                  {/* Badge strictly appears ONLY when unreadCount > 0, disappears on Mark Read */}
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1 end-1 min-w-4.5 h-4.5 px-1 rounded-full bg-red-600 text-white text-[10px] font-black flex items-center justify-center border-2 border-white shadow-xs animate-in zoom-in-75">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
                 </button>
 
                 {/* Notifications Dropdown */}
                 {showNotificationsDropdown && (
-                  <div className="absolute top-full mt-2 end-0 w-80 bg-white rounded-2xl shadow-xl border border-slate-200 p-4 z-50 animate-in fade-in-50 zoom-in-95 duration-150">
-                    <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
-                      <span className="font-extrabold text-xs text-slate-900">
-                        {language === 'ar' ? 'الإشعارات الحديثة' : 'Recent Notifications'}
-                      </span>
-                      <span className="text-[10px] bg-red-50 text-red-600 font-bold px-1.5 py-0.5 rounded-md">
-                        1 جديد
-                      </span>
-                    </div>
-
-                    <div className="space-y-2.5">
-                      <div className="p-2.5 rounded-xl bg-blue-50/70 border border-blue-100 flex items-start gap-2.5">
-                        <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 mt-0.5">
-                          <Calendar size={14} />
-                        </div>
-                        <div>
-                          <p className="text-xs font-bold text-slate-900">
-                            {language === 'ar' ? 'تأكيد موعد العيادة' : 'Clinic Appointment Confirmed'}
-                          </p>
-                          <p className="text-[11px] text-slate-600 mt-0.5">
-                            {language === 'ar' ? 'تم تأكيد موعدك بنجاح مع د. سارة محمد.' : 'Your appointment with Dr. Sara Mohammed is confirmed.'}
-                          </p>
-                          <span className="text-[10px] text-slate-400 mt-1 block">
-                            {language === 'ar' ? 'منذ 5 دقائق' : '5 mins ago'}
+                  <div className="absolute top-full mt-2 end-0 w-80 sm:w-96 bg-white rounded-2xl shadow-xl border border-slate-200 p-4 z-50 animate-in fade-in-50 zoom-in-95 duration-150">
+                    <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
+                      <div className="flex items-center gap-2">
+                        <Bell size={16} className="text-blue-700" />
+                        <span className="font-extrabold text-sm text-slate-900">
+                          {language === 'ar' ? 'الإشعارات والتنبيهات' : 'Notifications'}
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center gap-1.5">
+                        {unreadCount > 0 ? (
+                          <>
+                            <span className="text-[10px] bg-red-50 text-red-600 font-bold px-2 py-0.5 rounded-full border border-red-100">
+                              {unreadCount} {language === 'ar' ? 'جديد' : 'new'}
+                            </span>
+                            <button
+                              onClick={handleMarkAllAsRead}
+                              disabled={isMarkingAll}
+                              className="text-[11px] text-blue-700 hover:text-blue-900 font-bold hover:underline flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-blue-50 transition-colors cursor-pointer"
+                              title={language === 'ar' ? 'تحديد كل الإشعارات كمقروءة لإخفاء الشارة' : 'Mark all as read to clear badge'}
+                            >
+                              <CheckCheck size={13} />
+                              <span>{language === 'ar' ? 'قراءة الكل' : 'Mark all read'}</span>
+                            </button>
+                          </>
+                        ) : (
+                          <span className="text-[10px] bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded-full border border-emerald-100 flex items-center gap-1">
+                            <CheckCheck size={12} />
+                            <span>{language === 'ar' ? 'الكل مقروء' : 'All caught up'}</span>
                           </span>
-                        </div>
+                        )}
                       </div>
                     </div>
+
+                    {/* Notifications List or Empty State */}
+                    {notifications.length === 0 ? (
+                      <div className="py-7 text-center px-4">
+                        <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-2.5">
+                          <Inbox size={22} />
+                        </div>
+                        <h4 className="text-xs font-bold text-slate-800 mb-1">
+                          {language === 'ar' ? 'لا توجد إشعارات جديدة حالياً' : 'No new notifications'}
+                        </h4>
+                        <p className="text-[11px] text-slate-500 leading-relaxed mb-3">
+                          {language === 'ar'
+                            ? 'ستظهر هنا التنبيهات الفورية فقط عند تأكيد المواعيد، أو صدور نتائج التحاليل، أو إرسال الوصفات الطبية.'
+                            : 'Live alerts appear here when appointments, lab results, or prescriptions arrive.'}
+                        </p>
+                        {user && (
+                          <button
+                            onClick={handleSendTestNotification}
+                            className="px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold transition-colors flex items-center justify-center gap-1.5 mx-auto cursor-pointer"
+                          >
+                            <Sparkles size={13} />
+                            <span>{language === 'ar' ? 'إرسال إشعار تجريبي لاختبار التنبيه' : 'Send Test Notification'}</span>
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-2.5 max-h-[360px] overflow-y-auto pe-1">
+                        {notifications.map((notif) => {
+                          const isUnread = !notif.read;
+                          return (
+                            <div 
+                              key={notif.id}
+                              className={`p-3 rounded-xl border transition-all flex flex-col gap-2 ${
+                                isUnread 
+                                  ? 'bg-blue-50/70 border-blue-200/80 shadow-xs' 
+                                  : 'bg-white hover:bg-slate-50 border-slate-100 text-slate-600'
+                              }`}
+                            >
+                              <div className="flex items-start gap-2.5">
+                                <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                                  isUnread ? 'bg-blue-600 text-white shadow-xs' : 'bg-slate-100 text-slate-500'
+                                }`}>
+                                  {notif.type === 'prescription' ? (
+                                    <Pill size={14} />
+                                  ) : notif.type === 'report_ready' ? (
+                                    <FileText size={14} />
+                                  ) : notif.type === 'booking_update' ? (
+                                    <Calendar size={14} />
+                                  ) : (
+                                    <Bell size={14} />
+                                  )}
+                                </div>
+
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between gap-1">
+                                    <p className={`text-xs truncate ${isUnread ? 'font-bold text-slate-900' : 'font-medium text-slate-700'}`}>
+                                      {notif.title}
+                                    </p>
+                                    <span className="text-[10px] text-slate-400 whitespace-nowrap shrink-0">
+                                      {formatRelativeTime(notif.createdAt, language)}
+                                    </span>
+                                  </div>
+
+                                  <p className="text-[11px] text-slate-600 mt-1 leading-relaxed line-clamp-2">
+                                    {notif.message}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Footer Action: "تمت القراءة" button to mark as read and remove badge */}
+                              <div className="flex items-center justify-between pt-1 border-t border-slate-200/50 text-[10px]">
+                                <span className="text-slate-400 font-mono">
+                                  {notif.type || 'system'}
+                                </span>
+
+                                {isUnread ? (
+                                  <button
+                                    onClick={() => handleMarkOneAsRead(notif.id)}
+                                    className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold flex items-center gap-1 transition-all cursor-pointer shadow-xs hover:shadow"
+                                    title={language === 'ar' ? 'اضغط لتأكيد القراءة وإخفاء العلامة' : 'Mark as read to clear badge'}
+                                  >
+                                    <Check size={12} />
+                                    <span>{language === 'ar' ? 'تمت القراءة' : 'Mark as Read'}</span>
+                                  </button>
+                                ) : (
+                                  <span className="text-emerald-700 font-semibold flex items-center gap-1">
+                                    <CheckCheck size={13} className="text-emerald-600" />
+                                    <span>{language === 'ar' ? 'تمت القراءة' : 'Read'}</span>
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
