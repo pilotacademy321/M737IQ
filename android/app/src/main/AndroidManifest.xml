@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    package="com.m737iq.app">
+    package="app.m737iq.com">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -52,7 +52,7 @@
 
             <meta-data
                 android:name="android.support.customtabs.trusted.FILE_PROVIDER_AUTHORITY"
-                android:value="com.m737iq.app.fileprovider" />
+                android:value="app.m737iq.com.fileprovider" />
 
             <meta-data
                 android:name="android.support.customtabs.trusted.FALLBACK_STRATEGY"
@@ -88,7 +88,7 @@
 
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="com.m737iq.app.fileprovider"
+            android:authorities="app.m737iq.com.fileprovider"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data

@@ -163,6 +163,8 @@ jobs:
       - name: Publish to GitHub Releases
         if: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.create_release == 'true') || startsWith(github.ref, 'refs/tags/v') }}
         uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ steps.meta.outputs.tag }}
           name: ${{ github.event.inputs.release_title || steps.meta.outputs.tag }}
@@ -180,7 +182,7 @@ jobs:
             - **رابط المنصة الحيّة**: [https://m737iq.netlify.app/](https://m737iq.netlify.app/)
             - **تقنية التشغيل**: Trusted Web Activity (TWA) مدعومة بمحرك Chromium المتقدم.
             - **التحديث التلقائي**: أي تحديث يتم نشره على الموقع يظهر مباشرة داخل تطبيق الأندرويد دون الحاجة لإعادة تثبيته.
-            - **اسم الحزمة (Package ID)**: `com.m737iq.app`
+            - **اسم الحزمة (Package ID)**: `app.m737iq.com`
             - **الإصدار (Version)**: `${{ steps.meta.outputs.tag }}`
             - **حجم الملف (File Size)**: `${{ steps.package.outputs.file_size }}`
             - **بصمة SHA-256**: `${{ steps.package.outputs.checksum }}`
@@ -206,7 +208,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Parameter | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|---|---|" >> $GITHUB_STEP_SUMMARY
-          echo "| **Package Name** | \`com.m737iq.app\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Package Name** | \`app.m737iq.com\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **Target Live URL** | https://m737iq.netlify.app/ |" >> $GITHUB_STEP_SUMMARY
           echo "| **APK File** | \`$APK_NAME\` ($SIZE) |" >> $GITHUB_STEP_SUMMARY
           echo "| **Release Tag** | \`$TAG\` |" >> $GITHUB_STEP_SUMMARY
