@@ -320,7 +320,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
           </a>
 
           <div className="text-center text-[10px] text-slate-400 font-mono tracking-wider">
-            M737IQ v1.0.0
+            M737IQ v1.0.1
           </div>
         </div>
       </aside>

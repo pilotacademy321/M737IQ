@@ -71,7 +71,15 @@ service cloud.firestore {
 
     // Global Account Identifiers Registry: /account_ids/{accountId}
     match /account_ids/{accountId} {
-      allow get, list: if isSignedIn();
+      allow get: if isSignedIn() && (
+        resource.data.uid == request.auth.uid 
+        || isAdmin() 
+        || (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) 
+          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['doctor', 'secretary', 'super_admin', 'laboratory', 'radiology_center', 'pharmacy', 'wholesaler']
+        )
+      );
+      allow list: if isAdmin();
       allow create: if isSignedIn() && (incoming().uid == request.auth.uid || isAdmin());
       allow update: if isAdmin() || (
         isSignedIn() 
@@ -185,7 +193,11 @@ service cloud.firestore {
         resource.data.patientId == request.auth.uid || 
         isAdmin()
       );
-      allow list: if isSignedIn();
+      allow list: if isSignedIn() && (
+        resource.data.doctorId == request.auth.uid || 
+        resource.data.patientId == request.auth.uid || 
+        isAdmin()
+      );
 
       allow create: if isSignedIn() && (
         incoming().doctorId == request.auth.uid || 
@@ -598,12 +610,18 @@ service cloud.firestore {
         isOwner(patientId) || 
         isAdmin() ||
         exists(/databases/$(database)/documents/doctor_profiles/$(request.auth.uid)) ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['doctor', 'secretary', 'super_admin'])
+        (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) 
+          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['doctor', 'secretary', 'super_admin', 'laboratory', 'radiology_center']
+        )
       );
       allow list: if isSignedIn() && (
         isAdmin() ||
         exists(/databases/$(database)/documents/doctor_profiles/$(request.auth.uid)) ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['doctor', 'secretary', 'super_admin'])
+        (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) 
+          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['doctor', 'secretary', 'super_admin']
+        )
       );
       allow create: if (isOwner(patientId) || isAdmin()) 
         && incoming().patientId == patientId

@@ -1287,7 +1287,7 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
                 <button
                   type="button"
                   onClick={() => {
-                    const pharmId = userProfile?.accountId || pharmacyProfile?.pharmacyId || (user?.uid ? generateFacilityOrUserId('pharmacy', user.uid) : 'M737-PHARM-DEMO');
+                    const pharmId = userProfile?.accountId || pharmacyProfile?.pharmacyId || generateFacilityOrUserId('pharmacy', user?.uid || 'guest');
                     navigator.clipboard.writeText(pharmId);
                     showToast(language === 'ar' ? `تم نسخ معرف الصيدلية (${pharmId})` : `Pharmacy ID copied (${pharmId})`);
                   }}
@@ -1295,7 +1295,7 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
                   title={language === 'ar' ? 'انقر لنسخ المعرف' : 'Click to copy ID'}
                 >
                   <Copy size={12} className="text-teal-300" />
-                  <span>ID: {userProfile?.accountId || pharmacyProfile?.pharmacyId || (user?.uid ? generateFacilityOrUserId('pharmacy', user.uid) : 'M737-PHARM-DEMO')}</span>
+                  <span>ID: {userProfile?.accountId || pharmacyProfile?.pharmacyId || generateFacilityOrUserId('pharmacy', user?.uid || 'guest')}</span>
                 </button>
                 <span className="opacity-40">·</span>
                 <span>{language === 'ar' ? 'الصيدلي المسؤول:' : 'Pharmacist:'} {pharmacyProfile?.ownerName}</span>

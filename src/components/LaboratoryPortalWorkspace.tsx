@@ -1423,7 +1423,7 @@ export const LaboratoryPortalWorkspace: React.FC<LaboratoryPortalWorkspaceProps>
                 <button
                   type="button"
                   onClick={() => {
-                    const labId = userProfile?.accountId || labProfile?.labId || (user?.uid ? generateFacilityOrUserId('laboratory', user.uid) : 'M737-LAB-DEMO');
+                    const labId = userProfile?.accountId || labProfile?.labId || generateFacilityOrUserId('laboratory', user?.uid || 'guest');
                     navigator.clipboard.writeText(labId);
                     showToast(language === 'ar' ? `تم نسخ معرف المختبر (${labId})` : `Laboratory ID copied (${labId})`);
                   }}
@@ -1431,7 +1431,7 @@ export const LaboratoryPortalWorkspace: React.FC<LaboratoryPortalWorkspaceProps>
                   title={language === 'ar' ? 'انقر لنسخ المعرف' : 'Click to copy ID'}
                 >
                   <Copy size={12} className="text-emerald-300" />
-                  <span>ID: {userProfile?.accountId || labProfile?.labId || (user?.uid ? generateFacilityOrUserId('laboratory', user.uid) : 'M737-LAB-DEMO')}</span>
+                  <span>ID: {userProfile?.accountId || labProfile?.labId || generateFacilityOrUserId('laboratory', user?.uid || 'guest')}</span>
                 </button>
                 <span className="opacity-40">·</span>
                 <span>{language === 'ar' ? 'إشراف:' : 'Director:'} {labProfile?.directorName}</span>

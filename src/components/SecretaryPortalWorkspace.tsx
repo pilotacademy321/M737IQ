@@ -837,7 +837,7 @@ export const SecretaryPortalWorkspace: React.FC<SecretaryPortalWorkspaceProps> =
                   <button
                     type="button"
                     onClick={() => {
-                      const secId = userProfile?.accountId || (user?.uid ? generateFacilityOrUserId('secretary', user.uid) : 'M737-SEC-DEMO');
+                      const secId = userProfile?.accountId || generateFacilityOrUserId('secretary', user?.uid || 'guest');
                       navigator.clipboard.writeText(secId);
                       showToast(language === 'ar' ? `تم نسخ معرّف السكرتير (${secId})` : `Secretary ID copied (${secId})`);
                     }}
@@ -845,7 +845,7 @@ export const SecretaryPortalWorkspace: React.FC<SecretaryPortalWorkspaceProps> =
                     title={language === 'ar' ? 'انقر لنسخ المعرّف' : 'Click to copy ID'}
                   >
                     <Copy className="w-3 h-3 text-cyan-300" />
-                    <span>ID: {userProfile?.accountId || (user?.uid ? generateFacilityOrUserId('secretary', user.uid) : 'M737-SEC-DEMO')}</span>
+                    <span>ID: {userProfile?.accountId || generateFacilityOrUserId('secretary', user?.uid || 'guest')}</span>
                   </button>
                 </div>
                 <h1 className="text-2xl font-bold mt-1">{userProfile?.displayName || user.displayName || user.email}</h1>
@@ -1030,7 +1030,7 @@ export const SecretaryPortalWorkspace: React.FC<SecretaryPortalWorkspaceProps> =
                 <button
                   type="button"
                   onClick={() => {
-                    const secId = userProfile?.accountId || (user?.uid ? generateFacilityOrUserId('secretary', user.uid) : 'M737-SEC-DEMO');
+                    const secId = userProfile?.accountId || generateFacilityOrUserId('secretary', user?.uid || 'guest');
                     navigator.clipboard.writeText(secId);
                     showToast(language === 'ar' ? `تم نسخ معرّف السكرتير (${secId})` : `Secretary ID copied (${secId})`);
                   }}
@@ -1038,7 +1038,7 @@ export const SecretaryPortalWorkspace: React.FC<SecretaryPortalWorkspaceProps> =
                   title={language === 'ar' ? 'انقر لنسخ المعرّف' : 'Click to copy ID'}
                 >
                   <Copy className="w-2.5 h-2.5 text-cyan-300" />
-                  <span>ID: {userProfile?.accountId || (user?.uid ? generateFacilityOrUserId('secretary', user.uid) : 'M737-SEC-DEMO')}</span>
+                  <span>ID: {userProfile?.accountId || generateFacilityOrUserId('secretary', user?.uid || 'guest')}</span>
                 </button>
                 <span className="text-[10px] text-emerald-300 font-mono">
                   {language === 'ar' ? 'صلاحيات الاستقبال معتمدة' : 'Verified Receptionist'}

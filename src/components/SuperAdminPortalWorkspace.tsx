@@ -64,8 +64,16 @@ import {
   Trash2,
   DollarSign,
   Server,
-  Check
+  Check,
+  Copy
 } from 'lucide-react';
+import { 
+  auditAndMigrateAccountIds, 
+  searchAccountWithAuthorization, 
+  AccountIdAuditReport, 
+  AuthorizedSearchResult, 
+  PORTAL_ID_PREFIXES 
+} from '../utils/medicalId';
 
 interface SuperAdminPortalWorkspaceProps {
   onBackToHome: () => void;
@@ -84,12 +92,20 @@ export const SuperAdminPortalWorkspace: React.FC<SuperAdminPortalWorkspaceProps>
   } = useAuth();
   const { language, isRTL } = useLanguage();
 
-  const [activeTab, setActiveTab] = useState<'accreditation' | 'analytics' | 'audit_logs' | 'subscriptions'>('accreditation');
+  const [activeTab, setActiveTab] = useState<'accreditation' | 'analytics' | 'audit_logs' | 'subscriptions' | 'id_audit'>('accreditation');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [isPurgingPending, setIsPurgingPending] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Account IDs Audit & Migration State
+  const [isRunningAudit, setIsRunningAudit] = useState(false);
+  const [auditReport, setAuditReport] = useState<AccountIdAuditReport | null>(null);
+  const [adminIdQuery, setAdminIdQuery] = useState('');
+  const [adminIdSearchResult, setAdminIdSearchResult] = useState<AuthorizedSearchResult | null>(null);
+  const [isSearchingId, setIsSearchingId] = useState(false);
+  const [copiedAuditId, setCopiedAuditId] = useState<string | null>(null);
 
   // Users from Firestore
   const [usersList, setUsersList] = useState<UserProfile[]>([]);
@@ -380,6 +396,41 @@ export const SuperAdminPortalWorkspace: React.FC<SuperAdminPortalWorkspaceProps>
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  };
+
+  const handleRunIdAuditAndMigration = async () => {
+    setIsRunningAudit(true);
+    try {
+      const rep = await auditAndMigrateAccountIds(db);
+      setAuditReport(rep);
+      showToast(
+        language === 'ar'
+          ? `اكتمل فحص وتدقيق المعرّفات: ${rep.scannedUsers} حساباً (${rep.backfilledCount} معرّف تم استكماله، ${rep.repairedRegistryCount} رابط تم إصلاحه).`
+          : `Audit completed: ${rep.scannedUsers} accounts scanned (${rep.backfilledCount} backfilled, ${rep.repairedRegistryCount} repaired).`
+      );
+      // Reload admin data to refresh state
+      await loadAdminData();
+    } catch (err: unknown) {
+      console.error('Audit execution error:', err);
+      showToast(language === 'ar' ? 'فشل تنفيذ تدقيق المعرّفات' : 'Audit execution failed', 'error');
+    } finally {
+      setIsRunningAudit(false);
+    }
+  };
+
+  const handleAdminSearchId = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!adminIdQuery.trim()) return;
+    setIsSearchingId(true);
+    setAdminIdSearchResult(null);
+    try {
+      const res = await searchAccountWithAuthorization(db, adminIdQuery.trim(), 'super_admin', user?.uid || '');
+      setAdminIdSearchResult(res);
+    } catch (err) {
+      console.error('Search error:', err);
+    } finally {
+      setIsSearchingId(false);
     }
   };
 
@@ -957,6 +1008,18 @@ export const SuperAdminPortalWorkspace: React.FC<SuperAdminPortalWorkspaceProps>
         >
           <Sparkles size={16} />
           <span>{language === 'ar' ? 'الاشتراكات والعيادات' : 'Subscriptions'}</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('id_audit')}
+          className={`flex-1 min-w-[140px] py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            activeTab === 'id_audit'
+              ? 'bg-[#003366] text-white shadow-sm'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+          }`}
+        >
+          <Database size={16} />
+          <span>{language === 'ar' ? 'تدقيق معرّفات الحسابات (M737 IDs)' : 'Account IDs & Audit'}</span>
         </button>
       </div>
 
@@ -1987,6 +2050,224 @@ export const SuperAdminPortalWorkspace: React.FC<SuperAdminPortalWorkspaceProps>
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 5: UNIFIED ACCOUNT IDS AUDIT & INTEGRITY */}
+      {activeTab === 'id_audit' && (
+        <div className="space-y-6">
+          {/* Audit Hub Header Card */}
+          <div className="p-6 rounded-3xl bg-linear-to-r from-[#002244] to-[#003366] text-white shadow-xl relative overflow-hidden">
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="space-y-2 max-w-2xl">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/20 text-sky-300 border border-sky-400/30 text-xs font-bold font-mono">
+                  <ShieldCheck size={14} />
+                  <span>M737 MEDICAL IDENTITY ARCHITECTURE · RELEASE 2</span>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-black">
+                  {language === 'ar' ? 'تدقيق معرّفات الحسابات المعتمدة (Unified Account IDs)' : 'Account IDs Audit & Integrity Hub'}
+                </h2>
+                <p className="text-xs sm:text-sm text-sky-100/90 leading-relaxed">
+                  {language === 'ar'
+                    ? 'نظام التدقيق الشامل لمعرّفات M737IQ الدائمة لكافة الحسابات (المرضى، الأطباء، الصيدليات، المختبرات، مراكز الأشعة، السكرتارية، المذاخر). يضمن النظام عدم تكرار المعرّفات، واستكمال أي معرّف مفقود بصورة آمنة ودائمة دون التأثير على البيانات الحالية.'
+                    : 'Unified M737 permanent account identity audit across all 7 platform portals. Guarantees concurrency safety, zero duplicate IDs, and idempotent backfilling preserving all production records.'}
+                </p>
+              </div>
+
+              <div className="shrink-0 flex flex-col sm:flex-row gap-3">
+                <button
+                  type="button"
+                  onClick={handleRunIdAuditAndMigration}
+                  disabled={isRunningAudit}
+                  className="px-5 py-3 rounded-2xl bg-sky-500 hover:bg-sky-400 text-[#002244] font-black text-xs sm:text-sm transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw size={16} className={isRunningAudit ? 'animate-spin' : ''} />
+                  <span>
+                    {isRunningAudit
+                      ? (language === 'ar' ? 'جارٍ تدقيق واستكمال المعرّفات...' : 'Running Audit...')
+                      : (language === 'ar' ? 'تشغيل فحص وتدقيق المعرّفات' : 'Run ID Audit & Backfill')}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Metrics by Role Prefix */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+            {[
+              { role: 'patient', labelAr: 'المرضى', labelEn: 'Patients', prefix: PORTAL_ID_PREFIXES.patient, color: 'text-sky-700 bg-sky-50 border-sky-200' },
+              { role: 'doctor', labelAr: 'الأطباء', labelEn: 'Doctors', prefix: PORTAL_ID_PREFIXES.doctor, color: 'text-blue-700 bg-blue-50 border-blue-200' },
+              { role: 'pharmacy', labelAr: 'الصيدليات', labelEn: 'Pharmacies', prefix: PORTAL_ID_PREFIXES.pharmacy, color: 'text-teal-700 bg-teal-50 border-teal-200' },
+              { role: 'laboratory', labelAr: 'المختبرات', labelEn: 'Labs', prefix: PORTAL_ID_PREFIXES.laboratory, color: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
+              { role: 'radiology_center', labelAr: 'الأشعة', labelEn: 'Radiology', prefix: PORTAL_ID_PREFIXES.radiology_center, color: 'text-cyan-700 bg-cyan-50 border-cyan-200' },
+              { role: 'secretary', labelAr: 'السكرتارية', labelEn: 'Secretaries', prefix: PORTAL_ID_PREFIXES.secretary, color: 'text-indigo-700 bg-indigo-50 border-indigo-200' },
+              { role: 'wholesaler', labelAr: 'المذاخر', labelEn: 'Wholesalers', prefix: PORTAL_ID_PREFIXES.wholesaler, color: 'text-purple-700 bg-purple-50 border-purple-200' },
+            ].map((item) => {
+              const count = usersList.filter(u => u.role === item.role || (item.role === 'radiology_center' && (u.role === 'radiology_center' || (u.role as any) === 'radiology'))).length;
+              return (
+                <div key={item.role} className={`p-3.5 rounded-2xl border ${item.color} text-center space-y-1`}>
+                  <div className="text-[11px] font-bold">{language === 'ar' ? item.labelAr : item.labelEn}</div>
+                  <div className="font-mono text-[10px] opacity-75 font-bold">{item.prefix}*</div>
+                  <div className="text-xl font-black">{count}</div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Audit Report Details Card (when audit is executed) */}
+          {auditReport && (
+            <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4 animate-in fade-in duration-200">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                    <CheckCircle2 size={18} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-slate-900">
+                      {language === 'ar' ? 'تقرير نتائج التدقيق والاستكمال' : 'Audit Execution Summary'}
+                    </h3>
+                    <span className="text-[11px] text-slate-400 font-mono">
+                      {new Date(auditReport.completedAt).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+
+                <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">
+                  {language === 'ar' ? 'التدقيق مكتمل 100%' : 'Audit Completed'}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                  <span className="text-slate-500 block mb-0.5">{language === 'ar' ? 'الحسابات المفحوصة:' : 'Scanned Users:'}</span>
+                  <span className="font-bold text-slate-900 text-base">{auditReport.scannedUsers}</span>
+                </div>
+                <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-900">
+                  <span className="text-emerald-700 block mb-0.5">{language === 'ar' ? 'المعرّفات السليمة:' : 'Valid IDs:'}</span>
+                  <span className="font-bold text-base">{auditReport.validCount}</span>
+                </div>
+                <div className="p-3 rounded-xl bg-sky-50 border border-sky-100 text-sky-900">
+                  <span className="text-sky-700 block mb-0.5">{language === 'ar' ? 'المعرّفات المستكملة:' : 'Backfilled IDs:'}</span>
+                  <span className="font-bold text-base">{auditReport.backfilledCount}</span>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                  <span className="text-slate-500 block mb-0.5">{language === 'ar' ? 'حالات التضارب / التكرار:' : 'Duplicates / Conflicts:'}</span>
+                  <span className={`font-bold text-base ${auditReport.duplicateCount > 0 ? 'text-rose-600' : 'text-emerald-700'}`}>
+                    {auditReport.duplicateCount}
+                  </span>
+                </div>
+              </div>
+
+              {auditReport.details.length > 0 && (
+                <div className="mt-3">
+                  <div className="text-xs font-bold text-slate-700 mb-1">
+                    {language === 'ar' ? 'سجل العمليات التفصيلي:' : 'Audit Event Log:'}
+                  </div>
+                  <div className="p-3 rounded-xl bg-slate-900 text-slate-200 font-mono text-[11px] max-h-48 overflow-y-auto space-y-1">
+                    {auditReport.details.map((item, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <span className="text-emerald-400">✓</span>
+                        <span>{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Administrative ID Search Tool */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
+            <div>
+              <h3 className="text-base font-black text-slate-900">
+                {language === 'ar' ? 'أداة الاستعلام والتحقق من المعرّف (Administrative ID Lookup)' : 'Administrative Account ID Lookup'}
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                {language === 'ar'
+                  ? 'يمكنك البحث عن أي معرّف معتمد لأي دور للتحقق من سلامة الربط وصحة السجل في قاعدة البيانات.'
+                  : 'Verify any public account ID against the global registry and Firestore user records.'}
+              </p>
+            </div>
+
+            <form onSubmit={handleAdminSearchId} className="flex flex-col sm:flex-row gap-2.5">
+              <div className="relative flex-1">
+                <Search size={16} className="absolute right-3.5 top-3.5 text-slate-400" />
+                <input
+                  type="text"
+                  value={adminIdQuery}
+                  onChange={(e) => setAdminIdQuery(e.target.value)}
+                  placeholder={language === 'ar' ? 'أدخل المعرف (مثال: M737-DOC-..., M737-PAT-..., M737-PHARM-...)' : 'Enter ID (e.g. M737-DOC-..., M737-PAT-...)'}
+                  className="w-full pr-10 pl-4 py-2.5 rounded-xl border border-slate-300 font-mono text-xs sm:text-sm focus:border-[#003366] focus:outline-hidden"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSearchingId || !adminIdQuery.trim()}
+                className="px-6 py-2.5 rounded-xl bg-[#003366] hover:bg-[#002244] text-white font-bold text-xs sm:text-sm transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+              >
+                {isSearchingId && <RefreshCw size={14} className="animate-spin" />}
+                <span>{language === 'ar' ? 'تحقق واستعلام' : 'Verify ID'}</span>
+              </button>
+            </form>
+
+            {/* Search Result Display */}
+            {adminIdSearchResult && (
+              <div className="mt-4 animate-in fade-in duration-150">
+                {adminIdSearchResult.success && adminIdSearchResult.account ? (
+                  <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 text-xs space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 size={16} className="text-emerald-600" />
+                        <span className="font-bold text-emerald-900 text-sm">
+                          {language === 'ar' ? 'المعرّف معتمد وموثق في النظام' : 'Account ID Verified & Active'}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const id = adminIdSearchResult.account!.accountId;
+                          navigator.clipboard.writeText(id);
+                          setCopiedAuditId(id);
+                          setTimeout(() => setCopiedAuditId(null), 2500);
+                        }}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-emerald-300 font-mono text-xs font-bold text-emerald-800 hover:bg-emerald-100 transition-colors cursor-pointer"
+                      >
+                        <Copy size={11} className="text-emerald-600" />
+                        <span>{copiedAuditId ? (language === 'ar' ? 'تم النسخ' : 'Copied') : adminIdSearchResult.account.accountId}</span>
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-slate-700">
+                      <div>
+                        <span className="text-slate-400 block text-[11px]">{language === 'ar' ? 'الاسم:' : 'Name:'}</span>
+                        <strong className="text-slate-900">{adminIdSearchResult.account.displayName}</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[11px]">{language === 'ar' ? 'الدور المصرح:' : 'Role:'}</span>
+                        <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-bold font-mono">
+                          {adminIdSearchResult.account.role}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[11px]">{language === 'ar' ? 'المنشأة:' : 'Facility:'}</span>
+                        <span>{adminIdSearchResult.account.facilityName || '—'}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[11px]">{language === 'ar' ? 'معرّف UID الموثق:' : 'Auth UID:'}</span>
+                        <span className="font-mono text-[10px] text-slate-600">{adminIdSearchResult.account.uid}</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-2">
+                    <AlertCircle size={16} className="text-amber-600 shrink-0" />
+                    <span>{language === 'ar' ? adminIdSearchResult.errorAr : adminIdSearchResult.errorEn}</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

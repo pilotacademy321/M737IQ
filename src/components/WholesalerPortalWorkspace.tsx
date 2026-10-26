@@ -767,7 +767,7 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
               <button
                 type="button"
                 onClick={() => {
-                  const wId = userProfile?.accountId || wholesalerProfile?.wholesalerId || (user?.uid ? generateFacilityOrUserId('wholesaler', user.uid) : 'M737-WHOLE-DEMO');
+                  const wId = userProfile?.accountId || wholesalerProfile?.wholesalerId || generateFacilityOrUserId('wholesaler', user?.uid || 'guest');
                   navigator.clipboard.writeText(wId);
                   setFeedbackMsg({
                     type: 'success',
@@ -779,7 +779,7 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
                 title={language === 'ar' ? 'انقر لنسخ المعرّف' : 'Click to copy ID'}
               >
                 <Copy size={12} className="text-teal-600" />
-                <span>ID: {userProfile?.accountId || wholesalerProfile?.wholesalerId || (user?.uid ? generateFacilityOrUserId('wholesaler', user.uid) : 'M737-WHOLE-DEMO')}</span>
+                <span>ID: {userProfile?.accountId || wholesalerProfile?.wholesalerId || generateFacilityOrUserId('wholesaler', user?.uid || 'guest')}</span>
               </button>
               <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200">
                 <ShieldCheck size={12} className="text-teal-600" />

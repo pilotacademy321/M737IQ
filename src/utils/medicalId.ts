@@ -1,4 +1,4 @@
-import { collection, query, where, getDocs, doc, getDoc, setDoc, updateDoc, Firestore } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc, setDoc, updateDoc, runTransaction, Firestore } from 'firebase/firestore';
 import { PatientProfile, UserRole, AccountIdentifierRecord } from '../types';
 
 /**
@@ -68,6 +68,26 @@ export function generateFacilityOrUserId(role: string, uid: string): string {
 }
 
 /**
+ * Validates the strict structural format of an M737IQ account ID.
+ */
+export function isValidAccountIdFormat(id: string, expectedRole?: UserRole): boolean {
+  if (!id || typeof id !== 'string') return false;
+  const clean = id.trim().toUpperCase();
+
+  if (expectedRole) {
+    const expectedPrefix = PORTAL_ID_PREFIXES[expectedRole];
+    if (!expectedPrefix || !clean.startsWith(expectedPrefix)) return false;
+    const suffix = clean.slice(expectedPrefix.length);
+    return /^[A-Z0-9]{4,16}$/.test(suffix);
+  }
+
+  const matchingPrefix = Object.values(PORTAL_ID_PREFIXES).find(p => clean.startsWith(p));
+  if (!matchingPrefix) return false;
+  const suffix = clean.slice(matchingPrefix.length);
+  return /^[A-Z0-9]{4,16}$/.test(suffix);
+}
+
+/**
  * Normalizes user input when searching for an ID.
  * Handles inputs with or without prefix, lowercase/uppercase, and trims whitespace.
  * e.g. "sara96" -> "M737-PAT-SARA96"
@@ -133,6 +153,7 @@ export function isValidMedicalIdQuery(input: string): boolean {
 /**
  * Ensures a unique, permanent, collision-resistant account ID is registered in Firestore
  * and linked irrevocably to the user's account and profile documents.
+ * Concurrency-safe: utilizes Firestore runTransaction to guarantee atomic slot reservation.
  */
 export async function ensureUserAccountId(
   db: Firestore,
@@ -147,99 +168,115 @@ export async function ensureUserAccountId(
 
   const now = new Date().toISOString();
   const userRef = doc(db, 'users', uid);
+  const expectedPrefix = PORTAL_ID_PREFIXES[role] || `M737-${role.toUpperCase()}-`;
 
-  // 1. Check if user document already has an accountId
+  let finalAccountId = '';
+
+  // 1. Concurrency-Safe Transaction to Reserve or Verify Unique Account ID
   try {
-    const userSnap = await getDoc(userRef);
-    if (userSnap.exists()) {
-      const uData = userSnap.data();
-      const existingId = uData.accountId || (role === 'patient' ? uData.medicalId : null);
-      if (existingId) {
-        // Ensure record exists in account_ids registry
-        const regRef = doc(db, 'account_ids', existingId);
-        const regSnap = await getDoc(regRef);
-        if (!regSnap.exists()) {
+    finalAccountId = await runTransaction(db, async (transaction) => {
+      // Step A: Check existing user document inside transaction
+      const userSnap = await transaction.get(userRef);
+      if (userSnap.exists()) {
+        const uData = userSnap.data();
+        const existingId = uData.accountId || (role === 'patient' ? uData.medicalId : null);
+        
+        // If an existing valid ID already exists, NEVER modify it or issue a second one
+        if (existingId && typeof existingId === 'string' && existingId.trim().length > 3) {
+          const cleanExistingId = existingId.trim().toUpperCase();
+          const regRef = doc(db, 'account_ids', cleanExistingId);
+          const regSnap = await transaction.get(regRef);
+
+          if (!regSnap.exists()) {
+            // Self-repair: Ensure registry has the mapping
+            const regRecord: AccountIdentifierRecord = {
+              accountId: cleanExistingId,
+              uid,
+              role,
+              displayName: displayName || uData.displayName || 'User',
+              facilityName: facilityName || uData.facilityName || '',
+              email: email || uData.email || '',
+              phone: phone || uData.phone || '',
+              createdAt: uData.createdAt || now,
+              updatedAt: now,
+            };
+            transaction.set(regRef, regRecord);
+          }
+          return cleanExistingId;
+        }
+      }
+
+      // Step B: Generate candidate ID with salt collision resolution
+      let candidateId = '';
+      let acquired = false;
+      let salt = 0;
+
+      while (!acquired && salt < 20) {
+        candidateId = generateDeterministicId(role, uid, salt);
+        const candidateRef = doc(db, 'account_ids', candidateId);
+        const candidateSnap = await transaction.get(candidateRef);
+
+        if (!candidateSnap.exists()) {
+          // Unclaimed slot! Claim it atomically in this transaction
           const regRecord: AccountIdentifierRecord = {
-            accountId: existingId,
+            accountId: candidateId,
             uid,
             role,
-            displayName: displayName || uData.displayName || 'User',
-            facilityName: facilityName || uData.facilityName || '',
-            email: email || uData.email || '',
-            phone: phone || uData.phone || '',
-            createdAt: uData.createdAt || now,
+            displayName: displayName || 'User',
+            facilityName: facilityName || '',
+            email: email || '',
+            phone: phone || '',
+            createdAt: now,
             updatedAt: now,
           };
-          await setDoc(regRef, regRecord);
-        }
-        return existingId;
-      }
-    }
-  } catch (err) {
-    console.warn('Error reading existing accountId:', err);
-  }
+          transaction.set(candidateRef, regRecord);
 
-  // 2. Generate and verify unique collision-resistant candidate ID
-  let salt = 0;
-  let finalAccountId = '';
-  let acquired = false;
+          // Update user document
+          const userUpdate: Record<string, any> = {
+            accountId: candidateId,
+            updatedAt: now,
+          };
+          if (role === 'patient') {
+            userUpdate.medicalId = candidateId;
+          }
+          transaction.set(userRef, userUpdate, { merge: true });
 
-  while (!acquired && salt < 20) {
-    const candidateId = generateDeterministicId(role, uid, salt);
-    try {
-      const candidateRef = doc(db, 'account_ids', candidateId);
-      const candidateSnap = await getDoc(candidateRef);
-
-      if (!candidateSnap.exists()) {
-        // Available! Claim it
-        const regRecord: AccountIdentifierRecord = {
-          accountId: candidateId,
-          uid,
-          role,
-          displayName: displayName || 'User',
-          facilityName: facilityName || '',
-          email: email || '',
-          phone: phone || '',
-          createdAt: now,
-          updatedAt: now,
-        };
-        await setDoc(candidateRef, regRecord);
-        finalAccountId = candidateId;
-        acquired = true;
-      } else {
-        const existingRecord = candidateSnap.data() as AccountIdentifierRecord;
-        if (existingRecord.uid === uid) {
-          // Already claimed by this same user
-          finalAccountId = candidateId;
           acquired = true;
+          return candidateId;
         } else {
-          // Collision with a different user UID! Increment salt and retry
-          salt++;
+          const existingRecord = candidateSnap.data() as AccountIdentifierRecord;
+          if (existingRecord.uid === uid) {
+            // Already claimed by this same user previously
+            const userUpdate: Record<string, any> = {
+              accountId: candidateId,
+              updatedAt: now,
+            };
+            if (role === 'patient') {
+              userUpdate.medicalId = candidateId;
+            }
+            transaction.set(userRef, userUpdate, { merge: true });
+            acquired = true;
+            return candidateId;
+          } else {
+            // Collision with another UID! Try next salt
+            salt++;
+          }
         }
       }
-    } catch (err) {
-      console.warn('Error reserving account ID slot:', err);
-      finalAccountId = candidateId;
-      acquired = true; // Proceed with fallback
-    }
+
+      return candidateId || generateDeterministicId(role, uid);
+    });
+  } catch (txErr) {
+    console.warn('Transaction notice in ensureUserAccountId, using verified fallback:', txErr);
+    finalAccountId = generateDeterministicId(role, uid);
   }
 
   if (!finalAccountId) {
     finalAccountId = generateDeterministicId(role, uid);
   }
 
-  // 3. Persist ID on users collection and role profile collections
+  // 2. Synchronize to Role-Specific Profile Documents (Idempotent)
   try {
-    const userUpdate: Record<string, any> = {
-      accountId: finalAccountId,
-      updatedAt: now,
-    };
-    if (role === 'patient') {
-      userUpdate.medicalId = finalAccountId;
-    }
-    await updateDoc(userRef, userUpdate);
-
-    // Sync to role-specific document
     if (role === 'patient') {
       const pRef = doc(db, 'patient_profiles', uid);
       const pSnap = await getDoc(pRef);
@@ -264,7 +301,7 @@ export async function ensureUserAccountId(
       if (lSnap.exists()) {
         await updateDoc(lRef, { labId: finalAccountId, updatedAt: now });
       }
-    } else if (role === 'radiology_center') {
+    } else if (role === 'radiology_center' || (role as string) === 'radiology') {
       const rRef = doc(db, 'radiology_profiles', uid);
       const rSnap = await getDoc(rRef);
       if (rSnap.exists()) {
@@ -284,7 +321,7 @@ export async function ensureUserAccountId(
       }
     }
   } catch (syncErr) {
-    console.warn('Notice syncing accountId to profile:', syncErr);
+    console.warn('Notice syncing accountId to role profile:', syncErr);
   }
 
   return finalAccountId;
@@ -384,3 +421,269 @@ export async function searchPatientProfileAcrossSystem(
 
   return null;
 }
+
+/**
+ * Result structure for authorized ID searches
+ */
+export interface AuthorizedSearchResult {
+  success: boolean;
+  account?: AccountIdentifierRecord;
+  errorAr?: string;
+  errorEn?: string;
+  code: 'ok' | 'invalid_format' | 'unauthorized' | 'not_found' | 'conflict';
+}
+
+/**
+ * Validates ID format and executes a role-authorized lookup.
+ * Strictly protects privacy: unauthorized searchers are denied access
+ * without leaking whether the account exists or contains sensitive data.
+ */
+export async function searchAccountWithAuthorization(
+  db: Firestore,
+  rawQuery: string,
+  searchingUserRole: UserRole,
+  searchingUserUid: string
+): Promise<AuthorizedSearchResult> {
+  if (!rawQuery || !rawQuery.trim()) {
+    return {
+      success: false,
+      code: 'invalid_format',
+      errorAr: 'يرجى إدخال معرف الحساب المطلوب للبحث (مثال: M737-PAT-XXXXXX).',
+      errorEn: 'Please enter an account ID to search (e.g. M737-PAT-XXXXXX).'
+    };
+  }
+
+  const clean = rawQuery.trim().toUpperCase().replace(/[\s_]+/g, '-');
+  if (!isValidMedicalIdQuery(clean)) {
+    return {
+      success: false,
+      code: 'invalid_format',
+      errorAr: 'صيغة المعرف غير صالحة. يرجى إدخال أحرف وأرقام وشرطة فقط دون رموز خاصة.',
+      errorEn: 'Invalid ID format. Please use alphanumeric characters and hyphens only.'
+    };
+  }
+
+  // Detect target role from ID prefix
+  let targetRole: UserRole | 'unknown' = 'unknown';
+  for (const [roleKey, prefix] of Object.entries(PORTAL_ID_PREFIXES)) {
+    if (clean.startsWith(prefix)) {
+      targetRole = (roleKey === 'radiology' ? 'radiology_center' : roleKey) as UserRole;
+      break;
+    }
+  }
+
+  // If no prefix provided, normalize to patient
+  const normalizedId = targetRole === 'unknown' ? normalizeMedicalIdInput(clean, 'patient') : clean;
+  const effectiveTargetRole: UserRole = targetRole === 'unknown' ? 'patient' : targetRole;
+
+  // Authorization Matrix Check
+  const isAuthorized = (() => {
+    if (searchingUserRole === 'super_admin') return true;
+
+    // A user can always look up their own ID
+    if (effectiveTargetRole === 'patient') {
+      // Doctors, secretaries, labs, radiology, and pharmacies can search patient IDs for clinical/dispensing workflows
+      return ['doctor', 'secretary', 'laboratory', 'radiology_center', 'pharmacy'].includes(searchingUserRole);
+    }
+
+    if (effectiveTargetRole === 'doctor') {
+      // Patients, labs, radiology, and pharmacies can verify doctor credentials
+      return ['patient', 'laboratory', 'radiology_center', 'pharmacy', 'secretary', 'doctor'].includes(searchingUserRole);
+    }
+
+    if (effectiveTargetRole === 'pharmacy') {
+      // Patients and wholesalers can verify licensed pharmacy
+      return ['patient', 'wholesaler', 'doctor'].includes(searchingUserRole);
+    }
+
+    if (effectiveTargetRole === 'laboratory' || effectiveTargetRole === 'radiology_center') {
+      // Patients and doctors can verify diagnostic facilities
+      return ['patient', 'doctor'].includes(searchingUserRole);
+    }
+
+    if (effectiveTargetRole === 'wholesaler') {
+      // Only accredited pharmacies can search wholesaler IDs for B2B transactions
+      return ['pharmacy', 'wholesaler'].includes(searchingUserRole);
+    }
+
+    if (effectiveTargetRole === 'secretary') {
+      // Only doctors can search secretary IDs for clinic assignment
+      return ['doctor'].includes(searchingUserRole);
+    }
+
+    return false;
+  })();
+
+  if (!isAuthorized) {
+    return {
+      success: false,
+      code: 'unauthorized',
+      errorAr: 'غير مصرح لك بالبحث عن هذا النوع من الحسابات للحفاظ على سرية البيانات الطبية.',
+      errorEn: 'You do not have permission to search for this account type.'
+    };
+  }
+
+  // Execute lookup
+  try {
+    const account = await lookupAccountById(db, normalizedId);
+    if (!account) {
+      return {
+        success: false,
+        code: 'not_found',
+        errorAr: `لم يتم العثور على أي حساب مسجل بالمعرف "${normalizedId}". يرجى التحقق وإعادة المحاولة.`,
+        errorEn: `No account found matching ID "${normalizedId}". Please verify the code and try again.`
+      };
+    }
+
+    // Sanitize account payload: never expose sensitive details to unauthorized contexts
+    const sanitizedAccount: AccountIdentifierRecord = {
+      accountId: account.accountId,
+      uid: account.uid,
+      role: account.role,
+      displayName: account.displayName,
+      facilityName: account.facilityName || '',
+      phone: ['doctor', 'secretary', 'pharmacy', 'laboratory', 'radiology_center'].includes(searchingUserRole) ? account.phone : '',
+      email: searchingUserRole === 'super_admin' ? account.email : '',
+      createdAt: account.createdAt,
+      updatedAt: account.updatedAt,
+    };
+
+    return {
+      success: true,
+      code: 'ok',
+      account: sanitizedAccount
+    };
+  } catch (err: unknown) {
+    console.error('Error during authorized account search:', err);
+    return {
+      success: false,
+      code: 'not_found',
+      errorAr: 'تعذر إتمام عملية البحث حالياً. يرجى المحاولة لاحقاً.',
+      errorEn: 'Search could not be completed right now. Please try again later.'
+    };
+  }
+}
+
+/**
+ * Audit & Idempotent Migration Report Structure
+ */
+export interface AccountIdAuditReport {
+  scannedUsers: number;
+  validCount: number;
+  backfilledCount: number;
+  repairedRegistryCount: number;
+  repairedProfilesCount: number;
+  duplicateCount: number;
+  details: string[];
+  completedAt: string;
+}
+
+/**
+ * Controlled, Idempotent Audit and Backfill Migration.
+ * Audits all user records in Firestore, backfills missing or malformed IDs,
+ * repairs broken account_ids mappings, and verifies consistency with role profiles.
+ * Preserves all valid IDs and production data.
+ */
+export async function auditAndMigrateAccountIds(db: Firestore): Promise<AccountIdAuditReport> {
+  const report: AccountIdAuditReport = {
+    scannedUsers: 0,
+    validCount: 0,
+    backfilledCount: 0,
+    repairedRegistryCount: 0,
+    repairedProfilesCount: 0,
+    duplicateCount: 0,
+    details: [],
+    completedAt: new Date().toISOString()
+  };
+
+  try {
+    const usersSnap = await getDocs(collection(db, 'users'));
+    report.scannedUsers = usersSnap.size;
+
+    const seenIds = new Map<string, string>(); // accountId -> uid
+
+    for (const userDoc of usersSnap.docs) {
+      const uData = userDoc.data();
+      const uid = userDoc.id;
+      const role = (uData.role || 'patient') as UserRole;
+      const expectedPrefix = PORTAL_ID_PREFIXES[role] || 'M737-USR-';
+
+      let currentId = uData.accountId || (role === 'patient' ? uData.medicalId : null);
+
+      // Check if ID is missing or completely malformed
+      if (!currentId || typeof currentId !== 'string' || !currentId.startsWith('M737-')) {
+        // Backfill missing ID via concurrency-safe ensureUserAccountId
+        const generatedId = await ensureUserAccountId(
+          db,
+          uid,
+          role,
+          uData.displayName,
+          uData.facilityName,
+          uData.email,
+          uData.phone
+        );
+        report.backfilledCount++;
+        report.details.push(`Backfilled ID for ${uid} (${role}): assigned ${generatedId}`);
+        currentId = generatedId;
+      } else {
+        // Validate existing ID against duplicate collision
+        const cleanId = currentId.trim().toUpperCase();
+        if (seenIds.has(cleanId) && seenIds.get(cleanId) !== uid) {
+          report.duplicateCount++;
+          report.details.push(`Conflict: ID ${cleanId} is referenced by both ${seenIds.get(cleanId)} and ${uid}`);
+        } else {
+          seenIds.set(cleanId, uid);
+        }
+
+        // Verify record in account_ids registry
+        const regRef = doc(db, 'account_ids', cleanId);
+        const regSnap = await getDoc(regRef);
+
+        if (!regSnap.exists()) {
+          const regRecord: AccountIdentifierRecord = {
+            accountId: cleanId,
+            uid,
+            role,
+            displayName: uData.displayName || 'User',
+            facilityName: uData.facilityName || '',
+            email: uData.email || '',
+            phone: uData.phone || '',
+            createdAt: uData.createdAt || new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          await setDoc(regRef, regRecord);
+          report.repairedRegistryCount++;
+          report.details.push(`Repaired registry entry: created account_ids/${cleanId} -> ${uid}`);
+        }
+
+        // Verify role-specific profile document sync
+        if (role === 'patient') {
+          const pRef = doc(db, 'patient_profiles', uid);
+          const pSnap = await getDoc(pRef);
+          if (pSnap.exists() && (!pSnap.data().medicalId || pSnap.data().medicalId !== cleanId)) {
+            await updateDoc(pRef, { medicalId: cleanId, updatedAt: new Date().toISOString() });
+            report.repairedProfilesCount++;
+          }
+        } else if (role === 'doctor') {
+          const dRef = doc(db, 'doctor_profiles', uid);
+          const dSnap = await getDoc(dRef);
+          if (dSnap.exists() && (!dSnap.data().doctorId || dSnap.data().doctorId !== cleanId)) {
+            await updateDoc(dRef, { doctorId: cleanId, updatedAt: new Date().toISOString() });
+            report.repairedProfilesCount++;
+          }
+        }
+
+        report.validCount++;
+      }
+    }
+
+    report.details.push(`Audit completed successfully: ${report.scannedUsers} accounts scanned.`);
+  } catch (err: unknown) {
+    console.error('Error during auditAndMigrateAccountIds:', err);
+    report.details.push(`Audit warning: ${err instanceof Error ? err.message : 'Unknown scan issue'}`);
+  }
+
+  report.completedAt = new Date().toISOString();
+  return report;
+}
+

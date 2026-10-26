@@ -27,8 +27,10 @@ import {
   Sparkles,
   Inbox,
   FlaskConical,
-  Pill
+  Pill,
+  Copy
 } from 'lucide-react';
+import { generateFacilityOrUserId } from '../utils/medicalId';
 import { PortalId } from '../types';
 import { 
   AppNotification, 
@@ -136,6 +138,7 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   const [showAccountModal, setShowAccountModal] = useState(false);
+  const [copiedId, setCopiedId] = useState(false);
   const [showSelfDeleteModal, setShowSelfDeleteModal] = useState(false);
   const [isDeletingOwnAccount, setIsDeletingOwnAccount] = useState(false);
   const [selfDeleteError, setSelfDeleteError] = useState<string | null>(null);
@@ -556,6 +559,30 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Account Details Box */}
             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2">
+              <div className="flex justify-between items-center py-1.5 border-b border-slate-200/80 bg-sky-50/70 -mx-2 px-2.5 rounded-lg">
+                <span className="text-slate-600 font-semibold">{language === 'ar' ? 'معرّف الحساب المعتمد (ID):' : 'Account ID:'}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const idToCopy = userProfile?.accountId || userProfile?.medicalId || (user ? generateFacilityOrUserId(userProfile?.role || 'patient', user.uid) : '');
+                    if (idToCopy) {
+                      navigator.clipboard.writeText(idToCopy);
+                      setCopiedId(true);
+                      setTimeout(() => setCopiedId(false), 2500);
+                    }
+                  }}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white hover:bg-slate-100 border border-slate-300 font-mono text-xs font-bold text-[#003366] transition-colors cursor-pointer shadow-2xs"
+                  title={language === 'ar' ? 'انقر لنسخ المعرّف' : 'Click to copy ID'}
+                >
+                  <Copy size={12} className={copiedId ? 'text-emerald-600' : 'text-sky-600'} />
+                  <span>
+                    {copiedId 
+                      ? (language === 'ar' ? 'تم النسخ!' : 'Copied!') 
+                      : (userProfile?.accountId || userProfile?.medicalId || (user ? generateFacilityOrUserId(userProfile?.role || 'patient', user.uid) : 'M737-ID'))
+                    }
+                  </span>
+                </button>
+              </div>
               <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
                 <span className="text-slate-500">{language === 'ar' ? 'الاسم الكامل:' : 'Full Name:'}</span>
                 <span className="font-bold text-slate-800">{userProfile?.displayName || user.displayName || 'غير محدد'}</span>

@@ -1290,7 +1290,7 @@ export const RadiologyPortalWorkspace: React.FC<RadiologyPortalWorkspaceProps> =
                 <button
                   type="button"
                   onClick={() => {
-                    const cId = userProfile?.accountId || centerProfile?.centerId || (user?.uid ? generateFacilityOrUserId('radiology', user.uid) : 'M737-RAD-DEMO');
+                    const cId = userProfile?.accountId || centerProfile?.centerId || generateFacilityOrUserId('radiology', user?.uid || 'guest');
                     navigator.clipboard.writeText(cId);
                     setFeedbackMsg({
                       type: 'success',
@@ -1301,7 +1301,7 @@ export const RadiologyPortalWorkspace: React.FC<RadiologyPortalWorkspaceProps> =
                   title={language === 'ar' ? 'انقر لنسخ معرّف المركز' : 'Click to copy Center ID'}
                 >
                   <Copy size={12} className="text-cyan-300" />
-                  <span>ID: {userProfile?.accountId || centerProfile?.centerId || (user?.uid ? generateFacilityOrUserId('radiology', user.uid) : 'M737-RAD-DEMO')}</span>
+                  <span>ID: {userProfile?.accountId || centerProfile?.centerId || generateFacilityOrUserId('radiology', user?.uid || 'guest')}</span>
                 </button>
                 <span className="opacity-40">·</span>
                 <span>{language === 'ar' ? 'ترخيص النقابة / الوزارة:' : 'License:'} {centerProfile?.licenseNumber || userProfile?.licenseNumber || 'RAD-IQ'}</span>

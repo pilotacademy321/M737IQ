@@ -81,7 +81,8 @@ import {
   Layers, 
   Settings,
   MessageSquare,
-  Info
+  Info,
+  Copy
 } from 'lucide-react';
 import { SmartMedicineSearch, SearchMedicineResult } from './SmartMedicineSearch';
 import { PrescriptionPdfModal } from './PrescriptionPdfModal';
@@ -1819,9 +1820,19 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
                   <h3 className="font-bold text-lg text-slate-900">
                     {language === 'ar' ? 'بطاقة البيانات الصحية وحالات الطوارئ (Medical Passport)' : 'Medical Identity & Emergency Card'}
                   </h3>
-                  <span className="text-xs text-slate-500 font-mono">
-                    ID: {patientProfile?.medicalId || generateMedicalId(user?.uid || '')}
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const id = patientProfile?.medicalId || generateMedicalId(user?.uid || '');
+                      navigator.clipboard.writeText(id);
+                      showToast(language === 'ar' ? `تم نسخ المعرّف الطبي (${id})` : `Medical ID copied (${id})`);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-300 font-mono text-xs font-bold text-[#003366] transition-colors cursor-pointer mt-1"
+                    title={language === 'ar' ? 'انقر لنسخ المعرّف' : 'Click to copy ID'}
+                  >
+                    <Copy size={12} className="text-sky-600" />
+                    <span>ID: {patientProfile?.medicalId || generateMedicalId(user?.uid || '')}</span>
+                  </button>
                 </div>
               </div>
 
