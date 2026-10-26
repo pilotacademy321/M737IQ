@@ -51,8 +51,10 @@ import {
   ArrowRight,
   AlertTriangle,
   MessageCircle,
-  Camera
+  Camera,
+  Copy
 } from 'lucide-react';
+import { generateFacilityOrUserId } from '../utils/medicalId';
 import { SmartMedicineSearch, SearchMedicineResult } from './SmartMedicineSearch';
 import { logAuditEvent } from '../lib/auditLogger';
 import { validateAndCompressImage, formatWhatsAppUrl } from '../utils/mediaUtils';
@@ -762,6 +764,23 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
               <h2 className="text-xl font-bold text-slate-900">
                 {wholesalerProfile?.warehouseName || userProfile?.facilityName || 'مذخر الأدوية المعتمد'}
               </h2>
+              <button
+                type="button"
+                onClick={() => {
+                  const wId = userProfile?.accountId || wholesalerProfile?.wholesalerId || (user?.uid ? generateFacilityOrUserId('wholesaler', user.uid) : 'M737-WHOLE-DEMO');
+                  navigator.clipboard.writeText(wId);
+                  setFeedbackMsg({
+                    type: 'success',
+                    text: language === 'ar' ? `تم نسخ معرّف المذخر (${wId})` : `Wholesaler ID copied (${wId})`
+                  });
+                  setTimeout(() => setFeedbackMsg(null), 3000);
+                }}
+                className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 hover:bg-slate-200 text-teal-900 border border-slate-300 font-mono transition-colors cursor-pointer"
+                title={language === 'ar' ? 'انقر لنسخ المعرّف' : 'Click to copy ID'}
+              >
+                <Copy size={12} className="text-teal-600" />
+                <span>ID: {userProfile?.accountId || wholesalerProfile?.wholesalerId || (user?.uid ? generateFacilityOrUserId('wholesaler', user.uid) : 'M737-WHOLE-DEMO')}</span>
+              </button>
               <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200">
                 <ShieldCheck size={12} className="text-teal-600" />
                 <span>{language === 'ar' ? 'مكتب علمي معتمد' : 'Verified Bureau'}</span>

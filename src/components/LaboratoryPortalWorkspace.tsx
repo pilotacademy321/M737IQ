@@ -474,66 +474,9 @@ export const LaboratoryPortalWorkspace: React.FC<LaboratoryPortalWorkspaceProps>
         let ordList = labOrderSnap.docs.map(d => ({ id: d.id, ...d.data() } as LabOrder));
         ordList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-        if (ordList.length === 0) {
-          const sampleLabOrders: LabOrder[] = [
-            {
-              id: 'demo_lab_ref_1',
-              orderNumber: 'LAB-ORD-9045',
-              doctorId: 'demo_doctor_ahmed',
-              doctorName: 'د. أحمد الرافدين',
-              doctorSpecialty: 'استشاري أمراض باطنية وقلبية',
-              doctorPhone: '07801122334',
-              clinicName: 'عيادة الرافدين الاستشارية',
-              patientId: 'demo_patient_karrar',
-              patientName: 'كرار جاسم الشمري',
-              patientPhone: '07802233445',
-              targetLabId: user.uid,
-              targetLabName: labProfile?.labName || 'مختبرنا التخصصي',
-              priority: 'urgent',
-              clinicalIndication: 'اشتباه بفقر دم أو نقص حديد حاد مع إجهاد مستمر',
-              preparationInstructions: 'لا يشترط الصيام المسبق',
-              status: 'in_progress',
-              tests: [
-                { testName: 'Complete Blood Count (CBC - صورة دم كاملة)' },
-                { testName: 'Serum Ferritin (مخزون الحديد)' },
-              ],
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            },
-            {
-              id: 'demo_lab_ref_2',
-              orderNumber: 'LAB-ORD-9021',
-              doctorId: 'demo_doctor_ahmed',
-              doctorName: 'د. أحمد الرافدين',
-              doctorSpecialty: 'استشاري أمراض باطنية وقلبية',
-              doctorPhone: '07801122334',
-              clinicName: 'عيادة الرافدين الاستشارية',
-              patientId: 'demo_patient_sara',
-              patientName: 'سارة حيدر العراقي',
-              patientPhone: '07705566778',
-              targetLabId: user.uid,
-              targetLabName: labProfile?.labName || 'مختبرنا التخصصي',
-              priority: 'normal',
-              clinicalIndication: 'فحص روتيني لمتابعة دهون الدم ووظائف الكلى',
-              preparationInstructions: 'صيام 12 ساعة قبل سحب العينة صباحاً',
-              status: 'completed',
-              resultSummary: 'نتائج طبيعية، نسبة الكولسترول 185 mg/dL وسكر الصائم 92 mg/dL',
-              completedAt: new Date(Date.now() - 3600000 * 20).toISOString(),
-              tests: [
-                { testName: 'Lipid Profile (تحليل الدهون الشامل)' },
-                { testName: 'Fasting Blood Sugar (سكر الصيام FBS)' },
-                { testName: 'Serum Creatinine (وظائف الكلى - كرياتينين)' },
-              ],
-              createdAt: new Date(Date.now() - 3600000 * 48).toISOString(),
-              updatedAt: new Date(Date.now() - 3600000 * 20).toISOString(),
-            }
-          ];
-          setIncomingLabOrders(sampleLabOrders);
-        } else {
-          setIncomingLabOrders(ordList);
-        }
-      } catch {
-        // Fallback
+        setIncomingLabOrders(ordList);
+      } catch (err) {
+        console.warn('Failed to load live lab orders:', err);
       }
 
     } catch (err: unknown) {
@@ -1480,7 +1423,7 @@ export const LaboratoryPortalWorkspace: React.FC<LaboratoryPortalWorkspaceProps>
                 <button
                   type="button"
                   onClick={() => {
-                    const labId = generateFacilityOrUserId('laboratory', labProfile?.labId || user?.uid || 'lab');
+                    const labId = userProfile?.accountId || labProfile?.labId || (user?.uid ? generateFacilityOrUserId('laboratory', user.uid) : 'M737-LAB-DEMO');
                     navigator.clipboard.writeText(labId);
                     showToast(language === 'ar' ? `تم نسخ معرف المختبر (${labId})` : `Laboratory ID copied (${labId})`);
                   }}
@@ -1488,7 +1431,7 @@ export const LaboratoryPortalWorkspace: React.FC<LaboratoryPortalWorkspaceProps>
                   title={language === 'ar' ? 'انقر لنسخ المعرف' : 'Click to copy ID'}
                 >
                   <Copy size={12} className="text-emerald-300" />
-                  <span>ID: {generateFacilityOrUserId('laboratory', labProfile?.labId || user?.uid || 'lab')}</span>
+                  <span>ID: {userProfile?.accountId || labProfile?.labId || (user?.uid ? generateFacilityOrUserId('laboratory', user.uid) : 'M737-LAB-DEMO')}</span>
                 </button>
                 <span className="opacity-40">·</span>
                 <span>{language === 'ar' ? 'إشراف:' : 'Director:'} {labProfile?.directorName}</span>
@@ -1672,32 +1615,19 @@ export const LaboratoryPortalWorkspace: React.FC<LaboratoryPortalWorkspaceProps>
                 <button
                   type="button"
                   onClick={() => {
-                    setSelectedBookingForIntake({
-                      id: `quick_${Date.now()}`,
-                      patientId: searchedPatientProfile.patientId,
+                    const firstTest = tests[0];
+                    setNewBookingData({
                       patientName: searchedPatientProfile.fullName,
                       patientPhone: searchedPatientProfile.phone,
-                      patientGovernorate: searchedPatientProfile.governorate,
-                      patientAddress: searchedPatientProfile.address,
-                      patientMedicalId: searchedPatientProfile.medicalId,
-                      testId: availableTests[0]?.id || 'cbc',
-                      testName: availableTests[0]?.name || 'CBC Complete Blood Count',
-                      testCode: availableTests[0]?.code || 'CBC',
-                      bookingType: 'center_visit',
-                      bookingDate: new Date().toISOString().split('T')[0],
+                      testName: firstTest?.name || 'فحص صورة الدم الكاملة (CBC)',
+                      category: firstTest?.category || 'Hematology',
+                      date: new Date().toISOString().split('T')[0],
                       timeSlot: '09:00 AM',
-                      status: 'accepted',
-                      sampleStatus: 'collected',
-                      price: availableTests[0]?.price || 15000,
-                      homeCollectionFee: 0,
-                      totalPrice: availableTests[0]?.price || 15000,
-                      paymentStatus: 'paid',
-                      requiresFasting: false,
-                      resultReady: false,
-                      createdAt: new Date().toISOString(),
-                      updatedAt: new Date().toISOString(),
+                      bookingType: 'in_lab',
+                      homeAddress: searchedPatientProfile.address || '',
+                      notes: `معرف المريض الطبي: ${searchedPatientProfile.medicalId}`,
                     });
-                    setShowIntakeModal(true);
+                    setShowNewBookingModal(true);
                   }}
                   className="w-full md:w-auto px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                 >

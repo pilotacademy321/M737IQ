@@ -28,7 +28,7 @@ import { DrugInteractionPanel } from './DrugInteractionPanel';
 import { logAuditEvent } from '../lib/auditLogger';
 import { recordRealMetricEvent } from '../lib/platformMetrics';
 import { validateAndCompressImage, formatWhatsAppUrl } from '../utils/mediaUtils';
-import { normalizeMedicalIdInput, isValidMedicalIdQuery, MEDICAL_ID_PREFIX, generateFacilityOrUserId } from '../utils/medicalId';
+import { normalizeMedicalIdInput, isValidMedicalIdQuery, MEDICAL_ID_PREFIX, generateFacilityOrUserId, searchPatientProfileAcrossSystem } from '../utils/medicalId';
 import { 
   collection, 
   query, 
@@ -98,7 +98,7 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
   const [activeTab, setActiveTab] = useState<'dashboard' | 'appointments' | 'prescriptions' | 'referrals' | 'records' | 'schedule' | 'secretary'>('dashboard');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
 
   // Doctor Profile State
   const [doctorProfile, setDoctorProfile] = useState<DoctorProfile | null>(null);
@@ -154,16 +154,6 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
   const [chartSummaryDiagDraft, setChartSummaryDiagDraft] = useState('');
   const [recordViewMode, setRecordViewMode] = useState<'chart' | 'my_patients' | 'all_records'>('chart');
 
-  // Multi-Doctor Simulation & Verification Suite State
-  const [activeDoctorPersona, setActiveDoctorPersona] = useState<'doc_primary' | 'doc_secondary'>('doc_primary');
-  const [showVerificationSuite, setShowVerificationSuite] = useState(false);
-  const [isTestRunnerRunning, setIsTestRunnerRunning] = useState(false);
-  const [testResults, setTestResults] = useState<{
-    validSearch?: { passed: boolean; message: string; timestamp: string };
-    invalidSearch?: { passed: boolean; message: string; timestamp: string };
-    chartIndependence?: { passed: boolean; message: string; timestamp: string };
-    chartReopen?: { passed: boolean; message: string; timestamp: string };
-  }>({});
   const [showNewVisitModal, setShowNewVisitModal] = useState(false);
   const [newVisitData, setNewVisitData] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -457,91 +447,21 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
         const chartsList = chartsSnap.docs.map(d => ({ id: d.id, ...d.data() } as DoctorPatientChart));
         chartsList.sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime());
 
-        if (isDemoMode && chartsList.length === 0) {
-          const sampleChart: DoctorPatientChart = {
-            id: `chart_${user.uid}_demo_patient_sara`,
-            doctorId: user.uid,
-            doctorName: doctorProfile?.fullName || userProfile?.displayName || 'د. أحمد الرافدين',
-            doctorSpecialty: doctorProfile?.specialty || 'استشاري أمراض باطنية وقلبية',
-            patientId: 'demo_patient_sara',
-            patientMedicalId: 'M737-PAT-SARA96',
-            patientName: 'سارة حيدر العراقي',
-            patientPhone: '07809988776',
-            patientGender: 'female',
-            patientBloodType: 'O+',
-            dateOfBirth: '1996-04-12',
-            emergencyContactName: 'حيدر العراقي (الأب)',
-            emergencyContactPhone: '07801122334',
-            allergies: ['البنسلين (Penicillin Allergy)'],
-            chronicDiseases: ['ارتفاع ضغط الدم الخفيف (Stage 1 HTN)'],
-            summaryDiagnosis: 'ارتفاع ضغط الدم الشرياني الأولي مع متابعة الدهون وضبط الحمية',
-            doctorPrivateNotes: 'المريضة منتظمة على دواء كونكور 5 ملغ صباحاً. الاستجابة جيدة مع انخفاض معدل النبض واستقرار الضغط عند 120/75 مم زئبق. يرجى الاستمرار على فحص وظائف الكلى دورياً كل 6 أشهر.',
-            firstVisitDate: '2026-02-10T10:00:00Z',
-            lastVisitDate: '2026-03-18T11:30:00Z',
-            status: 'active',
-            visits: [
-              {
-                visitId: 'vst_demo_1',
-                date: '2026-03-18',
-                visitType: 'followup',
-                chiefComplaint: 'مراجعة دورية لضغط الدم وفحص وظائف الكلى والدهون',
-                clinicalDiagnosis: 'ضغط دم مسيطر عليه جيداً (Controlled Hypertension)',
-                doctorPrivateNotes: 'ضغط الدم 120/75 مم زئبق. أصوات القلب طبيعية، لا توجد وذمة بالأطراف السفلية.',
-                vitals: {
-                  bloodPressure: '120/75',
-                  heartRate: '72',
-                  temperature: '36.8',
-                  bloodSugar: '95',
-                  weightKg: '62',
-                },
-                treatmentPlan: 'الاستمرار على كونكور 5 ملغ حبة صباحاً، تقليل ملح الطعام، مشي 30 دقيقة يومياً.',
-                createdAt: '2026-03-18T11:30:00Z',
-              },
-              {
-                visitId: 'vst_demo_2',
-                date: '2026-02-10',
-                visitType: 'consultation',
-                chiefComplaint: 'صداع خفيف في مؤخرة الرأس عند الاستيقاظ',
-                clinicalDiagnosis: 'ارتفاع ضغط الدم الخفيف الأولي (New onset stage 1 HTN)',
-                doctorPrivateNotes: 'ضغط الدم أثناء الزيارة الأولى 145/95 مم زئبق. لا توجد قصة عائلية لأمراض كلوية.',
-                vitals: {
-                  bloodPressure: '145/95',
-                  heartRate: '84',
-                  temperature: '37.0',
-                  bloodSugar: '102',
-                  weightKg: '63',
-                },
-                treatmentPlan: 'بدء كونكور 5 ملغ، طلب تخطيط قلب وفحوصات كلى وتحليل إدرار عام.',
-                createdAt: '2026-02-10T10:00:00Z',
-              }
-            ],
-            createdAt: '2026-02-10T10:00:00Z',
-            updatedAt: '2026-03-18T11:30:00Z',
-          };
-          setDoctorChartsList([sampleChart]);
-          setActiveDoctorChart(sampleChart);
-          setActivePatientProfile({
-            patientId: sampleChart.patientId,
-            fullName: sampleChart.patientName,
-            medicalId: sampleChart.patientMedicalId,
-            phone: sampleChart.patientPhone,
-            governorate: 'بغداد (Baghdad)',
-            address: 'العراق، بغداد، المنصور',
-            bloodType: 'O+',
-            emergencyContactName: sampleChart.emergencyContactName,
-            emergencyContactPhone: sampleChart.emergencyContactPhone,
-            allergies: sampleChart.allergies,
-            chronicDiseases: sampleChart.chronicDiseases,
-            dateOfBirth: sampleChart.dateOfBirth,
-            gender: sampleChart.patientGender,
-            createdAt: sampleChart.createdAt,
-            updatedAt: sampleChart.updatedAt,
-          });
-        } else {
-          setDoctorChartsList(chartsList);
-          if (chartsList.length > 0) {
-            setActiveDoctorChart(chartsList[0]);
+        setDoctorChartsList(chartsList);
+        if (chartsList.length > 0) {
+          setActiveDoctorChart(chartsList[0]);
+          try {
+            const pRef = doc(db, 'patient_profiles', chartsList[0].patientId);
+            const pSnap = await getDoc(pRef);
+            if (pSnap.exists()) {
+              setActivePatientProfile({ patientId: pSnap.id, ...pSnap.data() } as PatientProfile);
+            }
+          } catch (e) {
+            console.warn('Patient profile fetch note:', e);
           }
+        } else {
+          setActiveDoctorChart(null);
+          setActivePatientProfile(null);
         }
       } catch (err) {
         console.warn('Error fetching doctor patient charts:', err);
@@ -856,7 +776,7 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
     loadDoctorData();
   }, [user]);
 
-  const showToast = (text: string, type: 'success' | 'error' = 'success') => {
+  const showToast = (text: string, type: 'success' | 'error' | 'info' = 'success') => {
     setFeedbackMsg({ text, type });
     setTimeout(() => setFeedbackMsg(null), 3500);
   };
@@ -1657,34 +1577,19 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
   }, [activeDoctorChart]);
 
   // ==============================================================
-  // Doctor Identity Profiles for Multi-Doctor Isolation & Simulation
-  const doctor1Profile = {
-    doctorId: user?.uid || 'demo_doc_ahmed',
-    fullName: doctorProfile?.fullName || userProfile?.displayName || 'د. أحمد الرافدين',
-    specialty: doctorProfile?.specialty || 'استشاري أمراض باطنية وقلبية',
-    clinicName: 'عيادة الرافدين الاستشارية للباطنية والقلب',
-    phone: doctorProfile?.phone || '07801122334',
+  // Authenticated Doctor Identity Profile (Permanent Doctor ID)
+  // ==============================================================
+  const effectiveDoctor = {
+    doctorId: userProfile?.accountId || (user?.uid ? generateFacilityOrUserId('doctor', user.uid) : 'M737-DOC-GUEST'),
+    uid: user?.uid || '',
+    fullName: doctorProfile?.fullName || userProfile?.displayName || (language === 'ar' ? 'طبيب ممارس' : 'Practicing Physician'),
+    specialty: doctorProfile?.specialty || (language === 'ar' ? 'استشاري عام' : 'Consultant'),
+    clinicName: doctorProfile?.clinicAddress || userProfile?.facilityName || (language === 'ar' ? 'العيادة الطبية' : 'Medical Clinic'),
+    phone: doctorProfile?.phone || userProfile?.phone || '',
   };
-
-  const doctor2Profile = {
-    doctorId: user?.uid ? `${user.uid}_partner_layth` : 'demo_doc_layth_ortho',
-    fullName: 'د. ليث السامرائي',
-    specialty: 'استشاري جراحة العظام والمفاصل والكسور',
-    clinicName: 'مركز بغداد لجراحة المفاصل والعمود الفقري',
-    phone: '07804455667',
-  };
-
-  const effectiveDoctor = activeDoctorPersona === 'doc_primary' ? doctor1Profile : doctor2Profile;
-
-  // When switching doctor persona, immediately reload chart for active patient if one is loaded
-  useEffect(() => {
-    if (activePatientProfile) {
-      loadOrCreateDoctorChart(activePatientProfile, effectiveDoctor.doctorId);
-    }
-  }, [activeDoctorPersona]);
 
   // ==============================================================
-  // SEARCH PATIENT BY MEDICAL ID
+  // SEARCH PATIENT BY MEDICAL ID (REAL DATABASE QUERY)
   // ==============================================================
   const handleSearchPatientByMedicalId = async (searchQueryId?: string): Promise<PatientProfile | null> => {
     const rawId = (searchQueryId !== undefined ? searchQueryId : patientSearchId).trim();
@@ -1710,38 +1615,13 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
     setPatientSearchFeedback(null);
 
     try {
-      const cleanUpper = rawId.toUpperCase();
-      const normalizedMedicalId = normalizeMedicalIdInput(rawId);
-      let foundProfile: PatientProfile | null = null;
+      // Direct real Firestore lookup across patient_profiles, users, and account_ids
+      let foundProfile: PatientProfile | null = await searchPatientProfileAcrossSystem(db, rawId);
 
-      if (!isDemoMode) {
-        // 1. Query by normalized medical ID (e.g. M737-PAT-XXXXXX)
-        const q1 = query(collection(db, 'patient_profiles'), where('medicalId', '==', normalizedMedicalId));
-        let snap = await getDocs(q1);
-
-        // 2. Query by cleanUpper if different
-        if (snap.empty && cleanUpper !== normalizedMedicalId) {
-          const q2 = query(collection(db, 'patient_profiles'), where('medicalId', '==', cleanUpper));
-          snap = await getDocs(q2);
-        }
-
-        // 3. Direct document lookup by patientId
-        if (snap.empty) {
-          try {
-            const directSnap = await getDoc(doc(db, 'patient_profiles', rawId));
-            if (directSnap.exists()) {
-              foundProfile = { patientId: directSnap.id, ...directSnap.data() } as PatientProfile;
-            }
-          } catch {
-            // direct get fallback
-          }
-        } else {
-          foundProfile = { patientId: snap.docs[0].id, ...snap.docs[0].data() } as PatientProfile;
-        }
-      }
-
-      // Check existing patient charts in clinic memory / active charts
+      // Check existing patient charts in clinic memory / active charts if not returned by direct query
       if (!foundProfile) {
+        const cleanUpper = rawId.toUpperCase();
+        const normalizedMedicalId = normalizeMedicalIdInput(rawId, 'patient');
         const inCharts = doctorChartsList.find(c => 
           c.patientMedicalId.toUpperCase() === normalizedMedicalId || 
           c.patientMedicalId.toUpperCase() === cleanUpper || 
@@ -1753,11 +1633,11 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
             fullName: inCharts.patientName,
             medicalId: inCharts.patientMedicalId,
             phone: inCharts.patientPhone,
-            governorate: 'بغداد (Baghdad)',
+            governorate: 'العراق',
             address: 'العراق',
             bloodType: (inCharts.patientBloodType as any) || 'O+',
             gender: inCharts.patientGender || 'female',
-            dateOfBirth: inCharts.dateOfBirth || '1996-04-12',
+            dateOfBirth: inCharts.dateOfBirth || '',
             emergencyContactName: inCharts.emergencyContactName,
             emergencyContactPhone: inCharts.emergencyContactPhone,
             allergies: inCharts.allergies,
@@ -1788,7 +1668,7 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
       });
 
       // Load or auto-create doctor's confidential chart for this patient
-      await loadOrCreateDoctorChart(foundProfile, effectiveDoctor.doctorId);
+      await loadOrCreateDoctorChart(foundProfile, user?.uid || effectiveDoctor.doctorId);
 
       // Switch to records tab and chart subview
       setActiveTab('records');
@@ -1798,7 +1678,7 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
       await logAuditEvent({
         action: 'patient_search_by_medical_id',
         category: 'medical_records',
-        actorUid: effectiveDoctor.doctorId,
+        actorUid: user?.uid || effectiveDoctor.doctorId,
         actorName: effectiveDoctor.fullName,
         actorRole: 'doctor',
         resourceId: foundProfile.patientId,
@@ -1824,9 +1704,9 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
   // LOAD OR AUTO-CREATE DOCTOR-PATIENT CHART (STRICT PER-DOCTOR ISOLATION)
   // ==============================================================
   const loadOrCreateDoctorChart = async (patient: PatientProfile, doctorIdToUse?: string) => {
-    const docId = doctorIdToUse || effectiveDoctor.doctorId;
-    const docName = docId === doctor2Profile.doctorId ? doctor2Profile.fullName : doctor1Profile.fullName;
-    const docSpecialty = docId === doctor2Profile.doctorId ? doctor2Profile.specialty : doctor1Profile.specialty;
+    const docId = doctorIdToUse || user?.uid || effectiveDoctor.doctorId;
+    const docName = effectiveDoctor.fullName;
+    const docSpecialty = effectiveDoctor.specialty;
 
     setIsLoadingChart(true);
     try {
@@ -1848,132 +1728,6 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
       if (!existingChart) {
         const local = doctorChartsList.find(c => c.id === chartId || (c.patientId === patient.patientId && c.doctorId === docId));
         if (local) existingChart = local;
-      }
-
-      // Pre-seeded authentic clinical record for Doctor 1 (Dr. Ahmed - Internal Medicine) on Sara
-      if (!existingChart && (docId === doctor1Profile.doctorId || docId === 'demo_doc_ahmed') && patient.patientId === 'demo_patient_sara') {
-        existingChart = {
-          id: `chart_${doctor1Profile.doctorId}_demo_patient_sara`,
-          doctorId: doctor1Profile.doctorId,
-          doctorName: doctor1Profile.fullName,
-          doctorSpecialty: doctor1Profile.specialty,
-          patientId: 'demo_patient_sara',
-          patientMedicalId: 'M737-PAT-SARA96',
-          patientName: 'سارة حيدر العراقي',
-          patientPhone: '07809988776',
-          patientGender: 'female',
-          patientBloodType: 'O+',
-          dateOfBirth: '1996-04-12',
-          emergencyContactName: 'حيدر العراقي (الأب)',
-          emergencyContactPhone: '07801122334',
-          allergies: ['البنسلين (Penicillin Allergy)'],
-          chronicDiseases: ['ارتفاع ضغط الدم الخفيف (Stage 1 HTN)'],
-          summaryDiagnosis: 'ارتفاع ضغط الدم الشرياني الأولي مع متابعة الدهون وضبط الحمية',
-          doctorPrivateNotes: 'المريضة منتظمة على دواء كونكور 5 ملغ صباحاً. الاستجابة جيدة مع انخفاض معدل النبض واستقرار الضغط عند 120/75 مم زئبق. يرجى الاستمرار على فحص وظائف الكلى دورياً كل 6 أشهر.',
-          firstVisitDate: '2026-02-10T10:00:00Z',
-          lastVisitDate: '2026-03-18T11:30:00Z',
-          status: 'active',
-          visits: [
-            {
-              visitId: 'vst_demo_1',
-              date: '2026-03-18',
-              visitType: 'followup',
-              chiefComplaint: 'مراجعة دورية لضغط الدم وفحص وظائف الكلى والدهون',
-              clinicalDiagnosis: 'ضغط دم مسيطر عليه جيداً (Controlled Hypertension)',
-              doctorPrivateNotes: 'ضغط الدم 120/75 مم زئبق. أصوات القلب طبيعية، لا توجد وذمة بالأطراف السفلية.',
-              vitals: {
-                bloodPressure: '120/75',
-                heartRate: '72',
-                temperature: '36.8',
-                bloodSugar: '95',
-                weightKg: '62',
-              },
-              treatmentPlan: 'الاستمرار على كونكور 5 ملغ حبة صباحاً، تقليل ملح الطعام، مشي 30 دقيقة يومياً.',
-              createdAt: '2026-03-18T11:30:00Z',
-            },
-            {
-              visitId: 'vst_demo_2',
-              date: '2026-02-10',
-              visitType: 'consultation',
-              chiefComplaint: 'صداع خفيف في مؤخرة الرأس عند الاستيقاظ',
-              clinicalDiagnosis: 'ارتفاع ضغط الدم الخفيف الأولي (New onset stage 1 HTN)',
-              doctorPrivateNotes: 'ضغط الدم أثناء الزيارة الأولى 145/95 مم زئبق. لا توجد قصة عائلية لأمراض كلوية.',
-              vitals: {
-                bloodPressure: '145/95',
-                heartRate: '84',
-                temperature: '37.0',
-                bloodSugar: '102',
-                weightKg: '63',
-              },
-              treatmentPlan: 'بدء كونكور 5 ملغ، طلب تخطيط قلب وفحوصات كلى وتحليل إدرار عام.',
-              createdAt: '2026-02-10T10:00:00Z',
-            }
-          ],
-          createdAt: '2026-02-10T10:00:00Z',
-          updatedAt: '2026-03-18T11:30:00Z',
-        };
-      }
-
-      // Pre-seeded authentic clinical record for Doctor 2 (Dr. Layth - Orthopedics) on Sara
-      if (!existingChart && docId === doctor2Profile.doctorId && patient.patientId === 'demo_patient_sara') {
-        existingChart = {
-          id: `chart_${doctor2Profile.doctorId}_demo_patient_sara`,
-          doctorId: doctor2Profile.doctorId,
-          doctorName: doctor2Profile.fullName,
-          doctorSpecialty: doctor2Profile.specialty,
-          patientId: 'demo_patient_sara',
-          patientMedicalId: 'M737-PAT-SARA96',
-          patientName: 'سارة حيدر العراقي',
-          patientPhone: '07809988776',
-          patientGender: 'female',
-          patientBloodType: 'O+',
-          dateOfBirth: '1996-04-12',
-          emergencyContactName: 'حيدر العراقي (الأب)',
-          emergencyContactPhone: '07801122334',
-          allergies: ['البنسلين (Penicillin Allergy)'],
-          chronicDiseases: ['ارتفاع ضغط الدم الخفيف (Stage 1 HTN)'],
-          summaryDiagnosis: 'خشونة المفصل الرضفي الفخذي والتهاب أوتار الركبة اليمنى (Patellofemoral Pain)',
-          doctorPrivateNotes: 'فحص الركبة السريري: إيجابية طقطقة خفيفة عند الثني، لا يوجد ارتشاح مفصلي حاد. تم وصف تمارين تقوية العضلة الرباعية ومسكن موضعي، وتجنب صعود الدرج المتكرر. ملاحظة هامة: المريضة تراجع طبيب باطنية منفصل لضغط الدم ولم تذكر مضاعفات أخرى.',
-          firstVisitDate: '2026-03-05T16:00:00Z',
-          lastVisitDate: '2026-03-24T17:30:00Z',
-          status: 'active',
-          visits: [
-            {
-              visitId: 'vst_ortho_1',
-              date: '2026-03-24',
-              visitType: 'followup',
-              chiefComplaint: 'متابعة ألم الركبة اليمنى بعد بدء العلاج الطبيعي',
-              clinicalDiagnosis: 'تحسن بنسبة 40% في أوتار الرضفة مع التزام التمارين',
-              doctorPrivateNotes: 'استمرار التمارين، وصف دهان موضعي، وإعادة تقييم بعد شهر.',
-              vitals: {
-                bloodPressure: '122/78',
-                heartRate: '74',
-                temperature: '36.9',
-                weightKg: '62',
-              },
-              treatmentPlan: 'جلسات علاج طبيعي 3 مرات أسبوعياً، دهان فولتارين موضعي، تجنب القرفصاء.',
-              createdAt: '2026-03-24T17:30:00Z',
-            },
-            {
-              visitId: 'vst_ortho_2',
-              date: '2026-03-05',
-              visitType: 'consultation',
-              chiefComplaint: 'ألم موضعي في صابونة الركبة اليمنى عند صعود الدرج',
-              clinicalDiagnosis: 'خشونة مبكرة في صابونة الركبة (Chondromalacia Patellae)',
-              doctorPrivateNotes: 'معاينة أولية: لا يوجد ورم، حركة المفصل كاملة. طلب أشعة سينية X-Ray لوضعية شروق الشمس للصابونة.',
-              vitals: {
-                bloodPressure: '125/80',
-                heartRate: '76',
-                temperature: '37.0',
-                weightKg: '62',
-              },
-              treatmentPlan: 'أشعة ركبة أمامية وخلفية وجانبية، كبسولات كولاجين ومسكن باراسيتامول عند اللزوم.',
-              createdAt: '2026-03-05T16:00:00Z',
-            }
-          ],
-          createdAt: '2026-03-05T16:00:00Z',
-          updatedAt: '2026-03-24T17:30:00Z',
-        };
       }
 
       if (existingChart) {
@@ -2024,7 +1778,7 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
         setDoctorChartsList(prev => [newChart, ...prev.filter(c => c.id !== newChart.id)]);
 
         showToast(language === 'ar'
-          ? `تم فتح وتوثيق ملف متابعة سريري جديد خاص بعيادتك (${docName}) للمريض ${patient.fullName}`
+          ? `تم فتح وتوثيق ملف متابعة سريري جديد خاص بعيادتك للمريض ${patient.fullName}`
           : `Created new independent clinical chart for ${patient.fullName}`
         );
       }
@@ -2033,104 +1787,6 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
     } finally {
       setIsLoadingChart(false);
     }
-  };
-
-  // ==============================================================
-  // AUTOMATED TEST SUITE RUNNER (REQUIREMENT 4: TESTING & VERIFICATION)
-  // ==============================================================
-  const runAutomatedTestSuite = async () => {
-    setIsTestRunnerRunning(true);
-    showToast(language === 'ar' ? 'بدء الفحص الآلي الشامل لمتطلبات الهوية الطبية واستقلالية الأطباء...' : 'Running automated verification suite...');
-
-    const results = {
-      validSearch: { passed: false, message: '', timestamp: new Date().toLocaleTimeString() },
-      invalidSearch: { passed: false, message: '', timestamp: new Date().toLocaleTimeString() },
-      chartIndependence: { passed: false, message: '', timestamp: new Date().toLocaleTimeString() },
-      chartReopen: { passed: false, message: '', timestamp: new Date().toLocaleTimeString() },
-    };
-
-    // Test 1: Valid Medical ID Search
-    try {
-      const targetQuery = doctorChartsList.length > 0 ? doctorChartsList[0].patientMedicalId : (activePatientProfile?.medicalId || '');
-      if (targetQuery) {
-        const p = await handleSearchPatientByMedicalId(targetQuery);
-        if (p) {
-          results.validSearch = {
-            passed: true,
-            message: language === 'ar'
-              ? `نجاح: تم العثور على المريض بالمعرف ${p.medicalId} وعرض بياناته الأساسية وحالته السريرية بنجاح.`
-              : `Passed: Patient found with Medical ID ${p.medicalId} and core data loaded.`,
-            timestamp: new Date().toLocaleTimeString(),
-          };
-        } else {
-          results.validSearch = { passed: false, message: 'فشل استرجاع المعرف', timestamp: new Date().toLocaleTimeString() };
-        }
-      } else {
-        results.validSearch = {
-          passed: true,
-          message: language === 'ar' ? 'محرك البحث جاهز ويتحقق من المعرفات الطبية الحقيقية.' : 'Search engine ready for real verified IDs.',
-          timestamp: new Date().toLocaleTimeString(),
-        };
-      }
-    } catch (e) {
-      results.validSearch = { passed: false, message: String(e), timestamp: new Date().toLocaleTimeString() };
-    }
-
-    // Test 2: Invalid / Non-existent Medical ID Search
-    try {
-      setPatientSearchId('M737-PAT-NOTFOUND999');
-      const pNotFound = await handleSearchPatientByMedicalId('M737-PAT-NOTFOUND999');
-      if (!pNotFound) {
-        results.invalidSearch = {
-          passed: true,
-          message: language === 'ar'
-            ? 'نجاح: تم حجب الوصول وإظهار رسالة واضحة بعدم وجود المعرف الطبي M737-PAT-NOTFOUND999 دون كشف أي ملفات أو بيانات خاصة.'
-            : 'Passed: Explicit not-found error shown without exposing any confidential records.',
-          timestamp: new Date().toLocaleTimeString(),
-        };
-      } else {
-        results.invalidSearch = { passed: false, message: 'أرجع نتيجة غير متوقعة لمعرف غير مسجل', timestamp: new Date().toLocaleTimeString() };
-      }
-    } catch (e) {
-      results.invalidSearch = { passed: false, message: String(e), timestamp: new Date().toLocaleTimeString() };
-    }
-
-    // Test 3: Multi-Doctor Independence Verification
-    try {
-      const testPatId = activePatientProfile?.patientId || 'patient_live_ref';
-      const chartDoc1Id = `chart_${doctor1Profile.doctorId}_${testPatId}`;
-      const chartDoc2Id = `chart_${doctor2Profile.doctorId}_${testPatId}`;
-
-      const isIsolated = chartDoc1Id !== chartDoc2Id;
-      if (isIsolated) {
-        results.chartIndependence = {
-          passed: true,
-          message: language === 'ar'
-            ? `نجاح: تم التحقق من استقلالية ملف الطبيب الأول (${doctor1Profile.fullName}) عن ملف الطبيب الثاني (${doctor2Profile.fullName}) لنفس المريض. لا تتسرب الملاحظات أو التشخيصات بين العيادتين.`
-            : 'Passed: Doctor 1 and Doctor 2 maintain separate clinical charts with zero leakage of private notes.',
-          timestamp: new Date().toLocaleTimeString(),
-        };
-      }
-    } catch (e) {
-      results.chartIndependence = { passed: false, message: String(e), timestamp: new Date().toLocaleTimeString() };
-    }
-
-    // Test 4: Chart Reopen & State Preservation
-    try {
-      results.chartReopen = {
-        passed: true,
-        message: language === 'ar'
-          ? 'نجاح: تم إعادة فتح ملف المريض بنجاح مع استرجاع كامل الملاحظات والزيارات السابقة دون تكرار أو حذف.'
-          : 'Passed: Reopened patient chart preserves past visits and notes with zero data loss.',
-        timestamp: new Date().toLocaleTimeString(),
-      };
-    } catch (e) {
-      results.chartReopen = { passed: false, message: String(e), timestamp: new Date().toLocaleTimeString() };
-    }
-
-    setTestResults(results);
-    setIsTestRunnerRunning(false);
-    showToast(language === 'ar' ? 'اكتملت جميع الفحوصات والتحقق بنجاح 100%' : 'All verifications passed');
   };
 
   // ==============================================================
@@ -2348,9 +2004,15 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
         <div className={`p-4 rounded-2xl flex items-center gap-3 text-sm font-bold shadow-lg animate-in slide-in-from-top-3 ${
           feedbackMsg.type === 'success' 
             ? 'bg-emerald-600 text-white' 
+            : feedbackMsg.type === 'info'
+            ? 'bg-blue-600 text-white'
             : 'bg-red-600 text-white'
         }`}>
-          <CheckCircle2 size={18} />
+          {feedbackMsg.type === 'success' ? (
+            <CheckCircle2 size={18} />
+          ) : (
+            <AlertCircle size={18} />
+          )}
           <span>{feedbackMsg.text}</span>
         </div>
       )}
@@ -2374,7 +2036,7 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
                 <button
                   type="button"
                   onClick={() => {
-                    const docId = generateFacilityOrUserId('doctor', effectiveDoctor.doctorId);
+                    const docId = effectiveDoctor.doctorId;
                     navigator.clipboard.writeText(docId);
                     showToast(language === 'ar' ? `تم نسخ معرف الطبيب (${docId})` : `Doctor ID copied (${docId})`);
                   }}
@@ -2382,7 +2044,7 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
                   title={language === 'ar' ? 'انقر لنسخ المعرف' : 'Click to copy ID'}
                 >
                   <Copy size={12} className="text-red-300" />
-                  <span>ID: {generateFacilityOrUserId('doctor', effectiveDoctor.doctorId)}</span>
+                  <span>ID: {effectiveDoctor.doctorId}</span>
                 </button>
                 <span className="opacity-40">·</span>
                 <span>{doctorProfile?.specialty || 'استشاري جراحة وباطنية'}</span>
@@ -2909,19 +2571,6 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
 
               <div className="flex flex-wrap items-center gap-2">
                 <button
-                  type="button"
-                  onClick={() => setShowVerificationSuite(prev => !prev)}
-                  className={`px-3.5 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer ${
-                    showVerificationSuite
-                      ? 'bg-indigo-900 text-white ring-2 ring-indigo-400'
-                      : 'bg-indigo-50 text-indigo-950 border border-indigo-200 hover:bg-indigo-100'
-                  }`}
-                >
-                  <Sparkles size={14} className="text-amber-500" />
-                  <span>{language === 'ar' ? 'فحص ومحاكاة استقلالية الأطباء' : 'Multi-Doctor Verification Suite'}</span>
-                </button>
-
-                <button
                   onClick={() => setShowNewRecordModal(true)}
                   className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
@@ -2930,195 +2579,6 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
                 </button>
               </div>
             </div>
-
-            {/* VERIFICATION AND MULTI-DOCTOR SIMULATION HUB */}
-            {showVerificationSuite && (
-              <div className="p-5 rounded-3xl bg-gradient-to-br from-indigo-950 via-slate-900 to-[#002244] text-white border border-indigo-800/60 shadow-xl space-y-4 animate-in fade-in duration-200">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-indigo-800/60">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-10 h-10 rounded-2xl bg-indigo-600/30 text-amber-300 flex items-center justify-center shrink-0 border border-indigo-500/30">
-                      <ShieldCheck size={22} />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-sm text-white flex items-center gap-2">
-                        <span>{language === 'ar' ? 'وحدة التحقق السريري وفحص استقلالية الأطباء (Multi-Doctor Isolation)' : 'Multi-Doctor Isolation Verification Suite'}</span>
-                        <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 text-[10px] font-mono border border-emerald-500/30">M737-ID-VERIFY</span>
-                      </h4>
-                      <p className="text-[11px] text-slate-300 mt-0.5">
-                        {language === 'ar'
-                          ? 'أداة اختبار تفاعلية تؤكد استقلالية ملفات الأطباء لنفس المريض، وتطابق الهوية الطبية الموحدة، ومنع تسرب الملاحظات.'
-                          : 'Interactive test suite proving doctor chart partition and unified permanent Medical ID.'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={runAutomatedTestSuite}
-                    disabled={isTestRunnerRunning}
-                    className="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 disabled:bg-slate-700 text-slate-950 font-black text-xs flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer shrink-0"
-                  >
-                    {isTestRunnerRunning ? <RefreshCw size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                    <span>{language === 'ar' ? 'تشغيل الفحص الشامل (Run All Tests)' : 'Run All Tests'}</span>
-                  </button>
-                </div>
-
-                {/* 1. DOCTOR PERSONA SWITCHER */}
-                <div className="space-y-2">
-                  <span className="text-xs font-bold text-indigo-200 flex items-center gap-1.5">
-                    <Users size={14} />
-                    <span>{language === 'ar' ? '1. محاكاة هوية الطبيب المعالج (طبيبان يتابعان المريض نفسه للتأكد من استقلال الملفات السريرية):' : '1. Doctor Persona Switcher (Multi-doctor clinic isolation test):'}</span>
-                  </span>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveDoctorPersona('doc_primary');
-                        showToast(language === 'ar' ? 'التبديل إلى عيادة د. أحمد الرافدين (باطنية وقلبية)' : 'Active: Dr. Ahmed (Internal Med)');
-                      }}
-                      className={`p-3.5 rounded-2xl border text-start transition-all cursor-pointer flex items-start gap-3 ${
-                        activeDoctorPersona === 'doc_primary'
-                          ? 'bg-blue-600/30 border-blue-400 text-white ring-1 ring-blue-400 shadow-xs'
-                          : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10'
-                      }`}
-                    >
-                      <div className={`w-3.5 h-3.5 rounded-full mt-1 shrink-0 ${activeDoctorPersona === 'doc_primary' ? 'bg-emerald-400 ring-2 ring-emerald-300/40' : 'bg-slate-600'}`} />
-                      <div className="flex-1">
-                        <strong className="block text-white font-bold">{doctor1Profile.fullName}</strong>
-                        <span className="text-[11px] text-blue-200 block">{doctor1Profile.specialty}</span>
-                        <span className="text-[10px] text-slate-400 block mt-0.5">{doctor1Profile.clinicName}</span>
-                        <span className="inline-block mt-1 px-2 py-0.5 rounded bg-blue-900/60 text-blue-300 text-[10px] font-mono">
-                          {activeDoctorPersona === 'doc_primary' ? (language === 'ar' ? '● العيادة النشطة حالياً' : '● Currently Active') : (language === 'ar' ? 'انقر للتفعيل' : 'Click to Switch')}
-                        </span>
-                      </div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveDoctorPersona('doc_secondary');
-                        showToast(language === 'ar' ? 'التبديل إلى عيادة د. ليث السامرائي (جراحة عظام ومفاصل)' : 'Active: Dr. Layth (Orthopedics)');
-                      }}
-                      className={`p-3.5 rounded-2xl border text-start transition-all cursor-pointer flex items-start gap-3 ${
-                        activeDoctorPersona === 'doc_secondary'
-                          ? 'bg-purple-600/30 border-purple-400 text-white ring-1 ring-purple-400 shadow-xs'
-                          : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10'
-                      }`}
-                    >
-                      <div className={`w-3.5 h-3.5 rounded-full mt-1 shrink-0 ${activeDoctorPersona === 'doc_secondary' ? 'bg-emerald-400 ring-2 ring-emerald-300/40' : 'bg-slate-600'}`} />
-                      <div className="flex-1">
-                        <strong className="block text-white font-bold">{doctor2Profile.fullName}</strong>
-                        <span className="text-[11px] text-purple-200 block">{doctor2Profile.specialty}</span>
-                        <span className="text-[10px] text-slate-400 block mt-0.5">{doctor2Profile.clinicName}</span>
-                        <span className="inline-block mt-1 px-2 py-0.5 rounded bg-purple-900/60 text-purple-300 text-[10px] font-mono">
-                          {activeDoctorPersona === 'doc_secondary' ? (language === 'ar' ? '● العيادة النشطة حالياً' : '● Currently Active') : (language === 'ar' ? 'انقر للتفعيل' : 'Click to Switch')}
-                        </span>
-                      </div>
-                    </button>
-                  </div>
-                </div>
-
-                {/* 2. INSTANT TEST TRIGGERS */}
-                <div className="space-y-2 pt-2 border-t border-indigo-800/40">
-                  <span className="text-xs font-bold text-indigo-200 block">
-                    {language === 'ar' ? '2. سيناريوهات الاختبار الفورية المطلوب التحقق منها:' : '2. Required Verification Scenarios:'}
-                  </span>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const targetId = activePatientProfile?.medicalId || (doctorChartsList.length > 0 ? doctorChartsList[0].patientMedicalId : patientSearchId);
-                        if (targetId) {
-                          setPatientSearchId(targetId);
-                          handleSearchPatientByMedicalId(targetId);
-                        } else {
-                          showToast(language === 'ar' ? 'أدخل معرف المريض في شريط البحث أولاً' : 'Enter a Patient ID in search box first', 'info');
-                        }
-                      }}
-                      className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/10 transition-colors text-center font-bold cursor-pointer"
-                    >
-                      🧪 {language === 'ar' ? '1. فحص بحث المريض' : '1. Test Search ID'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPatientSearchId('M737-PAT-NOTFOUND999');
-                        handleSearchPatientByMedicalId('M737-PAT-NOTFOUND999');
-                      }}
-                      className="p-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/30 transition-colors text-center font-bold cursor-pointer"
-                    >
-                      🧪 {language === 'ar' ? '2. بحث بـ ID غير موجود' : '2. Invalid ID'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveDoctorPersona(prev => prev === 'doc_primary' ? 'doc_secondary' : 'doc_primary');
-                      }}
-                      className="p-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 border border-emerald-500/30 transition-colors text-center font-bold cursor-pointer"
-                    >
-                      🔄 {language === 'ar' ? '3. تبديل عيادة الطبيب' : '3. Toggle Clinic'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setRecordViewMode('my_patients');
-                      }}
-                      className="p-2.5 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-200 border border-blue-500/30 transition-colors text-center font-bold cursor-pointer"
-                    >
-                      📂 {language === 'ar' ? '4. فتح ملف سابق' : '4. Reopen Chart'}
-                    </button>
-                  </div>
-                </div>
-
-                {/* 3. TEST RESULTS REPORT */}
-                {(testResults.validSearch || testResults.invalidSearch || testResults.chartIndependence || testResults.chartReopen) && (
-                  <div className="pt-2 border-t border-indigo-800/40 space-y-2">
-                    <span className="text-xs font-bold text-amber-300 flex items-center justify-between">
-                      <span>{language === 'ar' ? 'تقرير نتائج الفحص والتحقق الفعلي:' : 'Live Test Verification Report:'}</span>
-                      <span className="text-[10px] text-slate-300 font-normal">{language === 'ar' ? 'تم فحص جميع المتطلبات بنجاح' : 'All tests executed'}</span>
-                    </span>
-                    <div className="space-y-1.5 text-xs">
-                      {testResults.validSearch && (
-                        <div className="p-2.5 rounded-xl bg-emerald-950/70 border border-emerald-500/40 text-emerald-200 flex items-start gap-2">
-                          <CheckCircle2 size={16} className="text-emerald-400 shrink-0 mt-0.5" />
-                          <div className="flex-1">
-                            <strong className="block text-emerald-300 font-bold">{language === 'ar' ? 'الحالة 1: البحث بمعرف طبي صحيح وعرض البيانات الأساسية' : 'Case 1: Valid Medical ID Search'}</strong>
-                            <p className="text-[11px] text-slate-200 mt-0.5">{testResults.validSearch.message}</p>
-                          </div>
-                        </div>
-                      )}
-                      {testResults.invalidSearch && (
-                        <div className="p-2.5 rounded-xl bg-emerald-950/70 border border-emerald-500/40 text-emerald-200 flex items-start gap-2">
-                          <CheckCircle2 size={16} className="text-emerald-400 shrink-0 mt-0.5" />
-                          <div className="flex-1">
-                            <strong className="block text-emerald-300 font-bold">{language === 'ar' ? 'الحالة 2: البحث بمعرف غير موجود ومنع التسريب أو التخمين' : 'Case 2: Non-existent ID Protection'}</strong>
-                            <p className="text-[11px] text-slate-200 mt-0.5">{testResults.invalidSearch.message}</p>
-                          </div>
-                        </div>
-                      )}
-                      {testResults.chartIndependence && (
-                        <div className="p-2.5 rounded-xl bg-emerald-950/70 border border-emerald-500/40 text-emerald-200 flex items-start gap-2">
-                          <CheckCircle2 size={16} className="text-emerald-400 shrink-0 mt-0.5" />
-                          <div className="flex-1">
-                            <strong className="block text-emerald-300 font-bold">{language === 'ar' ? 'الحالة 3: استقلالية ملفات الطبيبين لنفس المريض وحجب الملاحظات الخاصة' : 'Case 3: Separate Confidential Charts per Doctor'}</strong>
-                            <p className="text-[11px] text-slate-200 mt-0.5">{testResults.chartIndependence.message}</p>
-                          </div>
-                        </div>
-                      )}
-                      {testResults.chartReopen && (
-                        <div className="p-2.5 rounded-xl bg-emerald-950/70 border border-emerald-500/40 text-emerald-200 flex items-start gap-2">
-                          <CheckCircle2 size={16} className="text-emerald-400 shrink-0 mt-0.5" />
-                          <div className="flex-1">
-                            <strong className="block text-emerald-300 font-bold">{language === 'ar' ? 'الحالة 4: إعادة فتح الملف واسترجاع الزيارات والملاحظات دون تكرار أو حذف' : 'Case 4: Reopen Chart & Historical State'}</strong>
-                            <p className="text-[11px] text-slate-200 mt-0.5">{testResults.chartReopen.message}</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
 
             {/* PATIENT ID SEARCH BAR */}
             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">

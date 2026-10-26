@@ -20,7 +20,7 @@ import {
 } from 'firebase/firestore';
 import { auth, db, googleProvider, validateFirestoreConnection, handleFirestoreError, OperationType } from '../lib/firebase';
 import { UserProfile, UserRole, AccountStatus, PatientProfile } from '../types';
-import { generateUniqueMedicalId } from '../utils/medicalId';
+import { generateUniqueMedicalId, ensureUserAccountId } from '../utils/medicalId';
 import firebaseConfig from '@/firebase-applet-config.json';
 import { recordRealMetricEvent } from '../lib/platformMetrics';
 
@@ -110,7 +110,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const userSnap = await getDoc(userDocRef);
 
       if (userSnap.exists()) {
-        const profile = userSnap.data() as UserProfile;
+        let profile = userSnap.data() as UserProfile;
+
+        // Ensure persistent unique accountId exists in users and account_ids registry
+        if (!profile.accountId) {
+          try {
+            const assignedId = await ensureUserAccountId(
+              db,
+              firebaseUser.uid,
+              profile.role,
+              profile.displayName,
+              profile.facilityName,
+              firebaseUser.email || profile.email,
+              profile.phone
+            );
+            profile.accountId = assignedId;
+            if (profile.role === 'patient') {
+              profile.medicalId = assignedId;
+            }
+          } catch (e) {
+            console.warn('Notice ensuring user account ID:', e);
+          }
+        }
+
         if (isVerifiedSuperAdminEmail && (profile.role !== 'super_admin' || profile.status !== 'approved')) {
           const now = new Date().toISOString();
           const elevatedProfile: UserProfile = {
@@ -326,12 +348,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         : 'pending';
 
       const now = new Date().toISOString();
+      const assignedId = await ensureUserAccountId(
+        db,
+        user.uid,
+        effectiveRole,
+        displayName || user.email?.split('@')[0] || 'User',
+        '',
+        user.email || email.trim(),
+        phone || ''
+      );
+
       const profile: UserProfile = {
         uid: user.uid,
         email: user.email || email.trim(),
         displayName: displayName || user.email?.split('@')[0] || 'User',
         role: effectiveRole,
         status: effectiveStatus,
+        accountId: assignedId,
+        medicalId: effectiveRole === 'patient' ? assignedId : undefined,
         phone: phone || '',
         createdAt: now,
         updatedAt: now,
@@ -457,13 +491,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAuthError(null);
     try {
       const now = new Date().toISOString();
-      const medicalId = generateUniqueMedicalId(user.uid);
+      const medicalId = await ensureUserAccountId(
+        db,
+        user.uid,
+        'patient',
+        displayName || user.displayName || 'Patient',
+        '',
+        user.email || '',
+        phone || ''
+      );
       const profile: UserProfile = {
         uid: user.uid,
         email: user.email || '',
         displayName: displayName || user.displayName || 'Patient',
         role: 'patient',
         status: 'approved', // Patient access is free and immediately available
+        accountId: medicalId,
+        medicalId,
         phone: phone || '',
         createdAt: now,
         updatedAt: now,
@@ -484,7 +528,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             phone: profile.phone || '',
             governorate: 'بغداد (Baghdad)',
             address: 'العراق',
-            bloodType: 'O+',
+            bloodType: 'Unknown',
             chronicDiseases: [],
             allergies: [],
             currentMedications: [],
@@ -522,12 +566,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAuthError(null);
     try {
       const now = new Date().toISOString();
+      const assignedId = await ensureUserAccountId(
+        db,
+        user.uid,
+        payload.role,
+        payload.displayName,
+        payload.facilityName,
+        user.email || '',
+        payload.phone
+      );
+
       const profile: UserProfile = {
         uid: user.uid,
         email: user.email || '',
         displayName: payload.displayName,
         role: payload.role,
         status: 'pending',
+        accountId: assignedId,
         licenseNumber: payload.licenseNumber,
         facilityName: payload.facilityName,
         governorate: payload.governorate,

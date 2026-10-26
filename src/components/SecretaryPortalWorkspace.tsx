@@ -51,8 +51,10 @@ import {
   UserPlus,
   Stethoscope,
   Info,
-  DollarSign
+  DollarSign,
+  Copy
 } from 'lucide-react';
+import { generateFacilityOrUserId, searchPatientProfileAcrossSystem } from '../utils/medicalId';
 
 interface SecretaryPortalWorkspaceProps {
   onBackToHome: () => void;
@@ -106,6 +108,8 @@ export const SecretaryPortalWorkspace: React.FC<SecretaryPortalWorkspaceProps> =
 
   // Walk-in / Phone Appointment Form
   const [walkinForm, setWalkinForm] = useState({
+    patientId: '',
+    patientMedicalId: '',
     patientName: '',
     patientPhone: '',
     date: new Date().toISOString().split('T')[0],
@@ -113,6 +117,9 @@ export const SecretaryPortalWorkspace: React.FC<SecretaryPortalWorkspaceProps> =
     consultationType: 'in_person' as 'in_person' | 'followup' | 'urgent',
     notes: '',
   });
+  const [walkinSearchMedicalId, setWalkinSearchMedicalId] = useState('');
+  const [walkinSearchLoading, setWalkinSearchLoading] = useState(false);
+  const [walkinSearchMsg, setWalkinSearchMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Secretary Self-Profile edit form
   const [profileForm, setProfileForm] = useState({
@@ -821,9 +828,24 @@ export const SecretaryPortalWorkspace: React.FC<SecretaryPortalWorkspaceProps> =
                 <Users className="w-7 h-7 text-blue-200" />
               </div>
               <div>
-                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-500/30 text-blue-100 border border-blue-400/30">
-                  {language === 'ar' ? 'حساب سكرتير عيادة' : 'Secretary Account'}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-500/30 text-blue-100 border border-blue-400/30">
+                    {language === 'ar' ? 'حساب سكرتير عيادة' : 'Secretary Account'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const secId = userProfile?.accountId || (user?.uid ? generateFacilityOrUserId('secretary', user.uid) : 'M737-SEC-DEMO');
+                      navigator.clipboard.writeText(secId);
+                      showToast(language === 'ar' ? `تم نسخ معرّف السكرتير (${secId})` : `Secretary ID copied (${secId})`);
+                    }}
+                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 font-mono text-xs font-bold text-white transition-colors cursor-pointer"
+                    title={language === 'ar' ? 'انقر لنسخ المعرّف' : 'Click to copy ID'}
+                  >
+                    <Copy className="w-3 h-3 text-cyan-300" />
+                    <span>ID: {userProfile?.accountId || (user?.uid ? generateFacilityOrUserId('secretary', user.uid) : 'M737-SEC-DEMO')}</span>
+                  </button>
+                </div>
                 <h1 className="text-2xl font-bold mt-1">{userProfile?.displayName || user.displayName || user.email}</h1>
                 <p className="text-xs text-blue-200">{user.email}</p>
               </div>
@@ -999,11 +1021,26 @@ export const SecretaryPortalWorkspace: React.FC<SecretaryPortalWorkspaceProps> =
 
           {/* Secretary Info Card */}
           <div className="flex items-center gap-4 bg-white/10 backdrop-blur-md px-5 py-3.5 rounded-2xl border border-white/15 w-full lg:w-auto justify-between lg:justify-start">
-            <div className="space-y-0.5">
+            <div className="space-y-1">
               <div className="text-[11px] text-blue-200">{language === 'ar' ? 'السكرتير المسؤول:' : 'Active Secretary:'}</div>
               <div className="font-bold text-sm text-white">{assignment?.secretaryName || userProfile?.displayName || user.email}</div>
-              <div className="text-[10px] text-emerald-300 font-mono">
-                {language === 'ar' ? 'صلاحيات الاستقبال معتمدة' : 'Verified Receptionist'}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const secId = userProfile?.accountId || (user?.uid ? generateFacilityOrUserId('secretary', user.uid) : 'M737-SEC-DEMO');
+                    navigator.clipboard.writeText(secId);
+                    showToast(language === 'ar' ? `تم نسخ معرّف السكرتير (${secId})` : `Secretary ID copied (${secId})`);
+                  }}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 border border-white/20 font-mono text-[10px] font-bold text-white transition-colors cursor-pointer"
+                  title={language === 'ar' ? 'انقر لنسخ المعرّف' : 'Click to copy ID'}
+                >
+                  <Copy className="w-2.5 h-2.5 text-cyan-300" />
+                  <span>ID: {userProfile?.accountId || (user?.uid ? generateFacilityOrUserId('secretary', user.uid) : 'M737-SEC-DEMO')}</span>
+                </button>
+                <span className="text-[10px] text-emerald-300 font-mono">
+                  {language === 'ar' ? 'صلاحيات الاستقبال معتمدة' : 'Verified Receptionist'}
+                </span>
               </div>
             </div>
 
@@ -1503,6 +1540,73 @@ export const SecretaryPortalWorkspace: React.FC<SecretaryPortalWorkspaceProps> =
                     : `Direct booking with automatic clash protection`}
                 </p>
               </div>
+            </div>
+
+            {/* Patient Medical ID Lookup for fast check-in */}
+            <div className="p-4 rounded-2xl bg-blue-50/70 border border-blue-200 space-y-2">
+              <label className="block text-xs font-bold text-blue-950">
+                {language === 'ar' ? 'البحث بالمعرف الطبي للمريض (Patient Medical ID) للاستيراد السريع:' : 'Search by Patient Medical ID for quick import:'}
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={walkinSearchMedicalId}
+                  onChange={(e) => {
+                    setWalkinSearchMedicalId(e.target.value);
+                    if (walkinSearchMsg) setWalkinSearchMsg(null);
+                  }}
+                  placeholder="M737-PAT-XXXXXX"
+                  className="flex-1 px-3.5 py-2 rounded-xl border border-blue-300 bg-white font-mono text-xs uppercase focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+                <button
+                  type="button"
+                  disabled={walkinSearchLoading || !walkinSearchMedicalId.trim()}
+                  onClick={async () => {
+                    if (!walkinSearchMedicalId.trim()) return;
+                    setWalkinSearchLoading(true);
+                    setWalkinSearchMsg(null);
+                    try {
+                      const profile = await searchPatientProfileAcrossSystem(db, walkinSearchMedicalId);
+                      if (profile) {
+                        setWalkinForm(prev => ({
+                          ...prev,
+                          patientId: profile.patientId,
+                          patientMedicalId: profile.medicalId,
+                          patientName: profile.fullName,
+                          patientPhone: profile.phone || prev.patientPhone,
+                        }));
+                        setWalkinSearchMsg({
+                          type: 'success',
+                          text: language === 'ar'
+                            ? `تم العثور على المريض: ${profile.fullName} (${profile.medicalId})`
+                            : `Patient identified: ${profile.fullName} (${profile.medicalId})`
+                        });
+                      } else {
+                        setWalkinSearchMsg({
+                          type: 'error',
+                          text: language === 'ar'
+                            ? `لم يتم العثور على مريض مسجل بالمعرف "${walkinSearchMedicalId}". يرجى التأكد من الـ ID أو إدخال البيانات يدوياً.`
+                            : `No patient found with ID "${walkinSearchMedicalId}".`
+                        });
+                      }
+                    } catch (err) {
+                      console.warn('Walkin search error:', err);
+                    } finally {
+                      setWalkinSearchLoading(false);
+                    }
+                  }}
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 shrink-0 transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  {walkinSearchLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+                  <span>{language === 'ar' ? 'بحث' : 'Search'}</span>
+                </button>
+              </div>
+              {walkinSearchMsg && (
+                <div className={`p-2.5 rounded-xl text-xs flex items-center gap-2 ${walkinSearchMsg.type === 'success' ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' : 'bg-amber-100 text-amber-900 border border-amber-300'}`}>
+                  {walkinSearchMsg.type === 'success' ? <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" /> : <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600" />}
+                  <span>{walkinSearchMsg.text}</span>
+                </div>
+              )}
             </div>
 
             <form onSubmit={handleCreateWalkin} className="space-y-4">

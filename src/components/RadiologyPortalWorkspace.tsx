@@ -70,8 +70,10 @@ import {
   QrCode,
   FileCheck2,
   CalendarDays,
-  Stethoscope
+  Stethoscope,
+  Copy
 } from 'lucide-react';
+import { generateFacilityOrUserId, searchPatientProfileAcrossSystem, isValidMedicalIdQuery, normalizeMedicalIdInput } from '../utils/medicalId';
 
 interface RadiologyPortalWorkspaceProps {
   onBackToHome: () => void;
@@ -107,6 +109,8 @@ export const RadiologyPortalWorkspace: React.FC<RadiologyPortalWorkspaceProps> =
 
   // New Booking Form
   const [newBookingData, setNewBookingData] = useState({
+    patientId: '',
+    patientMedicalId: '',
     patientName: '',
     patientPhone: '',
     serviceName: 'سونار البطن والحوض الشامل',
@@ -115,6 +119,9 @@ export const RadiologyPortalWorkspace: React.FC<RadiologyPortalWorkspaceProps> =
     timeSlot: '11:00 AM',
     notes: '',
   });
+  const [bookingSearchMedicalId, setBookingSearchMedicalId] = useState('');
+  const [bookingSearchLoading, setBookingSearchLoading] = useState(false);
+  const [bookingSearchMsg, setBookingSearchMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Reschedule Modal State
   const [reschedulingBooking, setReschedulingBooking] = useState<RadiologyBooking | null>(null);
@@ -356,55 +363,6 @@ export const RadiologyPortalWorkspace: React.FC<RadiologyPortalWorkspaceProps> =
         let ordList = radOrderSnap.docs.map(d => ({ id: d.id, ...d.data() } as RadiologyOrder));
         ordList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-        if (ordList.length === 0) {
-          const sampleRadOrders: RadiologyOrder[] = [
-            {
-              id: 'demo_rad_ref_1',
-              orderNumber: 'RAD-ORD-7712',
-              doctorId: 'demo_doctor_ahmed',
-              doctorName: 'د. حيدر المعموري',
-              doctorSpecialty: 'استشاري جراحة الجملة العصبية والعمود الفقري',
-              doctorPhone: '07802233445',
-              clinicName: 'عيادة بغداد التخصصية - شارع المغرب',
-              patientId: 'demo_patient_sara',
-              patientName: 'سارة علي الحسني',
-              patientPhone: '07701234567',
-              targetCenterId: user.uid,
-              targetCenterName: centerProfile?.centerName || userProfile?.facilityName || 'مركز النور للأشعة التخصصي',
-              modality: 'mri',
-              bodyRegion: 'Lumbosacral Spine (الفقرات القطنية العجزية)',
-              priority: 'urgent',
-              clinicalIndication: 'Severe low back pain radiating to left leg (L5-S1 radiculopathy) with numbness since 3 weeks.',
-              preparationInstructions: 'خلع كافة المعادن والساعات والمجوهرات، الحضور قبل 20 دقيقة.',
-              status: 'new',
-              createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-              updatedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-            },
-            {
-              id: 'demo_rad_ref_2',
-              orderNumber: 'RAD-ORD-6601',
-              doctorId: 'demo_doctor_omar',
-              doctorName: 'د. وسام الكرخي',
-              doctorSpecialty: 'أخصائي أمراض باطنية وجهاز هضمي',
-              doctorPhone: '07705544332',
-              clinicName: 'مجمع المنصور الطبي',
-              patientId: 'demo_patient_karrar',
-              patientName: 'كرار حسين الجبوري',
-              patientPhone: '07819876543',
-              targetCenterId: user.uid,
-              targetCenterName: centerProfile?.centerName || userProfile?.facilityName || 'مركز النور للأشعة التخصصي',
-              modality: 'ultrasound',
-              bodyRegion: 'Abdomen & Pelvis (سونار البطن والحوض الشامل)',
-              priority: 'normal',
-              clinicalIndication: 'Recurrent right upper quadrant pain post fatty meals, rule out cholelithiasis/biliary sludge.',
-              preparationInstructions: 'صيام 6 إلى 8 ساعات مع امتلاء نسبي للمثانة.',
-              status: 'in_progress',
-              createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
-              updatedAt: new Date(Date.now() - 3600000 * 5).toISOString(),
-            }
-          ];
-          ordList = sampleRadOrders;
-        }
         setIncomingRadiologyOrders(ordList);
       } catch (e) {
         console.warn('Failed to load live radiology orders:', e);
@@ -1324,6 +1282,23 @@ export const RadiologyPortalWorkspace: React.FC<RadiologyPortalWorkspaceProps> =
                 {centerProfile?.centerName || userProfile?.facilityName || 'مركز الأشعة والسونار'}
               </h1>
               <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-slate-200 mt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const cId = userProfile?.accountId || centerProfile?.centerId || (user?.uid ? generateFacilityOrUserId('radiology', user.uid) : 'M737-RAD-DEMO');
+                    navigator.clipboard.writeText(cId);
+                    setFeedbackMsg({
+                      type: 'success',
+                      text: language === 'ar' ? `تم نسخ معرّف المركز (${cId})` : `Center ID copied (${cId})`
+                    });
+                  }}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 font-mono text-xs font-bold text-white transition-colors cursor-pointer"
+                  title={language === 'ar' ? 'انقر لنسخ معرّف المركز' : 'Click to copy Center ID'}
+                >
+                  <Copy size={12} className="text-cyan-300" />
+                  <span>ID: {userProfile?.accountId || centerProfile?.centerId || (user?.uid ? generateFacilityOrUserId('radiology', user.uid) : 'M737-RAD-DEMO')}</span>
+                </button>
+                <span className="opacity-40">·</span>
                 <span>{language === 'ar' ? 'ترخيص النقابة / الوزارة:' : 'License:'} {centerProfile?.licenseNumber || userProfile?.licenseNumber || 'RAD-IQ'}</span>
                 <span className="opacity-40">·</span>
                 <span className="flex items-center gap-1">
@@ -2680,6 +2655,72 @@ export const RadiologyPortalWorkspace: React.FC<RadiologyPortalWorkspaceProps> =
               >
                 ✕
               </button>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-cyan-50/70 border border-cyan-200 space-y-2 mb-4">
+              <label className="block font-bold text-cyan-950 text-xs">
+                {language === 'ar' ? 'البحث بالمعرف الطبي للمريض (Patient Medical ID) للاستيراد السريع:' : 'Search by Patient Medical ID for quick import:'}
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={bookingSearchMedicalId}
+                  onChange={(e) => {
+                    setBookingSearchMedicalId(e.target.value);
+                    if (bookingSearchMsg) setBookingSearchMsg(null);
+                  }}
+                  placeholder="M737-PAT-XXXXXX"
+                  className="flex-1 px-3 py-2 rounded-xl border border-cyan-300 bg-white font-mono text-xs uppercase focus:ring-2 focus:ring-[#0891b2]"
+                />
+                <button
+                  type="button"
+                  disabled={bookingSearchLoading || !bookingSearchMedicalId.trim()}
+                  onClick={async () => {
+                    if (!bookingSearchMedicalId.trim()) return;
+                    setBookingSearchLoading(true);
+                    setBookingSearchMsg(null);
+                    try {
+                      const profile = await searchPatientProfileAcrossSystem(db, bookingSearchMedicalId);
+                      if (profile) {
+                        setNewBookingData(prev => ({
+                          ...prev,
+                          patientId: profile.patientId,
+                          patientMedicalId: profile.medicalId,
+                          patientName: profile.fullName,
+                          patientPhone: profile.phone || prev.patientPhone,
+                        }));
+                        setBookingSearchMsg({
+                          type: 'success',
+                          text: language === 'ar'
+                            ? `تم العثور على المريض: ${profile.fullName} (${profile.medicalId})`
+                            : `Identified: ${profile.fullName} (${profile.medicalId})`
+                        });
+                      } else {
+                        setBookingSearchMsg({
+                          type: 'error',
+                          text: language === 'ar'
+                            ? `لم يتم العثور على أي مريض مسجل بالمعرف "${bookingSearchMedicalId}". يرجى التأكد من الـ ID أو إدخال البيانات يدوياً.`
+                            : `No patient found with ID "${bookingSearchMedicalId}".`
+                        });
+                      }
+                    } catch (e) {
+                      console.warn('Patient lookup note:', e);
+                    } finally {
+                      setBookingSearchLoading(false);
+                    }
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-[#0891b2] hover:bg-[#0e7490] text-white font-bold text-xs flex items-center gap-1.5 shrink-0 transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  {bookingSearchLoading ? <RefreshCw size={13} className="animate-spin" /> : <Search size={13} />}
+                  <span>{language === 'ar' ? 'بحث' : 'Search'}</span>
+                </button>
+              </div>
+              {bookingSearchMsg && (
+                <div className={`p-2.5 rounded-xl text-xs flex items-center gap-2 ${bookingSearchMsg.type === 'success' ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' : 'bg-amber-100 text-amber-900 border border-amber-300'}`}>
+                  {bookingSearchMsg.type === 'success' ? <CheckCircle2 size={14} className="shrink-0 text-emerald-600" /> : <AlertTriangle size={14} className="shrink-0 text-amber-600" />}
+                  <span>{bookingSearchMsg.text}</span>
+                </div>
+              )}
             </div>
 
             <form onSubmit={handleCreateBooking} className="space-y-4 text-xs">

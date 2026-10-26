@@ -50,6 +50,16 @@
           "description": "Contact telephone or WhatsApp number",
           "maxLength": 32
         },
+        "accountId": {
+          "type": "string",
+          "description": "Deterministic permanent unique account identifier (e.g. M737-DOC-XXXXXX)",
+          "maxLength": 64
+        },
+        "medicalId": {
+          "type": "string",
+          "description": "Unified Iraqi medical identity code for patient profiles",
+          "maxLength": 64
+        },
         "createdAt": {
           "type": "string",
           "description": "ISO timestamp of profile creation"
@@ -1213,9 +1223,31 @@
         "updatedAt": { "type": "string" }
       },
       "required": ["id", "doctorId", "doctorName", "patientId", "patientMedicalId", "patientName", "patientPhone", "visits", "status", "createdAt", "updatedAt"]
+    },
+    "AccountIdentifier": {
+      "title": "AccountIdentifier",
+      "description": "Global unique identity registry record mapping fixed account ID to user UID and verified role",
+      "type": "object",
+      "properties": {
+        "accountId": { "type": "string", "maxLength": 64 },
+        "uid": { "type": "string", "maxLength": 128 },
+        "role": { "type": "string", "enum": ["doctor", "radiology_center", "laboratory", "pharmacy", "patient", "super_admin", "secretary", "wholesaler"] },
+        "displayName": { "type": "string", "maxLength": 128 },
+        "facilityName": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 128 },
+        "phone": { "type": "string", "maxLength": 32 },
+        "governorate": { "type": "string", "maxLength": 64 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["accountId", "uid", "role", "displayName", "createdAt", "updatedAt"]
     }
   },
   "firestore": {
+    "/account_ids/{accountId}": {
+      "schema": "AccountIdentifier",
+      "description": "Global unique account identity registry verifying ID ownership across all portals"
+    },
     "/users/{userId}": {
       "schema": "User",
       "description": "User profiles indexed by Firebase Auth UID"

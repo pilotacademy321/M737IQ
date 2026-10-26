@@ -23,10 +23,25 @@ export interface UserProfile {
   displayName: string;
   role: UserRole;
   status: AccountStatus;
+  accountId?: string;
+  medicalId?: string;
   licenseNumber?: string;
   facilityName?: string;
   governorate?: string;
   phone?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AccountIdentifierRecord {
+  accountId: string; // The primary document ID in 'account_ids' collection: e.g. "M737-DOC-7A8B9C"
+  uid: string;
+  role: UserRole;
+  displayName: string;
+  facilityName?: string;
+  email?: string;
+  phone?: string;
+  governorate?: string;
   createdAt: string;
   updatedAt: string;
 }
