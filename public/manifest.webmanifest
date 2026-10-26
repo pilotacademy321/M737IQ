@@ -1,0 +1,44 @@
+{
+  "id": "/",
+  "name": "M737IQ",
+  "short_name": "M737IQ",
+  "description": "منصة M737 الطبية الرقمية المتكاملة في العراق - ربط الأطباء والمختبرات ومراكز الأشعة والصيدليات والتمريض والمرضى",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#003366",
+  "theme_color": "#003366",
+  "categories": [
+    "medical",
+    "health"
+  ],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

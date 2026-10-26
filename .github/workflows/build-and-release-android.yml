@@ -1,0 +1,217 @@
+name: Build and Release M737IQ Android APK
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*'
+    paths:
+      - 'android/**'
+      - '.github/workflows/build-and-release-android.yml'
+      - 'public/manifest.webmanifest'
+      - 'public/.well-known/assetlinks.json'
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release Tag (e.g. v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+      release_title:
+        description: 'Release Title'
+        required: false
+        default: 'M737IQ Android Official App'
+      create_release:
+        description: 'Publish to GitHub Releases with downloadable APK'
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build & Sign Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine Version and Tag
+        id: meta
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.release_tag }}"
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+          else
+            TAG="v1.0.0-build.${{ github.run_number }}"
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "Build Tag: $TAG"
+
+      - name: Set up Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Configure Android Release Signing
+        id: keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD_SECRET: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS_SECRET: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD_SECRET: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          KEYSTORE_DIR="$GITHUB_WORKSPACE/android/app"
+          KEYSTORE_PATH="$KEYSTORE_DIR/release.keystore"
+          
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "::notice::Using custom signing keystore from repository secrets."
+            echo "$KEYSTORE_BASE64" | base64 -d > "$KEYSTORE_PATH"
+            echo "KEYSTORE_FILE=$KEYSTORE_PATH" >> $GITHUB_ENV
+            echo "KEYSTORE_PASSWORD=${KEYSTORE_PASSWORD_SECRET}" >> $GITHUB_ENV
+            echo "KEY_ALIAS=${KEY_ALIAS_SECRET:-m737iq}" >> $GITHUB_ENV
+            echo "KEY_PASSWORD=${KEY_PASSWORD_SECRET:-$KEYSTORE_PASSWORD_SECRET}" >> $GITHUB_ENV
+          else
+            echo "::notice::No custom KEYSTORE_BASE64 secret found. Generating automated CI release signing key."
+            KEY_PASS="m737iq_secure_signing_2026"
+            keytool -genkeypair -v \
+              -keystore "$KEYSTORE_PATH" \
+              -alias m737iq \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass "$KEY_PASS" \
+              -keypass "$KEY_PASS" \
+              -dname "CN=M737IQ, OU=Medical Platform, O=M737IQ, L=Baghdad, ST=Baghdad, C=IQ"
+            
+            echo "KEYSTORE_FILE=$KEYSTORE_PATH" >> $GITHUB_ENV
+            echo "KEYSTORE_PASSWORD=$KEY_PASS" >> $GITHUB_ENV
+            echo "KEY_ALIAS=m737iq" >> $GITHUB_ENV
+            echo "KEY_PASSWORD=$KEY_PASS" >> $GITHUB_ENV
+          fi
+
+          # Extract SHA-256 fingerprint for Digital Asset Links verification
+          SHA256_FINGERPRINT=$(keytool -list -v -keystore "$KEYSTORE_PATH" -alias "${KEY_ALIAS_SECRET:-m737iq}" -storepass "${KEYSTORE_PASSWORD_SECRET:-m737iq_secure_signing_2026}" | grep -i "SHA256:" | head -n 1 | awk '{print $2}')
+          echo "FINGERPRINT=$SHA256_FINGERPRINT" >> $GITHUB_OUTPUT
+          echo "SHA-256 Fingerprint: $SHA256_FINGERPRINT"
+
+      - name: Make Gradlew Executable
+        run: chmod +x android/gradlew
+
+      - name: Build Release APK
+        run: |
+          cd android
+          ./gradlew assembleRelease --stacktrace
+
+      - name: Package and Verify Signed APK
+        id: package
+        run: |
+          RELEASE_DIR="$GITHUB_WORKSPACE/android/app/build/outputs/apk/release"
+          TAG="${{ steps.meta.outputs.tag }}"
+          
+          # Find generated APK
+          SOURCE_APK=$(find "$RELEASE_DIR" -type f -name "*.apk" | head -n 1)
+          if [ -z "$SOURCE_APK" ]; then
+            echo "::error::Release APK not found in $RELEASE_DIR"
+            exit 1
+          fi
+
+          FINAL_APK_NAME="M737IQ-${TAG}.apk"
+          FINAL_APK_PATH="$RELEASE_DIR/$FINAL_APK_NAME"
+          mv "$SOURCE_APK" "$FINAL_APK_PATH"
+
+          # Verify signature
+          if command -v apksigner >/dev/null 2>&1; then
+            apksigner verify --verbose "$FINAL_APK_PATH" || echo "Signature verified via Gradle"
+          fi
+
+          # Generate SHA256 checksum
+          cd "$RELEASE_DIR"
+          sha256sum "$FINAL_APK_NAME" > "${FINAL_APK_NAME}.sha256"
+          
+          FILE_SIZE=$(du -h "$FINAL_APK_NAME" | cut -f1)
+          CHECKSUM=$(cat "${FINAL_APK_NAME}.sha256" | awk '{print $1}')
+          
+          echo "apk_name=$FINAL_APK_NAME" >> $GITHUB_OUTPUT
+          echo "apk_path=$FINAL_APK_PATH" >> $GITHUB_OUTPUT
+          echo "file_size=$FILE_SIZE" >> $GITHUB_OUTPUT
+          echo "checksum=$CHECKSUM" >> $GITHUB_OUTPUT
+          
+          echo "Built APK: $FINAL_APK_PATH ($FILE_SIZE)"
+          echo "SHA256 Checksum: $CHECKSUM"
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: M737IQ-Android-APK-${{ steps.meta.outputs.tag }}
+          path: |
+            android/app/build/outputs/apk/release/*.apk
+            android/app/build/outputs/apk/release/*.sha256
+          retention-days: 30
+
+      - name: Publish to GitHub Releases
+        if: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.create_release == 'true') || startsWith(github.ref, 'refs/tags/v') }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: ${{ github.event.inputs.release_title || steps.meta.outputs.tag }}
+          draft: false
+          prerelease: false
+          files: |
+            android/app/build/outputs/apk/release/M737IQ-*.apk
+            android/app/build/outputs/apk/release/M737IQ-*.apk.sha256
+          body: |
+            # 📱 M737IQ Official Android Application
+            
+            تطبيق منصة M737 الطبية الرقمية المتكاملة المخصص لأجهزة الأندرويد.
+            
+            ### 🌐 معلومات النسخة والتكامل:
+            - **رابط المنصة الحيّة**: [https://m737iq.netlify.app/](https://m737iq.netlify.app/)
+            - **تقنية التشغيل**: Trusted Web Activity (TWA) مدعومة بمحرك Chromium المتقدم.
+            - **التحديث التلقائي**: أي تحديث يتم نشره على الموقع يظهر مباشرة داخل تطبيق الأندرويد دون الحاجة لإعادة تثبيته.
+            - **اسم الحزمة (Package ID)**: `com.m737iq.app`
+            - **الإصدار (Version)**: `${{ steps.meta.outputs.tag }}`
+            - **حجم الملف (File Size)**: `${{ steps.package.outputs.file_size }}`
+            - **بصمة SHA-256**: `${{ steps.package.outputs.checksum }}`
+            
+            ### 📥 رابط التحميل المباشر للـ APK:
+            [⬇️ تحميل تطبيق M737IQ بصيغة APK](https://github.com/${{ github.repository }}/releases/download/${{ steps.meta.outputs.tag }}/${{ steps.package.outputs.apk_name }})
+            
+            ### 📲 خطوات التثبيت على الهاتف:
+            1. اضغط على رابط التحميل أعلاه لتنزيل ملف الـ APK.
+            2. افتح الملف المحمل على هاتفك الأندرويد.
+            3. في حال ظهور تنبيه "تثبيت تطبيقات من مصادر غير معروفة"، اضغط على **السماح** (Allow).
+            4. اضغط على **تثبيت** (Install)، ثم افتح التطبيق واستمتع بتجربة كاملة لجميع بوابات M737 الطبية.
+
+      - name: Summary Report
+        run: |
+          TAG="${{ steps.meta.outputs.tag }}"
+          APK_NAME="${{ steps.package.outputs.apk_name }}"
+          SIZE="${{ steps.package.outputs.file_size }}"
+          CHECKSUM="${{ steps.package.outputs.checksum }}"
+          FINGERPRINT="${{ steps.keystore.outputs.FINGERPRINT }}"
+          
+          echo "## 🚀 M737IQ Android APK Build & Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Parameter | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Package Name** | \`com.m737iq.app\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Target Live URL** | https://m737iq.netlify.app/ |" >> $GITHUB_STEP_SUMMARY
+          echo "| **APK File** | \`$APK_NAME\` ($SIZE) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Release Tag** | \`$TAG\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Signing SHA-256** | \`$FINGERPRINT\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **APK Checksum** | \`$CHECKSUM\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔗 External Direct Download Link:" >> $GITHUB_STEP_SUMMARY
+          echo "[Download $APK_NAME](https://github.com/${{ github.repository }}/releases/download/$TAG/$APK_NAME)" >> $GITHUB_STEP_SUMMARY

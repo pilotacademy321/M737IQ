@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.m737iq.app",
+      "sha256_cert_fingerprints": [
+        "A8:77:24:6A:E1:9F:50:58:FE:84:87:6D:E9:9D:61:94:81:4F:7B:64:99:99:E1:59:E7:5C:9E:C1:6B:42:C8:66"
+      ]
+    }
+  }
+]

@@ -663,6 +663,8 @@ export const SecretaryPortalWorkspace: React.FC<SecretaryPortalWorkspaceProps> =
       );
 
       setWalkinForm({
+        patientId: '',
+        patientMedicalId: '',
         patientName: '',
         patientPhone: '',
         date: new Date().toISOString().split('T')[0],

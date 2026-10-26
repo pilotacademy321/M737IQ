@@ -841,6 +841,8 @@ export const RadiologyPortalWorkspace: React.FC<RadiologyPortalWorkspaceProps> =
       );
       setShowNewBookingModal(false);
       setNewBookingData({
+        patientId: '',
+        patientMedicalId: '',
         patientName: '',
         patientPhone: '',
         serviceName: 'سونار البطن والحوض الشامل',
@@ -1162,6 +1164,7 @@ export const RadiologyPortalWorkspace: React.FC<RadiologyPortalWorkspaceProps> =
   const patientsRoster = useMemo(() => {
     const map = new Map<string, {
       id: string;
+      medicalId?: string;
       name: string;
       phone: string;
       bookingsCount: number;
@@ -1184,6 +1187,7 @@ export const RadiologyPortalWorkspace: React.FC<RadiologyPortalWorkspaceProps> =
       } else {
         map.set(key, {
           id: b.patientId,
+          medicalId: (b as any).patientMedicalId || '',
           name: b.patientName,
           phone: b.patientPhone,
           bookingsCount: 1,
@@ -1202,6 +1206,7 @@ export const RadiologyPortalWorkspace: React.FC<RadiologyPortalWorkspaceProps> =
       } else if (!map.has(key)) {
         map.set(key, {
           id: r.patientId,
+          medicalId: (r as any).patientMedicalId || '',
           name: r.patientName,
           phone: '07XXXXXXXXX',
           bookingsCount: 1,
@@ -2174,6 +2179,8 @@ export const RadiologyPortalWorkspace: React.FC<RadiologyPortalWorkspaceProps> =
                       <button
                         onClick={() => {
                           setNewBookingData({
+                            patientId: pat.id,
+                            patientMedicalId: pat.medicalId || '',
                             patientName: pat.name,
                             patientPhone: pat.phone,
                             serviceName: 'سونار البطن والحوض',
