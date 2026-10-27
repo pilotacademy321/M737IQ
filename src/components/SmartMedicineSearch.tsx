@@ -24,7 +24,6 @@ import {
 } from 'lucide-react';
 import { DrugInteractionPanel } from './DrugInteractionPanel';
 import { DosageFormVisual } from './DosageFormVisual';
-import { analyzeMedicineEquivalence, isDocumentedBioequivalent } from '../lib/medicineEquivalenceEngine';
 
 export interface SearchMedicineResult {
   id: string;
@@ -264,7 +263,6 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
   const [results, setResults] = useState<SearchMedicineResult[]>([]);
   const [approximateSuggestions, setApproximateSuggestions] = useState<ApproximateMatch[]>([]);
   const [suggestedQuery, setSuggestedQuery] = useState<string | null>(null);
-  const [similarAlternatives, setSimilarAlternatives] = useState<SearchMedicineResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
@@ -291,7 +289,6 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
       setResults([]);
       setApproximateSuggestions([]);
       setSuggestedQuery(null);
-      setSimilarAlternatives([]);
       setIsOpen(false);
       setIsSearching(false);
       setSearchError(null);
@@ -411,25 +408,6 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
         } else {
           setSuggestedQuery(null);
         }
-
-        // Find similar active-ingredient alternatives among live items if direct match exists
-        if (directMatches.length > 0) {
-          const primaryActive = directMatches[0].activeIngredient.trim().toLowerCase();
-          const primaryStrength = directMatches[0].strength.trim().toLowerCase();
-          if (primaryActive) {
-            const alternatives = liveResults.filter((alt) =>
-              alt.id !== directMatches[0].id &&
-              alt.activeIngredient.trim().toLowerCase() === primaryActive &&
-              alt.strength.trim().toLowerCase() === primaryStrength
-            );
-            setSimilarAlternatives(alternatives.slice(0, 3));
-          } else {
-            setSimilarAlternatives([]);
-          }
-        } else {
-          setSimilarAlternatives([]);
-        }
-
         setIsOpen(true);
         setSelectedIndex(-1);
       } catch (err: unknown) {
@@ -510,7 +488,6 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
               setResults([]);
               setApproximateSuggestions([]);
               setSuggestedQuery(null);
-              setSimilarAlternatives([]);
               setIsOpen(false);
               inputRef.current?.focus();
             }}
@@ -579,7 +556,7 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
             </div>
           )}
 
-          {/* Clean Empty State & Tier 4 Rejection Protocol Notice */}
+          {/* Clean Empty State */}
           {!isSearching && results.length === 0 && approximateSuggestions.length === 0 && !searchError && (
             <div className="p-6 text-center text-slate-500 text-xs space-y-2">
               <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-1">
@@ -588,9 +565,9 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
               <p className="font-bold text-slate-800 text-sm">
                 {language === 'ar' ? 'لم يتم العثور على أدوية مطابقة' : 'No matching medications found'}
               </p>
-              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs font-semibold max-w-md mx-auto leading-relaxed text-center">
-                «لم نعثر على بديل مكافئ مؤكّد في الكتالوج. يمكن مراجعة الصيدلي المختص أو الطبيب للتحقق من الخيارات المناسبة»
-              </div>
+              <p className="text-slate-400 text-xs">
+                {language === 'ar' ? 'تأكد من كتابة الاسم التجاري أو المادة الفعالة بشكل صحيح.' : 'Check the spelling of the brand or generic name.'}
+              </p>
             </div>
           )}
 
@@ -606,7 +583,7 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
           {!isSearching && results.length > 0 && (
             <div className="max-h-72 overflow-y-auto divide-y divide-slate-100">
               <div className="px-3.5 py-1.5 bg-slate-50 text-[10px] font-bold text-slate-600 uppercase tracking-wider">
-                {language === 'ar' ? 'نتائج مطابقة مباشرة (المستوى الأول):' : 'Exact Matches (Tier 1):'}
+                {language === 'ar' ? 'الأدوية المطابقة:' : 'Matching Medications:'}
               </div>
               {results.map((item, idx) => {
                 const isSelected = idx === selectedIndex;
@@ -769,46 +746,6 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
                           {language === 'ar' ? 'اختيار' : 'Select'}
                         </span>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Similar Alternatives Section (Distinct to avoid confusion) */}
-          {/* Similar Alternatives Section (Tier 2 & Tier 3) */}
-          {!isSearching && similarAlternatives.length > 0 && (
-            <div className="p-3 bg-slate-50/90 border-t border-slate-200">
-              <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#003366] mb-2">
-                <Layers size={13} />
-                <span>
-                  {language === 'ar'
-                    ? 'بدائل متطابقة بالمادة الفعالة ونفس المسار (المستوى الثاني والثالث):'
-                    : 'Generic & Bioequivalent Alternatives (Tier 2 & 3):'}
-                </span>
-              </div>
-              <div className="space-y-1.5">
-                {similarAlternatives.map((alt, aIdx) => {
-                  const isBio = results.length > 0 && isDocumentedBioequivalent(alt.activeIngredient, results[0].brand || results[0].name, alt.brand || alt.name);
-                  return (
-                    <div
-                      key={aIdx}
-                      onClick={() => handleSelectItem(alt)}
-                      className="p-2.5 rounded-xl bg-white border border-slate-200 hover:border-[#003366] flex items-center justify-between text-xs cursor-pointer transition-colors shadow-2xs"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${isBio ? 'bg-blue-100 text-blue-800' : 'bg-teal-100 text-teal-800'}`}>
-                          {isBio ? 'المستوى 3: مكافئ حيوي' : 'المستوى 2: نفس المادة'}
-                        </span>
-                        <div>
-                          <span className="font-bold text-slate-800 me-2">{alt.name}</span>
-                          <span className="text-[11px] text-slate-500 font-mono">({alt.strength} - {alt.dosageForm})</span>
-                        </div>
-                      </div>
-                      <span className="text-[11px] font-mono font-bold text-slate-700">
-                        {alt.priceIqd ? `${alt.priceIqd.toLocaleString()} د.ع` : ''}
-                      </span>
                     </div>
                   );
                 })}

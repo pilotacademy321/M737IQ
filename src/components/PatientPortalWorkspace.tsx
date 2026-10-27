@@ -277,263 +277,8 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
     return expiry < today;
   };
 
-  // Curated Fallback Catalogs (Authentic Iraqi Healthcare Data)
-  const FALLBACK_DOCTORS: DoctorProfile[] = [
-    {
-      doctorId: 'demo_doc_ahmed',
-      fullName: 'د. أحمد الرافدين',
-      specialty: 'أمراض باطنية وقلبية',
-      subspecialty: 'قسطرة الشرايين التاجية وضغط الدم',
-      qualifications: 'بورد عراقي / زميل كلية الجراحين والأطباء الملكية',
-      experienceYears: 16,
-      clinicAddress: 'بغداد، ساحة الواثق، مجمع الرافدين الاستشاري، طابق 2',
-      governorate: 'بغداد (Baghdad)',
-      phone: '07801234567',
-      whatsapp: '07801234567',
-      consultationFee: 35000,
-      workingDays: ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء'],
-      workingHours: '4:00 PM - 9:00 PM',
-      mapsUrl: 'https://maps.google.com',
-      bio: 'استشاري أمراض القلب والأوعية الدموية وارتفاع ضغط الدم مع خبرة واسعة في تخطيط وإيكو القلب.',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      doctorId: 'demo_doc_sanaa',
-      fullName: 'د. سناء الجبوري',
-      specialty: 'طب الأطفال وحديثي الولادة',
-      subspecialty: 'أمراض نمو الأطفال والربو التحسسي',
-      qualifications: 'بورد عربي في طب الأطفال، ماجستير رعاية الخدج',
-      experienceYears: 12,
-      clinicAddress: 'أربيل، شارع 60 متري، مقابل مشفى آزادي',
-      governorate: 'أربيل (Erbil)',
-      phone: '07509876543',
-      whatsapp: '07509876543',
-      consultationFee: 30000,
-      workingDays: ['السبت', 'الإثنين', 'الأربعاء', 'الخميس'],
-      workingHours: '3:00 PM - 8:00 PM',
-      mapsUrl: 'https://maps.google.com',
-      bio: 'أخصائية رعاية الخدج وتغذية ومناعة الأطفال وعلاج التحسس التنفسي.',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      doctorId: 'demo_doc_omar',
-      fullName: 'د. عمر فاروق السعدي',
-      specialty: 'جراحة العظام والمفاصل والكسور',
-      subspecialty: 'تبديل المفاصل الصناعية والإصابات الرياضية والناظور',
-      qualifications: 'بورد عراقي في جراحة الكسور والعظام',
-      experienceYears: 14,
-      clinicAddress: 'البصرة، العشار، مجمع الفيحاء الطبي، شارع الكويت',
-      governorate: 'البصرة (Basra)',
-      phone: '07705544332',
-      whatsapp: '07705544332',
-      consultationFee: 40000,
-      workingDays: ['الأحد', 'الثلاثاء', 'الأربعاء', 'الخميس'],
-      workingHours: '4:30 PM - 9:30 PM',
-      mapsUrl: '',
-      bio: 'استشاري جراحة العظام وعلاج الانزلاق الغضروفي وخشونة الركبة بدون جراحة.',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      doctorId: 'demo_doc_noor',
-      fullName: 'د. نور الحسيني',
-      specialty: 'طب وجراحة العيون والليزك',
-      subspecialty: 'تصحيح البصر بالليزر والمياه البيضاء',
-      qualifications: 'بورد عربي، زميل المجلس العالمي لطب العيون ICO',
-      experienceYears: 10,
-      clinicAddress: 'النجف الأشرف، شارع الروان، المجمع الطبي الحديث',
-      governorate: 'النجف الأشرف (Najaf)',
-      phone: '07812233445',
-      whatsapp: '07812233445',
-      consultationFee: 30000,
-      workingDays: ['السبت', 'الأحد', 'الثلاثاء', 'الخميس'],
-      workingHours: '4:00 PM - 8:30 PM',
-      mapsUrl: '',
-      bio: 'أخصائية جراحة الساد وزراعة العدسات وتصحيح النظر بالفيمتو ليزك.',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-  ];
-
-  const FALLBACK_MEDICINES: MedicineItem[] = [];
-
-  const FALLBACK_LABS: LabProfile[] = [
-    {
-      labId: 'demo_lab_alrafidain',
-      labName: 'مختبر الرافدين التخصصي للتحليلات المرضية',
-      directorName: 'د. حسين العامري (استشاري باثولوجي)',
-      licenseNumber: 'LAB-IQ-9421',
-      phone: '07802233441',
-      whatsapp: '07802233441',
-      address: 'بغداد، الحارثية، شارع الكندي، مجمع النخيل الطبي',
-      governorate: 'بغداد (Baghdad)',
-      mapsUrl: '',
-      workingHours: '8:00 AM - 10:00 PM',
-      equipmentList: ['Sysmex XN-550', 'Roche Cobas c311', 'Abbott Architect i1000SR', 'Real-Time PCR'],
-      homeCollectionAvailable: true,
-      homeCollectionFee: 10000,
-      bio: 'مختبر سريري تشخيصي معتمد بأعلى شهادات ضبط الجودة العالمية ومعالجة العينات بأجهزة آلية بالكامل.',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-  ];
-
-  const FALLBACK_LAB_TESTS: LabTest[] = [
-    {
-      id: 'demo_test_cbc',
-      labId: 'demo_lab_alrafidain',
-      labName: 'مختبر الرافدين التخصصي للتحليلات المرضية',
-      name: 'صورة الدم الكاملة (Complete Blood Count CBC)',
-      category: 'Hematology',
-      price: 15000,
-      estimatedHours: 2,
-      sampleType: 'EDTA Whole Blood (أنبوب بنفسجي)',
-      fastingInstructions: 'لا يشترط الصيام المسبق.',
-      normalRange: 'Hb: 13-17 g/dL (M), WBC: 4-11 x10^3/mcL, Platelets: 150-450 x10^3',
-      isAvailable: true,
-      homeCollectionSupported: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: 'demo_test_hba1c',
-      labId: 'demo_lab_alrafidain',
-      labName: 'مختبر الرافدين التخصصي للتحليلات المرضية',
-      name: 'فحص السكر التراكمي (HbA1c Glycated Hemoglobin)',
-      category: 'Biochemistry',
-      price: 20000,
-      estimatedHours: 2,
-      sampleType: 'EDTA Whole Blood (أنبوب بنفسجي)',
-      fastingInstructions: 'لا يتطلب صيام، يمكن إجراؤه بأي وقت.',
-      normalRange: '< 5.7% طبيعي، 5.7-6.4% مرحلة ما قبل السكري، >= 6.5% سكري',
-      isAvailable: true,
-      homeCollectionSupported: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: 'demo_test_lipid',
-      labId: 'demo_lab_alrafidain',
-      labName: 'مختبر الرافدين التخصصي للتحليلات المرضية',
-      name: 'فحص الدهون الشامل (Lipid Profile Panel)',
-      category: 'Biochemistry',
-      price: 25000,
-      estimatedHours: 3,
-      sampleType: 'Serum (أنبوب أصفر/أحمر)',
-      fastingInstructions: 'صيام تام من 10 إلى 12 ساعة (يسمح بشرب الماء فقط).',
-      normalRange: 'Cholesterol < 200 mg/dL, Triglycerides < 150 mg/dL, HDL > 40 mg/dL',
-      isAvailable: true,
-      homeCollectionSupported: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: 'demo_test_renal',
-      labId: 'demo_lab_alrafidain',
-      labName: 'مختبر الرافدين التخصصي للتحليلات المرضية',
-      name: 'وظائف الكلى (Kidney Function: Urea & Creatinine)',
-      category: 'Biochemistry',
-      price: 18000,
-      estimatedHours: 2,
-      sampleType: 'Serum (مصل الدم)',
-      fastingInstructions: 'صيام خفيف 4-6 ساعات، شرب كمية كافية من الماء.',
-      normalRange: 'Creatinine: 0.6 - 1.2 mg/dL, Blood Urea: 15 - 45 mg/dL',
-      isAvailable: true,
-      homeCollectionSupported: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: 'demo_test_vitd',
-      labId: 'demo_lab_alrafidain',
-      labName: 'مختبر الرافدين التخصصي للتحليلات المرضية',
-      name: 'فحص فيتامين د الشامل (Vitamin D 25-OH Total)',
-      category: 'Immunology',
-      price: 35000,
-      estimatedHours: 4,
-      sampleType: 'Serum (مصل الدم محمي من الضوء)',
-      fastingInstructions: 'لا يشترط الصيام المسبق.',
-      normalRange: 'كفاية: 30 - 100 ng/mL، نقص: أقل من 20 ng/mL',
-      isAvailable: true,
-      homeCollectionSupported: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-  ];
-
-  const FALLBACK_RAD_CENTERS: RadiologyProfile[] = [
-    {
-      centerId: 'demo_rad_baghdad',
-      centerName: 'مركز بغداد الدولي للأشعة والرنين',
-      licenseNumber: 'RAD-IQ-8102',
-      phone: '07712334455',
-      whatsapp: '07712334455',
-      address: 'بغداد، المنصور، تقاطع الرواد، بناية البرج الطبي',
-      governorate: 'بغداد (Baghdad)',
-      mapsUrl: '',
-      workingHours: '8:30 AM - 9:30 PM',
-      equipmentList: ['Siemens Magnetom 1.5T MRI', 'GE Revolution 128-Slice CT', 'Toshiba Aplio 500 Ultrasound'],
-      bio: 'مركز تخصصي متقدم لأشعة الرنين المغناطيسي والمفراس الحلزوني والسونار والدوبلر الملون بأحدث التقنيات.',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-  ];
-
-  const FALLBACK_RAD_SERVICES: RadiologyService[] = [
-    {
-      id: 'demo_serv_mri',
-      centerId: 'demo_rad_baghdad',
-      name: 'رنين مغناطيسي للدماغ (Brain MRI with Protocol)',
-      modality: 'mri',
-      price: 125000,
-      preparationInstructions: 'إزالة كافة المعادن والساعات والمجوهرات، والتواجد قبل 20 دقيقة.',
-      estimatedReportHours: 4,
-      isAvailable: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: 'demo_serv_ct',
-      centerId: 'demo_rad_baghdad',
-      name: 'مفراس حلزوني عالي الدقة للصدر (High Resolution CT Chest)',
-      modality: 'ct',
-      price: 90000,
-      preparationInstructions: 'صيام 4 ساعات إذا كان الفحص بالمادة الملونة، وإحضار فحص وظائف الكلى.',
-      estimatedReportHours: 3,
-      isAvailable: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: 'demo_serv_us',
-      centerId: 'demo_rad_baghdad',
-      name: 'سونار البطن والحوض الشامل (Abdomen & Pelvis Ultrasound)',
-      modality: 'ultrasound',
-      price: 35000,
-      preparationInstructions: 'صيام 6 ساعات عن الطعام، مع شرب لتر ماء لامتلاء المثانة قبل الفحص بساعة.',
-      estimatedReportHours: 1,
-      isAvailable: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: 'demo_serv_xray',
-      centerId: 'demo_rad_baghdad',
-      name: 'أشعة الصدر الرقمية (Digital Chest X-Ray PA/Lateral)',
-      modality: 'xray',
-      price: 25000,
-      preparationInstructions: 'إزالة القلائد والمعادن من منطقة الصدر قبل التصوير.',
-      estimatedReportHours: 1,
-      isAvailable: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-  ];
-
   // ==========================================
-  // LOAD ALL PATIENT DATA FROM FIRESTORE OR FALLBACK
+  // LOAD ALL PATIENT DATA FROM FIRESTORE
   // ==========================================
   const loadPatientWorkspaceData = async () => {
     if (!user) return;
@@ -639,7 +384,7 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
       } catch {
         // fallback
       }
-      setDoctorsList(docsList.length > 0 ? docsList : FALLBACK_DOCTORS);
+      setDoctorsList(docsList);
 
       let appList: Appointment[] = [];
       try {
@@ -651,26 +396,6 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
         appList = appSnap.docs.map(d => ({ id: d.id, ...d.data() } as Appointment));
       } catch {
         // fallback
-      }
-      if (appList.length === 0 && isDemoMode) {
-        appList = [
-          {
-            id: 'demo_apt_prev',
-            doctorId: 'demo_doc_ahmed',
-            doctorName: 'د. أحمد الرافدين',
-            specialty: 'أمراض باطنية وقلبية',
-            patientId: user.uid,
-            patientName: userProfile?.displayName || 'المراجع',
-            patientPhone: '07809988776',
-            date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            timeSlot: '05:30 PM - 06:00 PM',
-            consultationType: 'in_person',
-            status: 'confirmed',
-            notes: 'استشارة قلبية دورية وفحص الضغط',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          }
-        ];
       }
       appList.sort((a, b) => new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime());
       setDoctorAppointments(appList);
@@ -705,35 +430,6 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
       } catch {
         // fallback
       }
-      if (ordList.length === 0 && isDemoMode) {
-        ordList = [
-          {
-            id: 'demo_order_1',
-            pharmacyId: 'demo_pharmacy_alnoor',
-            pharmacyName: 'صيدلية النور النموذجية',
-            patientId: user.uid,
-            patientName: userProfile?.displayName || 'المراجع',
-            patientPhone: '07809988776',
-            items: [
-              {
-                medicineId: 'demo_med_1',
-                name: 'Panadol Extra (بانادول إكسترا)',
-                activeIngredient: 'Paracetamol 500mg',
-                strength: '500mg/65mg',
-                quantity: 2,
-                unitPrice: 3500,
-                totalPrice: 7000,
-              }
-            ],
-            totalAmount: 7000,
-            orderType: 'pickup',
-            status: 'ready_for_pickup',
-            pharmacistNotes: 'الطلب جاهز للاستلام من الصيدلية خلال أوقات الدوام الرسمي.',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          }
-        ];
-      }
       ordList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setPatientPharmacyOrders(ordList);
 
@@ -745,7 +441,7 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
       } catch {
         // fallback
       }
-      setLabsList(labsArr.length > 0 ? labsArr : FALLBACK_LABS);
+      setLabsList(labsArr);
 
       let testsArr: LabTest[] = [];
       try {
@@ -754,7 +450,7 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
       } catch {
         // fallback
       }
-      setLabTestsList(testsArr.length > 0 ? testsArr : FALLBACK_LAB_TESTS);
+      setLabTestsList(testsArr);
 
       let labBookings: LabBooking[] = [];
       try {
@@ -781,34 +477,6 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
       } catch {
         // fallback
       }
-      if (labResults.length === 0 && isDemoMode) {
-        labResults = [
-          {
-            id: 'demo_lab_res_1',
-            bookingId: 'demo_booking_cbc',
-            labId: 'demo_lab_alrafidain',
-            labName: 'مختبر الرافدين التخصصي للتحليلات المرضية',
-            patientId: user.uid,
-            patientName: userProfile?.displayName || 'المراجع',
-            testName: 'صورة الدم الكاملة (CBC)',
-            category: 'Hematology',
-            sampleType: 'EDTA Whole Blood',
-            parameters: [
-              { name: 'Hemoglobin (Hb)', value: '13.8', unit: 'g/dL', referenceRange: '12.0 - 16.0', status: 'normal' },
-              { name: 'WBC Count', value: '6,800', unit: '/mcL', referenceRange: '4,000 - 11,000', status: 'normal' },
-              { name: 'Platelets', value: '240,000', unit: '/mcL', referenceRange: '150,000 - 450,000', status: 'normal' },
-              { name: 'RBC Count', value: '4.6', unit: 'x10^6/mcL', referenceRange: '4.0 - 5.4', status: 'normal' },
-            ],
-            notes: 'تحليل سليم ضمن الحدود الطبيعية المعتمدة.',
-            pathologistName: 'د. حسين العامري',
-            pathologistLicense: 'LAB-IQ-9421',
-            reviewStatus: 'released',
-            status: 'published',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          }
-        ];
-      }
       labResults.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setPatientLabResults(labResults);
 
@@ -820,7 +488,7 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
       } catch {
         // fallback
       }
-      setRadiologyCentersList(radCenters.length > 0 ? radCenters : FALLBACK_RAD_CENTERS);
+      setRadiologyCentersList(radCenters);
 
       let radServices: RadiologyService[] = [];
       try {
@@ -829,7 +497,7 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
       } catch {
         // fallback
       }
-      setRadiologyServicesList(radServices.length > 0 ? radServices : FALLBACK_RAD_SERVICES);
+      setRadiologyServicesList(radServices);
 
       let radBookings: RadiologyBooking[] = [];
       try {
@@ -871,23 +539,6 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
       } catch {
         // fallback
       }
-      if (recList.length === 0 && isDemoMode) {
-        recList = [
-          {
-            id: 'demo_rec_personal_1',
-            patientId: user.uid,
-            patientName: userProfile?.displayName || 'المراجع',
-            doctorId: 'demo_doc_ahmed',
-            recordType: 'prescription',
-            title: 'وصفة طبية من عيادة د. أحمد الرافدين',
-            details: 'Panadol Extra قرص عند اللزوم + Concor 5mg حبة صباحاً يومياً بعد الإفطار',
-            sourceFacility: 'عيادة الرافدين الاستشارية',
-            doctorNotes: 'مراجعة قياس الضغط بعد أسبوعين',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          }
-        ];
-      }
       recList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setPersonalRecords(recList);
 
@@ -903,19 +554,6 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
       } catch {
         // fallback
       }
-      if (notifList.length === 0 && isDemoMode) {
-        notifList = [
-          {
-            id: 'demo_notif_welcome',
-            recipientUid: user.uid,
-            title: 'أهلاً بك في منصة M737 الطبية الموحدة',
-            message: 'تم تفعيل سجلك الطبي الرقمي الموحد بنجاح. يمكنك الآن حجز المواعيد وطلب الأدوية ومتابعة الفحوصات المخبرية والشعاعية بكل سهولة.',
-            type: 'general',
-            read: false,
-            createdAt: new Date().toISOString(),
-          }
-        ];
-      }
       notifList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setNotifications(notifList);
 
@@ -929,97 +567,7 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
         const rxSnap = await getDocs(rxQuery);
         rxList = rxSnap.docs.map(d => ({ id: d.id, ...d.data() } as ElectronicPrescription));
       } catch (e) {
-        console.warn('Prescriptions fetch fallback:', e);
-      }
-      if (rxList.length === 0 && isDemoMode) {
-        rxList = [
-          {
-            id: 'demo_rx_sara_1',
-            prescriptionNumber: 'RX-IQ-2026-8814',
-            doctorId: 'demo_doc_ahmed',
-            doctorName: 'د. أحمد الرافدين',
-            doctorSpecialty: 'استشاري أمراض باطنية وقلبية',
-            doctorLicenseNumber: 'DOC-IQ-19844',
-            doctorPhone: '07801234567',
-            clinicName: 'عيادة الرافدين الاستشارية التخصصية',
-            clinicAddress: 'بغداد، ساحة الواثق، مجمع الأطباء الاستشاري',
-            patientId: user.uid,
-            patientName: patientProfile?.fullName || userProfile?.displayName || user.displayName || 'مريض مسجل',
-            patientGender: 'male',
-            patientAge: 30,
-            patientPhone: userProfile?.phone || '',
-            targetPharmacyId: 'demo_pharmacy_alnoor',
-            targetPharmacyName: 'صيدلية النور النموذجية',
-            diagnosis: 'Essential Hypertension Grade 1 with mild tension headaches',
-            patientAllergies: ['البنسلين (Penicillin Allergy)'],
-            items: [
-              {
-                medicineId: 'demo_med_4',
-                name: 'Concor (كونكور)',
-                medicineName: 'Concor (كونكور)',
-                activeIngredient: 'Bisoprolol Fumarate',
-                dosageForm: 'أقراص (Tablets)',
-                strength: '5mg',
-                dosage: 'قرص واحد',
-                frequency: 'مرة واحدة يومياً صباحاً بعد الإفطار',
-                duration: '30 يوماً',
-                quantity: 1,
-                instructions: 'الاستمرار بالجرعة بانتظام دون توقف مفاجئ ومراقبة النبض دورياً'
-              },
-              {
-                medicineId: 'demo_med_1',
-                name: 'Panadol Extra (بانادول إكسترا)',
-                medicineName: 'Panadol Extra (بانادول إكسترا)',
-                activeIngredient: 'Paracetamol 500mg + Caffeine 65mg',
-                dosageForm: 'أقراص (Tablets)',
-                strength: '500mg/65mg',
-                dosage: 'قرص إلى قرصين',
-                frequency: 'عند اللزوم كل 8 ساعات',
-                duration: 'عند الحاجة للصداع',
-                quantity: 1,
-                instructions: 'لا تتجاوز 6 أقراص خلال 24 ساعة'
-              }
-            ],
-            medicines: [
-              {
-                medicineId: 'demo_med_4',
-                name: 'Concor (كونكور)',
-                medicineName: 'Concor (كونكور)',
-                activeIngredient: 'Bisoprolol Fumarate',
-                dosageForm: 'أقراص (Tablets)',
-                strength: '5mg',
-                dosage: 'قرص واحد',
-                frequency: 'مرة واحدة يومياً صباحاً بعد الإفطار',
-                duration: '30 يوماً',
-                quantity: 1,
-                instructions: 'الاستمرار بالجرعة بانتظام دون توقف مفاجئ ومراقبة النبض دورياً'
-              },
-              {
-                medicineId: 'demo_med_1',
-                name: 'Panadol Extra (بانادول إكسترا)',
-                medicineName: 'Panadol Extra (بانادول إكسترا)',
-                activeIngredient: 'Paracetamol 500mg + Caffeine 65mg',
-                dosageForm: 'أقراص (Tablets)',
-                strength: '500mg/65mg',
-                dosage: 'قرص إلى قرصين',
-                frequency: 'عند اللزوم كل 8 ساعات',
-                duration: 'عند الحاجة للصداع',
-                quantity: 1,
-                instructions: 'لا تتجاوز 6 أقراص خلال 24 ساعة'
-              }
-            ],
-            doctorNotes: 'مراجعة قياس ضغط الدم بعد أسبوعين والالتزام بتقليل الأملاح',
-            status: 'dispensed',
-            dispensedPharmacyId: 'demo_pharmacy_alnoor',
-            dispensedPharmacyName: 'صيدلية النور النموذجية',
-            dispensedAt: new Date(Date.now() - 3600000 * 12).toISOString(),
-            dispensedByUid: 'pharma_uid_1',
-            dispensedByName: 'د. ليث العزاوي (صيدلي ممارس)',
-            dispensingNotes: 'تم صرف الدواء كاملاً وشرح أوقات الجرعات والتحذيرات للمريضة.',
-            createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
-            updatedAt: new Date(Date.now() - 3600000 * 12).toISOString(),
-          }
-        ];
+        console.warn('Prescriptions fetch notice:', e);
       }
       rxList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setPatientPrescriptions(rxList);
@@ -1034,38 +582,7 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
         const labOrdSnap = await getDocs(labOrdQuery);
         labOrdersList = labOrdSnap.docs.map(d => ({ id: d.id, ...d.data() } as LabOrder));
       } catch (e) {
-        console.warn('Lab orders fetch fallback:', e);
-      }
-      if (labOrdersList.length === 0 && isDemoMode) {
-        labOrdersList = [
-          {
-            id: 'demo_lab_ref_sara',
-            orderNumber: 'LAB-ORD-9045',
-            doctorId: 'demo_doc_ahmed',
-            doctorName: 'د. أحمد الرافدين',
-            doctorSpecialty: 'استشاري أمراض باطنية وقلبية',
-            doctorPhone: '07801234567',
-            clinicName: 'عيادة الرافدين الاستشارية',
-            patientId: user.uid,
-            patientName: patientProfile?.fullName || userProfile?.displayName || user.displayName || 'مريض مسجل',
-            patientPhone: userProfile?.phone || '',
-            targetLabId: 'demo_lab_baghdad',
-            targetLabName: 'مختبر الرافدين المركزي التخصصي',
-            tests: [
-              { testId: 't1', testName: 'Lipid Profile (تحليل الدهون الشامل)', category: 'Biochemistry', sampleType: 'Serum' },
-              { testId: 't2', testName: 'Kidney Function Test (وظائف الكلى)', category: 'Biochemistry', sampleType: 'Serum' },
-              { testId: 't3', testName: 'Serum Electrolytes (Na, K)', category: 'Biochemistry', sampleType: 'Serum' }
-            ],
-            priority: 'normal',
-            clinicalIndication: 'Routine baseline evaluation for newly diagnosed hypertension.',
-            fastingInstructions: 'صيام 10-12 ساعة عن الطعام مع شرب الماء فقط.',
-            status: 'completed',
-            resultSummary: 'Total Cholesterol: 185 mg/dL (Normal), Triglycerides: 140 mg/dL (Normal), Creatinine: 0.8 mg/dL, Na: 140 mEq/L, K: 4.2 mEq/L. Normal baseline profile.',
-            completedAt: new Date(Date.now() - 3600000 * 20).toISOString(),
-            createdAt: new Date(Date.now() - 3600000 * 30).toISOString(),
-            updatedAt: new Date(Date.now() - 3600000 * 20).toISOString(),
-          }
-        ];
+        console.warn('Lab orders fetch notice:', e);
       }
       labOrdersList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setPatientLabOrders(labOrdersList);
@@ -1080,33 +597,7 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
         const radOrdSnap = await getDocs(radOrdQuery);
         radOrdersList = radOrdSnap.docs.map(d => ({ id: d.id, ...d.data() } as RadiologyOrder));
       } catch (e) {
-        console.warn('Radiology orders fetch fallback:', e);
-      }
-      if (radOrdersList.length === 0 && isDemoMode) {
-        radOrdersList = [
-          {
-            id: 'demo_rad_ref_sara',
-            orderNumber: 'RAD-ORD-7712',
-            doctorId: 'demo_doc_ahmed',
-            doctorName: 'د. حيدر المعموري',
-            doctorSpecialty: 'استشاري جراحة الجملة العصبية والعمود الفقري',
-            doctorPhone: '07802233445',
-            clinicName: 'عيادة بغداد التخصصية',
-            patientId: user.uid,
-            patientName: patientProfile?.fullName || userProfile?.displayName || user.displayName || 'مريض مسجل',
-            patientPhone: userProfile?.phone || '',
-            targetCenterId: 'demo_rad_baghdad',
-            targetCenterName: 'مركز النور للأشعة التخصصي',
-            modality: 'mri',
-            bodyRegion: 'Lumbosacral Spine (الفقرات القطنية العجزية)',
-            priority: 'urgent',
-            clinicalIndication: 'Severe low back pain radiating to left leg (L5-S1 radiculopathy) with numbness since 3 weeks.',
-            preparationInstructions: 'خلع كافة المعادن والساعات والمجوهرات، الحضور قبل 20 دقيقة.',
-            status: 'received',
-            createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-            updatedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-          }
-        ];
+        console.warn('Radiology orders fetch notice:', e);
       }
       radOrdersList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setPatientRadiologyOrders(radOrdersList);

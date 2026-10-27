@@ -58,9 +58,7 @@ export type AuditActionType =
   | 'doctor_chart_notes_updated'
   | 'clinic_visit_logged'
   | 'medicine_catalog_import'
-  | 'medicine_bulk_excel_import'
-  | 'ai_medicine_assistant_batch_add'
-  | 'ai_wholesale_catalog_batch_add';
+  | 'medicine_bulk_excel_import';
 
 export interface SystemAuditLogEntry {
   id: string;

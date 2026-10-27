@@ -70,7 +70,6 @@ export const SecretaryPortalWorkspace: React.FC<SecretaryPortalWorkspaceProps> =
     signInWithGoogle, 
     setShowDomainHelp,
     unauthorizedDomainDetected,
-    isDemoMode,
     signOut, 
     refreshProfile  
   } = useAuth();
@@ -161,51 +160,17 @@ export const SecretaryPortalWorkspace: React.FC<SecretaryPortalWorkspaceProps> =
           setDoctorProfile(docSnap.data() as DoctorProfile);
         }
       } else {
-        if (isDemoMode) {
-          const demoAssignment: SecretaryAssignment = {
-            id: 'demo_secretary_assignment',
-            secretaryUid: user.uid,
-            secretaryEmail: user.email || 'sec.rafidain@m737.iq',
-            secretaryName: userProfile?.displayName || 'أنسام علي',
-            doctorId: 'demo_doctor_ahmed',
-            doctorName: 'د. أحمد الرافدين (استشاري باطنية وقلبية)',
-            doctorSpecialty: 'أمراض باطنية وقلبية',
-            clinicAddress: 'شارع الكندي، الحارثية، بغداد',
-            clinicPhone: '07801122334',
-            permissions: ['manage_queue', 'confirm_bookings', 'create_walkin', 'view_schedule'],
-            status: 'active',
-            assignedAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          };
-          setAssignment(demoAssignment);
-          setDoctorProfile({
-            doctorId: 'demo_doctor_ahmed',
-            fullName: 'د. أحمد الرافدين (استشاري باطنية وقلبية)',
-            specialty: 'أمراض باطنية وقلبية',
-            qualifications: 'بورد عراقي / عربي في الطب الباطني',
-            experienceYears: 12,
-            clinicAddress: 'شارع الكندي، الحارثية، بغداد',
-            governorate: 'بغداد (Baghdad)',
-            phone: '07801122334',
-            consultationFee: 25000,
-            workingDays: ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء'],
-            workingHours: '4:00 PM - 9:00 PM',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          });
-        } else {
-          setAssignment(null);
-          // Look for pending delegations by email in /secretary_delegations
-          if (user.email) {
-            const delegQuery = query(
-              collection(db, 'secretary_delegations'),
-              where('secretaryEmail', '==', user.email.toLowerCase()),
-              where('status', '==', 'active')
-            );
-            const delegSnap = await getDocs(delegQuery);
-            const invList = delegSnap.docs.map(d => ({ id: d.id, ...d.data() } as SecretaryDelegation));
-            setPendingInvitations(invList);
-          }
+        setAssignment(null);
+        // Look for pending delegations by email in /secretary_delegations
+        if (user.email) {
+          const delegQuery = query(
+            collection(db, 'secretary_delegations'),
+            where('secretaryEmail', '==', user.email.toLowerCase()),
+            where('status', '==', 'active')
+          );
+          const delegSnap = await getDocs(delegQuery);
+          const invList = delegSnap.docs.map(d => ({ id: d.id, ...d.data() } as SecretaryDelegation));
+          setPendingInvitations(invList);
         }
       }
 
@@ -253,11 +218,7 @@ export const SecretaryPortalWorkspace: React.FC<SecretaryPortalWorkspaceProps> =
       });
       setAppointments(list);
     }, (error) => {
-      if (!isDemoMode) {
-        handleFirestoreError(error, OperationType.GET, 'appointments');
-      } else {
-        console.warn('Firestore subscription in demo mode (appointments):', error);
-      }
+      handleFirestoreError(error, OperationType.GET, 'appointments');
     });
 
     // Real-time Audit Logs
@@ -271,11 +232,7 @@ export const SecretaryPortalWorkspace: React.FC<SecretaryPortalWorkspaceProps> =
       logsList.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       setAuditLogs(logsList.slice(0, 50));
     }, (error) => {
-      if (!isDemoMode) {
-        handleFirestoreError(error, OperationType.GET, 'clinic_audit_logs');
-      } else {
-        console.warn('Firestore subscription in demo mode (clinic_audit_logs):', error);
-      }
+      handleFirestoreError(error, OperationType.GET, 'clinic_audit_logs');
     });
 
     // Notifications for Secretary
@@ -288,11 +245,7 @@ export const SecretaryPortalWorkspace: React.FC<SecretaryPortalWorkspaceProps> =
       nList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setNotifications(nList);
     }, (error) => {
-      if (!isDemoMode) {
-        handleFirestoreError(error, OperationType.GET, 'notifications');
-      } else {
-        console.warn('Firestore subscription in demo mode (notifications):', error);
-      }
+      handleFirestoreError(error, OperationType.GET, 'notifications');
     });
 
     return () => {

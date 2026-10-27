@@ -18,7 +18,6 @@ import { DosageFormVisual } from './DosageFormVisual';
 import { 
   Pill, 
   Search, 
-  CheckCircle2, 
   ShieldCheck, 
   AlertCircle, 
   Layers, 
@@ -44,11 +43,7 @@ import {
   BadgeAlert,
   Building,
   Calendar,
-  DollarSign,
-  ExternalLink,
-  FileCheck,
-  CheckCircle,
-  FileText
+  DollarSign
 } from 'lucide-react';
 
 interface CentralMedicineCatalogSectionProps {
@@ -90,9 +85,7 @@ export const CentralMedicineCatalogSection: React.FC<CentralMedicineCatalogSecti
   const [searchQuery, setSearchQuery] = useState('');
   const [dosageFilter, setDosageFilter] = useState('all');
   const [prescriptionFilter, setPrescriptionFilter] = useState<'all' | 'rx' | 'otc'>('all');
-  const [verificationFilter, setVerificationFilter] = useState<'all' | 'verified' | 'corrected' | 'needs_review'>('all');
   const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
-  const [inspectingMedicine, setInspectingMedicine] = useState<CatalogMedicineItem | null>(null);
 
   // Batch Add Modal State
   const [showBatchModal, setShowBatchModal] = useState(false);
@@ -147,11 +140,6 @@ export const CentralMedicineCatalogSection: React.FC<CentralMedicineCatalogSecti
       if (prescriptionFilter === 'rx' && !item.requiresPrescription) return false;
       if (prescriptionFilter === 'otc' && item.requiresPrescription) return false;
 
-      // Verification status filter
-      if (verificationFilter !== 'all' && item.verificationStatus !== verificationFilter) {
-        return false;
-      }
-
       // Text search
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
@@ -169,7 +157,7 @@ export const CentralMedicineCatalogSection: React.FC<CentralMedicineCatalogSecti
 
       return true;
     });
-  }, [selectedSpecialty, dosageFilter, prescriptionFilter, verificationFilter, searchQuery]);
+  }, [selectedSpecialty, dosageFilter, prescriptionFilter, searchQuery]);
 
   // Toggle item selection
   const toggleSelectItem = (id: string) => {
@@ -361,7 +349,7 @@ export const CentralMedicineCatalogSection: React.FC<CentralMedicineCatalogSecti
 
         {/* Search & Secondary Filters */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-3 text-xs pt-2">
-          <div className="md:col-span-5 relative">
+          <div className="md:col-span-6 relative">
             <Search size={16} className="absolute top-3 start-3 text-slate-400" />
             <input
               type="text"
@@ -369,7 +357,7 @@ export const CentralMedicineCatalogSection: React.FC<CentralMedicineCatalogSecti
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={
                 language === 'ar'
-                  ? 'ابحث بالاسم، المادة الفعالة، كود ATC، أو المسار...'
+                  ? 'ابحث بالاسم التجاري، المادة الفعالة، كود ATC، أو المسار...'
                   : 'Search by brand, generic, ATC code, or route...'
               }
               className="w-full ps-9 pe-3 py-2.5 rounded-xl border border-slate-200 text-xs sm:text-sm focus:ring-2 focus:ring-[#00796b] outline-none"
@@ -386,24 +374,11 @@ export const CentralMedicineCatalogSection: React.FC<CentralMedicineCatalogSecti
 
           <div className="md:col-span-3">
             <select
-              value={verificationFilter}
-              onChange={(e) => setVerificationFilter(e.target.value as any)}
-              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs sm:text-sm bg-white outline-none font-semibold text-slate-700"
-            >
-              <option value="all">{language === 'ar' ? 'كافة حالات التوثيق (79 دواء)' : 'All Verification States (79)'}</option>
-              <option value="verified">{language === 'ar' ? 'معتمد وموثق سريرياً (55 دواء)' : 'Clinically Verified (55)'}</option>
-              <option value="corrected">{language === 'ar' ? 'تم التدقيق والتصحيح بالوثائق (22 دواء)' : 'Audited & Corrected (22)'}</option>
-              <option value="needs_review">{language === 'ar' ? 'قيد مراجعة الهيئة السريرية (2 دواء)' : 'Needs Clinical Review (2)'}</option>
-            </select>
-          </div>
-
-          <div className="md:col-span-2">
-            <select
               value={dosageFilter}
               onChange={(e) => setDosageFilter(e.target.value)}
               className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs sm:text-sm bg-white outline-none"
             >
-              <option value="all">{language === 'ar' ? 'كافة الأشكال' : 'All Forms'}</option>
+              <option value="all">{language === 'ar' ? 'كافة الأشكال الصيدلانية' : 'All Dosage Forms'}</option>
               {availableDosageForms.map((df) => (
                 <option key={df} value={df}>
                   {df}
@@ -412,7 +387,7 @@ export const CentralMedicineCatalogSection: React.FC<CentralMedicineCatalogSecti
             </select>
           </div>
 
-          <div className="md:col-span-2">
+          <div className="md:col-span-3">
             <select
               value={prescriptionFilter}
               onChange={(e) => setPrescriptionFilter(e.target.value as any)}
@@ -602,7 +577,7 @@ export const CentralMedicineCatalogSection: React.FC<CentralMedicineCatalogSecti
                   )}
                 </div>
 
-                {/* Footer Metadata & Clinical Evidence Button */}
+                {/* Footer Metadata */}
                 <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between text-[10px] gap-2">
                   <div className="flex items-center gap-1.5">
                     {item.atcCode && (
@@ -610,38 +585,15 @@ export const CentralMedicineCatalogSection: React.FC<CentralMedicineCatalogSecti
                         {item.atcCode}
                       </span>
                     )}
-                    {item.verificationStatus === 'verified' && (
-                      <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold flex items-center gap-1">
-                        <Check size={10} />
-                        <span>{language === 'ar' ? 'موثق WHO/FDA' : 'Verified'}</span>
-                      </span>
-                    )}
-                    {item.verificationStatus === 'corrected' && (
-                      <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-bold flex items-center gap-1">
-                        <FileCheck size={10} />
-                        <span>{language === 'ar' ? 'مُدقق ومُصحح' : 'Corrected'}</span>
-                      </span>
-                    )}
-                    {item.verificationStatus === 'needs_review' && (
-                      <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold flex items-center gap-1">
-                        <AlertCircle size={10} />
-                        <span>{language === 'ar' ? 'قيد المراجعة' : 'Review'}</span>
-                      </span>
-                    )}
+                    <span className="text-slate-400 font-mono text-[10px]">
+                      {item.registrationNumber || item.id}
+                    </span>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setInspectingMedicine(item);
-                    }}
-                    className="px-2 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-[#00796b] font-bold text-[11px] transition-colors cursor-pointer flex items-center gap-1 shrink-0"
-                    title={language === 'ar' ? 'عرض التوثيق السريري والمصادر الدولية' : 'View international monograph & evidence'}
-                  >
-                    <ExternalLink size={11} />
-                    <span>{language === 'ar' ? 'المصادر' : 'Sources'}</span>
-                  </button>
+                  <span className="text-[11px] font-bold text-teal-700">
+                    {item.requiresPrescription
+                      ? (language === 'ar' ? 'وصفة إلزامية' : 'Rx Required')
+                      : (language === 'ar' ? 'صرف حر OTC' : 'OTC')}
+                  </span>
                 </div>
               </div>
             );
@@ -812,205 +764,7 @@ export const CentralMedicineCatalogSection: React.FC<CentralMedicineCatalogSecti
           </div>
         </div>
       )}
-
-      {/* GLOBAL CLINICAL VERIFICATION & EVIDENCE INSPECTION MODAL */}
-      {inspectingMedicine && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 animate-in zoom-in-95 space-y-5 max-h-[90vh] overflow-y-auto">
-            {/* Modal Header */}
-            <div className="flex items-start justify-between pb-4 border-b border-slate-100">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-teal-100 text-[#00796b] flex items-center justify-center shrink-0">
-                  <ShieldCheck size={26} />
-                </div>
-                <div>
-                  <h3 className="font-extrabold text-lg text-slate-900 flex items-center gap-2">
-                    <span>{inspectingMedicine.nameEn}</span>
-                    <span className="text-sm font-bold text-slate-500">({inspectingMedicine.nameAr})</span>
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    {language === 'ar'
-                      ? 'ملف التوثيق السريري والمطابقة وفق المعايير الدوائية العالمية (WHO / FDA / EMA / MHRA)'
-                      : 'International Clinical Monograph & Regulatory Verification Record'}
-                  </p>
-                </div>
-              </div>
-
-              <button
-                onClick={() => setInspectingMedicine(null)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* Verification Status Banner */}
-            <div
-              className={`p-4 rounded-2xl border text-xs leading-relaxed space-y-1 ${
-                inspectingMedicine.verificationStatus === 'verified'
-                  ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
-                  : inspectingMedicine.verificationStatus === 'corrected'
-                  ? 'bg-blue-50 border-blue-200 text-blue-950'
-                  : 'bg-amber-50 border-amber-200 text-amber-950'
-              }`}
-            >
-              <div className="font-bold flex items-center gap-1.5 text-sm">
-                {inspectingMedicine.verificationStatus === 'verified' && <CheckCircle size={16} className="text-emerald-600" />}
-                {inspectingMedicine.verificationStatus === 'corrected' && <FileCheck size={16} className="text-blue-600" />}
-                {inspectingMedicine.verificationStatus === 'needs_review' && <AlertCircle size={16} className="text-amber-600" />}
-                <span>
-                  {inspectingMedicine.verificationStatus === 'verified' && (language === 'ar' ? 'حالة التوثيق: معتمد ومطابق للمرجع الدولي' : 'Status: Clinically Verified')}
-                  {inspectingMedicine.verificationStatus === 'corrected' && (language === 'ar' ? 'حالة التوثيق: تم التدقيق والتصحيح السريري المعتمد' : 'Status: Audited & Corrected')}
-                  {inspectingMedicine.verificationStatus === 'needs_review' && (language === 'ar' ? 'حالة التوثيق: قيد مراجعة الهيئة السريرية' : 'Status: Needs Clinical Review')}
-                </span>
-              </div>
-              <p>
-                {inspectingMedicine.verificationStatus === 'verified' && (
-                  language === 'ar'
-                    ? 'تم فحص المادة الفعالة والعيار والمسار والشكل الصيدلاني وتطابقها التام مع الدراسات واللوائح التنظيمية الدولية.'
-                    : 'Active ingredient, strength, route, and dosage form fully verified against authoritative regulatory approvals.'
-                )}
-                {inspectingMedicine.verificationStatus === 'corrected' && (
-                  language === 'ar'
-                    ? 'تم تصحيح بيانات المسار أو الملح الفعال أو تحذيرات السلامة الدوائية وفق مواصفات FDA/EMA/MHRA مع توثيق القيمة السابقة والسبب.'
-                    : 'Field values corrected to conform with regulatory SmPC specifications; previous and corrected values logged.'
-                )}
-                {inspectingMedicine.verificationStatus === 'needs_review' && (
-                  language === 'ar'
-                    ? (inspectingMedicine.reviewReason || 'يوجد تباين تنظيمي أو دراسات سريرية متضاربة تتطلب قرار الهيئة السريرية.')
-                    : (inspectingMedicine.reviewReason || 'Regulatory divergence or conflicting evidence requiring clinical reviewer decision.')
-                )}
-              </p>
-            </div>
-
-            {/* Core Clinical Data Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-                <span className="text-[10px] text-slate-400 font-semibold block">{language === 'ar' ? 'الاسم الدولي (INN):' : 'WHO INN:'}</span>
-                <span className="font-mono font-bold text-slate-800">{inspectingMedicine.inn || inspectingMedicine.activeIngredient}</span>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-                <span className="text-[10px] text-slate-400 font-semibold block">{language === 'ar' ? 'رمز تصنيف WHO ATC:' : 'WHO ATC Code:'}</span>
-                <span className="font-mono font-bold text-[#003366]">{inspectingMedicine.atcCode || 'N/A'}</span>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-                <span className="text-[10px] text-slate-400 font-semibold block">{language === 'ar' ? 'مسار الإعطاء:' : 'Route:'}</span>
-                <span className="font-bold text-slate-800">{inspectingMedicine.routeOfAdministration || 'Oral'}</span>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-                <span className="text-[10px] text-slate-400 font-semibold block">{language === 'ar' ? 'آلية التحرر:' : 'Release:'}</span>
-                <span className="font-bold text-slate-800">{inspectingMedicine.releaseMechanism || 'immediate_release'}</span>
-              </div>
-            </div>
-
-            {/* Verified Fields Checklist */}
-            {inspectingMedicine.verifiedFields && (
-              <div className="space-y-1.5 text-xs">
-                <h4 className="font-bold text-slate-800 flex items-center gap-1.5">
-                  <CheckCircle2 size={14} className="text-teal-600" />
-                  <span>{language === 'ar' ? 'الحقول السريرية المدققة بالوثائق:' : 'Audited Clinical Fields:'}</span>
-                </h4>
-                <div className="flex flex-wrap gap-1.5">
-                  {inspectingMedicine.verifiedFields.map((f, idx) => (
-                    <span key={idx} className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-mono text-[11px]">
-                      {f}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Primary Evidence Citations */}
-            {inspectingMedicine.evidenceMetadata && inspectingMedicine.evidenceMetadata.length > 0 && (
-              <div className="space-y-2 text-xs">
-                <h4 className="font-bold text-slate-800 flex items-center gap-1.5">
-                  <FileText size={14} className="text-[#00796b]" />
-                  <span>{language === 'ar' ? 'المصادر والوثائق التنظيمية المعتمدة:' : 'Authoritative Regulatory Citations:'}</span>
-                </h4>
-                <div className="space-y-2">
-                  {inspectingMedicine.evidenceMetadata.map((ev, eIdx) => (
-                    <div key={eIdx} className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-slate-800 flex items-center gap-1.5">
-                          <span className="px-1.5 py-0.5 rounded bg-teal-100 text-teal-800 font-semibold text-[10px]">
-                            {ev.sourceName}
-                          </span>
-                          <span className="text-slate-600">{ev.referenceId}</span>
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-mono">{ev.checkedDate}</span>
-                      </div>
-                      <p className="text-[11px] text-slate-600">{ev.citationSummary}</p>
-                      {ev.sourceUrl && (
-                        <a
-                          href={ev.sourceUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-[11px] text-[#00796b] hover:underline flex items-center gap-1 font-semibold pt-1"
-                        >
-                          <ExternalLink size={12} />
-                          <span>{language === 'ar' ? 'رابط الوثيقة الرسمية للمستحضر' : 'View Official Regulatory Monograph'}</span>
-                        </a>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Change History Audit Log */}
-            {inspectingMedicine.changeHistory && inspectingMedicine.changeHistory.length > 0 && (
-              <div className="space-y-2 text-xs">
-                <h4 className="font-bold text-slate-800 flex items-center gap-1.5">
-                  <FileCheck size={14} className="text-blue-600" />
-                  <span>{language === 'ar' ? 'سجل التدقيق والتصحيح السريري التاريخي:' : 'Clinical Correction Audit Trail:'}</span>
-                </h4>
-                <div className="space-y-2">
-                  {inspectingMedicine.changeHistory.map((ch, cIdx) => (
-                    <div key={cIdx} className="p-3 rounded-xl bg-blue-50/60 border border-blue-200/80 space-y-1.5">
-                      <div className="flex items-center justify-between text-[11px]">
-                        <span className="font-bold text-blue-900">
-                          {language === 'ar' ? `الحقل المُعدّل: ${ch.field}` : `Modified Field: ${ch.field}`}
-                        </span>
-                        <span className="text-[10px] text-slate-500 font-mono">{ch.correctedAt?.split('T')[0]}</span>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
-                        <div className="p-2 rounded-lg bg-red-50 border border-red-100 text-red-950">
-                          <span className="text-[10px] text-red-600 font-bold block">{language === 'ar' ? 'القيمة السابقة:' : 'Previous Value:'}</span>
-                          <span className="font-mono">{String(ch.previousValue)}</span>
-                        </div>
-                        <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-950">
-                          <span className="text-[10px] text-emerald-600 font-bold block">{language === 'ar' ? 'القيمة المصححة:' : 'Corrected Value:'}</span>
-                          <span className="font-mono">{String(ch.correctedValue)}</span>
-                        </div>
-                      </div>
-                      <p className="text-[11px] text-slate-700 italic">
-                        <strong>{language === 'ar' ? 'مبرر التصحيح: ' : 'Rationale: '}</strong>
-                        {ch.reason}
-                      </p>
-                      <div className="text-[10px] text-slate-500 flex items-center justify-between pt-1 border-t border-blue-100">
-                        <span>{ch.correctedBy}</span>
-                        {ch.sourceAuthority && <span>{ch.sourceAuthority}</span>}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Tenancy & Security Invariant Reminder */}
-            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 text-[11px] flex items-center justify-between">
-              <span>{language === 'ar' ? 'قاعدة بيانات الدليل المركزي مفصولة برمجياً عن مخزون الصيدليات والمذاخر المستقل.' : 'Central catalog is strictly decoupled from tenant private inventories.'}</span>
-              <button
-                type="button"
-                onClick={() => setInspectingMedicine(null)}
-                className="px-4 py-2 rounded-xl bg-[#00796b] text-white font-bold text-xs hover:bg-teal-800 transition-colors cursor-pointer"
-              >
-                {language === 'ar' ? 'إغلاق' : 'Close'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
+

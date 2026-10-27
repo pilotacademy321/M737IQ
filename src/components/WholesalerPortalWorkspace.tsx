@@ -634,11 +634,12 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
 
     try {
       const now = new Date().toISOString();
+      const cleanLicense = profileForm.licenseNumber.trim();
       const updatedProfile: WholesalerProfile = {
         wholesalerId: user.uid,
         warehouseName: profileForm.warehouseName,
         ownerName: profileForm.ownerName,
-        licenseNumber: profileForm.licenseNumber || wholesalerProfile?.licenseNumber || 'IQ-WHOLE-88301',
+        licenseNumber: cleanLicense,
         commercialRegNumber: profileForm.commercialRegNumber,
         phone: profileForm.phone,
         whatsapp: profileForm.whatsapp,
@@ -656,6 +657,15 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
 
       try {
         await setDoc(doc(db, 'wholesaler_profiles', user.uid), sanitizeForFirestore(updatedProfile));
+        await updateDoc(doc(db, 'users', user.uid), {
+          displayName: profileForm.warehouseName,
+          facilityName: profileForm.warehouseName,
+          licenseNumber: cleanLicense,
+          governorate: profileForm.governorate,
+          phone: profileForm.phone,
+          updatedAt: now,
+        });
+        await refreshProfile();
       } catch (err: unknown) {
         handleFirestoreError(err, OperationType.WRITE, `wholesaler_profiles/${user.uid}`);
       }
@@ -667,15 +677,15 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
         actorName: profileForm.warehouseName,
         actorRole: 'wholesaler',
         resourceId: user.uid,
-        resourceNumber: profileForm.licenseNumber || 'IQ-WHOLE-88301',
+        resourceNumber: cleanLicense || 'WHOLESALER-IQ',
         status: 'updated',
-        details: `تحديث بيانات مذخر الأدوية وتغطية التوصيل في ${profileForm.governorate}`,
+        details: `تحديث بيانات مذخر الأدوية ورقم الإجازة الصحية / نقابة الصيادلة (${cleanLicense}) في ${profileForm.governorate}`,
       });
 
       setWholesalerProfile(updatedProfile);
       setFeedbackMsg({
         type: 'success',
-        text: language === 'ar' ? 'تم حفظ بيانات المذخر وإعدادات التوريد بنجاح' : 'Warehouse settings saved',
+        text: language === 'ar' ? 'تم حفظ بيانات المذخر ورقم الإجازة الصحية بنجاح' : 'Warehouse settings & license updated successfully',
       });
       setTimeout(() => setFeedbackMsg(null), 3000);
     } catch (err: unknown) {
@@ -785,7 +795,7 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
               </span>
             </div>
             <div className="text-xs text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
-              <span>{language === 'ar' ? 'الترخيص:' : 'License:'} <strong className="font-mono text-slate-700">{wholesalerProfile?.licenseNumber || 'IQ-WHOLE-88301'}</strong></span>
+              <span>{language === 'ar' ? 'الترخيص:' : 'License:'} <strong className="font-mono text-slate-700">{wholesalerProfile?.licenseNumber || userProfile?.licenseNumber || (language === 'ar' ? 'قيد التوثيق' : 'Under Review')}</strong></span>
               <span>·</span>
               <span>{wholesalerProfile?.governorate || 'بغداد (Baghdad)'}</span>
               <span>·</span>
@@ -1373,13 +1383,15 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
 
             <div>
               <label className="block font-bold text-slate-700 mb-1">
-                {language === 'ar' ? 'رقم الإجازة الصحية / نقابة الصيادلة (محمي)' : 'License Number (Certified)'}
+                {language === 'ar' ? 'رقم الإجازة الصحية / نقابة الصيادلة *' : 'Health License / Syndicate ID *'}
               </label>
               <input
                 type="text"
-                disabled
-                value={profileForm.licenseNumber || 'IQ-WHOLE-88301'}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-100 text-slate-500 font-mono"
+                required
+                value={profileForm.licenseNumber}
+                onChange={(e) => setProfileForm({ ...profileForm, licenseNumber: e.target.value })}
+                placeholder={language === 'ar' ? 'أدخل رقم الإجازة الصحية / نقابة الصيادلة' : 'Enter Health License / Syndicate ID'}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-700 font-mono text-sm"
               />
             </div>
 

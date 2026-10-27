@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { db, handleFirestoreError, OperationType, sanitizeForFirestore } from '../lib/firebase';
 import { 
@@ -76,7 +75,6 @@ export const UnifiedChatWorkspace: React.FC<UnifiedChatWorkspaceProps> = ({
   initialRecipient = null,
   onClose,
 }) => {
-  const { isDemoMode } = useAuth();
   const { language, isRTL } = useLanguage();
 
   // State
@@ -143,88 +141,6 @@ export const UnifiedChatWorkspace: React.FC<UnifiedChatWorkspaceProps> = ({
       unsubscribe = onSnapshot(convQuery, (snap) => {
         let list = snap.docs.map(d => ({ id: d.id, ...d.data() } as ChatConversation));
         list.sort((a, b) => new Date(b.lastMessageTimestamp || b.updatedAt).getTime() - new Date(a.lastMessageTimestamp || a.updatedAt).getTime());
-
-        // Fallback demo conversations if empty
-        if (list.length === 0 && isDemoMode) {
-          list = [
-            {
-              id: 'demo_conv_1',
-              patientId: currentRole === 'patient' ? currentUserId : 'demo_pat_sarah',
-              patientName: 'سارة حيدر العراقي',
-              patientPhone: '07809988776',
-              providerId: currentRole === 'doctor' ? currentUserId : 'demo_doc_ahmed',
-              providerName: 'د. أحمد الرافدين (استشاري باطنية وقلبية)',
-              providerRole: 'doctor',
-              facilityName: 'مجمع الرافدين الاستشاري',
-              lastMessage: 'أهلاً بكِ سارة، نتائج تخطيط القلب مطمئنة واستمرّي على علاج الضغط.',
-              lastMessageTimestamp: new Date(Date.now() - 3600000).toISOString(),
-              lastSenderId: 'demo_doc_ahmed',
-              unreadCountPatient: 1,
-              unreadCountProvider: 0,
-              status: 'active',
-              safetyAuditStatus: 'verified_safe',
-              createdAt: new Date(Date.now() - 86400000).toISOString(),
-              updatedAt: new Date(Date.now() - 3600000).toISOString(),
-            },
-            {
-              id: 'demo_conv_2',
-              patientId: currentRole === 'patient' ? currentUserId : 'demo_pat_sarah',
-              patientName: 'سارة حيدر العراقي',
-              patientPhone: '07809988776',
-              providerId: currentRole === 'pharmacy' ? currentUserId : 'demo_pharmacy_alnoor',
-              providerName: 'صيدلية النور النموذجية',
-              providerRole: 'pharmacy',
-              facilityName: 'صيدلية النور',
-              lastMessage: 'مرحباً، وصفة الدواء تم تجهيزها ومندوب التوصيل في طريقه إليكم.',
-              lastMessageTimestamp: new Date(Date.now() - 7200000).toISOString(),
-              lastSenderId: 'demo_pharmacy_alnoor',
-              unreadCountPatient: 0,
-              unreadCountProvider: 0,
-              status: 'active',
-              safetyAuditStatus: 'normal',
-              createdAt: new Date(Date.now() - 90000000).toISOString(),
-              updatedAt: new Date(Date.now() - 7200000).toISOString(),
-            },
-            {
-              id: 'demo_conv_3',
-              patientId: currentRole === 'patient' ? currentUserId : 'demo_pat_sarah',
-              patientName: 'سارة حيدر العراقي',
-              patientPhone: '07809988776',
-              providerId: currentRole === 'laboratory' ? currentUserId : 'demo_lab_alrafidain',
-              providerName: 'مختبر الرافدين التخصصي للتحليلات المرضية',
-              providerRole: 'laboratory',
-              facilityName: 'مختبر الرافدين',
-              lastMessage: 'تأكيد: يرجى الصيام 10 ساعات قبل الحضور لإجراء فحص السكر الصائم والدهون.',
-              lastMessageTimestamp: new Date(Date.now() - 14400000).toISOString(),
-              lastSenderId: 'demo_lab_alrafidain',
-              unreadCountPatient: 0,
-              unreadCountProvider: 0,
-              status: 'active',
-              safetyAuditStatus: 'normal',
-              createdAt: new Date(Date.now() - 120000000).toISOString(),
-              updatedAt: new Date(Date.now() - 14400000).toISOString(),
-            },
-            {
-              id: 'demo_conv_4',
-              patientId: currentRole === 'patient' ? currentUserId : 'demo_pat_sarah',
-              patientName: 'سارة حيدر العراقي',
-              patientPhone: '07809988776',
-              providerId: currentRole === 'radiology_center' ? currentUserId : 'demo_rad_baghdad',
-              providerName: 'مركز بغداد التخصصي للأشعة والسونار',
-              providerRole: 'radiology_center',
-              facilityName: 'مركز أشعة بغداد',
-              lastMessage: 'تقرير فحص السونار أصبح جاهزاً وتم توقيعه من طبيب الأشعة الاستشاري.',
-              lastMessageTimestamp: new Date(Date.now() - 28800000).toISOString(),
-              lastSenderId: 'demo_rad_baghdad',
-              unreadCountPatient: 0,
-              unreadCountProvider: 0,
-              status: 'active',
-              safetyAuditStatus: 'normal',
-              createdAt: new Date(Date.now() - 150000000).toISOString(),
-              updatedAt: new Date(Date.now() - 28800000).toISOString(),
-            }
-          ];
-        }
 
         setConversations(list);
         setLoading(false);
@@ -342,37 +258,6 @@ export const UnifiedChatWorkspace: React.FC<UnifiedChatWorkspaceProps> = ({
         let msgList = snap.docs.map(d => ({ id: d.id, ...d.data() } as ChatMessage));
         msgList.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
-        if (msgList.length === 0 && isDemoMode) {
-          msgList = [
-            {
-              id: 'demo_msg_1',
-              conversationId: selectedConversation.id,
-              senderId: selectedConversation.patientId,
-              senderName: selectedConversation.patientName,
-              senderRole: 'patient',
-              recipientId: selectedConversation.providerId,
-              recipientName: selectedConversation.providerName,
-              recipientRole: selectedConversation.providerRole,
-              text: 'السلام عليكم ورحمة الله، أود الاستفسار عن الموعد والتعليمات الخاصة بالحالة الطبية.',
-              createdAt: new Date(Date.now() - 7200000).toISOString(),
-              read: true,
-            },
-            {
-              id: 'demo_msg_2',
-              conversationId: selectedConversation.id,
-              senderId: selectedConversation.providerId,
-              senderName: selectedConversation.providerName,
-              senderRole: selectedConversation.providerRole,
-              recipientId: selectedConversation.patientId,
-              recipientName: selectedConversation.patientName,
-              recipientRole: 'patient',
-              text: selectedConversation.lastMessage,
-              createdAt: selectedConversation.lastMessageTimestamp,
-              read: true,
-            }
-          ];
-        }
-
         setMessages(msgList);
       }, (err) => {
         console.warn('Error reading chat messages:', err);
@@ -382,7 +267,7 @@ export const UnifiedChatWorkspace: React.FC<UnifiedChatWorkspaceProps> = ({
     }
 
     return () => unsubscribe();
-  }, [selectedConversation, isDemoMode]);
+  }, [selectedConversation]);
 
   // Create or Get Conversation with target provider
   const createOrGetConversation = async (provider: {

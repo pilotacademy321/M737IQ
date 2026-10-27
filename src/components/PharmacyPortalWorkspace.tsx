@@ -1185,6 +1185,7 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
       await updateDoc(doc(db, 'users', user.uid), {
         displayName: editProfileForm.pharmacyName,
         facilityName: editProfileForm.pharmacyName,
+        licenseNumber: editProfileForm.licenseNumber ? editProfileForm.licenseNumber.trim() : '',
         governorate: editProfileForm.governorate,
         phone: editProfileForm.phone,
         updatedAt: now,
