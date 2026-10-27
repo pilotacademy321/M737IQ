@@ -1241,6 +1241,54 @@
         "updatedAt": { "type": "string" }
       },
       "required": ["accountId", "uid", "role", "displayName", "createdAt", "updatedAt"]
+    },
+    "ChatConversation": {
+      "title": "ChatConversation",
+      "description": "Accredited clinical messaging conversation between patient and healthcare provider with Super Admin safety audit oversight",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "patientId": { "type": "string", "maxLength": 128 },
+        "patientName": { "type": "string", "maxLength": 128 },
+        "patientPhone": { "type": "string", "maxLength": 32 },
+        "providerId": { "type": "string", "maxLength": 128 },
+        "providerName": { "type": "string", "maxLength": 128 },
+        "providerRole": { "type": "string", "enum": ["doctor", "pharmacy", "laboratory", "radiology_center", "secretary"] },
+        "facilityName": { "type": "string", "maxLength": 128 },
+        "lastMessage": { "type": "string" },
+        "lastMessageTimestamp": { "type": "string" },
+        "lastSenderId": { "type": "string", "maxLength": 128 },
+        "unreadCountPatient": { "type": "number" },
+        "unreadCountProvider": { "type": "number" },
+        "status": { "type": "string", "enum": ["active", "archived", "flagged"] },
+        "safetyAuditStatus": { "type": "string", "enum": ["normal", "flagged_review", "verified_safe"] },
+        "safetyAuditNotes": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "patientId", "patientName", "providerId", "providerName", "providerRole", "lastMessage", "lastMessageTimestamp", "createdAt", "updatedAt"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "Individual message inside a medical conversation room",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "conversationId": { "type": "string", "maxLength": 128 },
+        "senderId": { "type": "string", "maxLength": 128 },
+        "senderName": { "type": "string", "maxLength": 128 },
+        "senderRole": { "type": "string", "enum": ["patient", "doctor", "pharmacy", "laboratory", "radiology_center", "secretary", "super_admin"] },
+        "recipientId": { "type": "string", "maxLength": 128 },
+        "recipientName": { "type": "string", "maxLength": 128 },
+        "recipientRole": { "type": "string", "enum": ["patient", "doctor", "pharmacy", "laboratory", "radiology_center", "secretary", "super_admin"] },
+        "text": { "type": "string" },
+        "attachmentUrl": { "type": "string" },
+        "attachmentName": { "type": "string" },
+        "isFlaggedForSafety": { "type": "boolean" },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "conversationId", "senderId", "senderName", "senderRole", "recipientId", "recipientName", "recipientRole", "text", "read", "createdAt"]
     }
   },
   "firestore": {
@@ -1351,6 +1399,14 @@
     "/platform_metrics/{docId}": {
       "schema": "PlatformMetrics",
       "description": "Live non-PII aggregated statistics counters"
+    },
+    "/conversations/{conversationId}": {
+      "schema": "ChatConversation",
+      "description": "Clinical messaging conversations with Super Admin safety audit access"
+    },
+    "/chat_messages/{messageId}": {
+      "schema": "ChatMessage",
+      "description": "Clinical messages between authorized patients and healthcare facilities"
     }
   }
 }

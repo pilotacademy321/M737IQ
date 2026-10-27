@@ -23,7 +23,8 @@ import {
   onSnapshot
 } from 'firebase/firestore';
 import { 
-  Users, 
+  Users,
+  MessageSquare, 
   Calendar, 
   Clock, 
   CheckCircle2, 
@@ -56,6 +57,8 @@ import {
 } from 'lucide-react';
 import { generateFacilityOrUserId, searchPatientProfileAcrossSystem } from '../utils/medicalId';
 
+import { UnifiedChatWorkspace } from './UnifiedChatWorkspace';
+
 interface SecretaryPortalWorkspaceProps {
   onBackToHome: () => void;
 }
@@ -74,7 +77,7 @@ export const SecretaryPortalWorkspace: React.FC<SecretaryPortalWorkspaceProps> =
   const { language, isRTL } = useLanguage();
 
   // Navigation State
-  const [activeTab, setActiveTab] = useState<'queue' | 'appointments' | 'walkin' | 'schedule' | 'audit' | 'profile'>('queue');
+  const [activeTab, setActiveTab] = useState<'queue' | 'appointments' | 'walkin' | 'schedule' | 'audit' | 'profile' | 'messages'>('queue');
 
   // Loading & Feedback
   const [loading, setLoading] = useState(true);
@@ -1156,6 +1159,18 @@ export const SecretaryPortalWorkspace: React.FC<SecretaryPortalWorkspaceProps> =
         </button>
 
         <button
+          onClick={() => setActiveTab('messages')}
+          className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-xs sm:text-sm transition-all whitespace-nowrap ${
+            activeTab === 'messages'
+              ? 'bg-blue-600 text-white shadow-md'
+              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+        >
+          <MessageSquare className="w-4 h-4" />
+          <span>{language === 'ar' ? 'رسائل واستفسارات المرضى' : 'Patient Inquiries'}</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('audit')}
           className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-xs sm:text-sm transition-all whitespace-nowrap ${
             activeTab === 'audit'
@@ -1181,6 +1196,18 @@ export const SecretaryPortalWorkspace: React.FC<SecretaryPortalWorkspaceProps> =
       </div>
 
       {/* ==================================================== */}
+      {/* TAB: UNIFIED CLINICAL MESSAGING */}
+      {activeTab === 'messages' && (
+        <div className="space-y-4">
+          <UnifiedChatWorkspace
+            currentRole="secretary"
+            currentUserId={user?.uid || 'secretary_user'}
+            currentUserName={userProfile?.displayName || (language === 'ar' ? 'سكرتارية واستقبال العيادة' : 'Clinic Reception')}
+            facilityName={assignment?.doctorName || doctorProfile?.clinicAddress || userProfile?.facilityName || (language === 'ar' ? 'عيادة الطبيب' : 'Doctor Clinic')}
+          />
+        </div>
+      )}
+
       {/* TAB 1: TODAY'S RECEPTION & QUEUE                     */}
       {/* ==================================================== */}
       {activeTab === 'queue' && (

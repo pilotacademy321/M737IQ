@@ -7,16 +7,17 @@ import { MedicalSpecialtyCategory } from '../types';
 
 console.log('--- Testing Central Medicine Catalog & Verification Rules ---');
 
-// 1. Verify all 16 medical specialties are defined
-assert.strictEqual(SPECIALTY_CATEGORIES.length, 16, 'Expected exactly 16 medical specialties');
+// 1. Verify all medical specialties are defined (17 specialties including Hematology)
+assert.strictEqual(SPECIALTY_CATEGORIES.length, 17, 'Expected exactly 17 medical specialties');
 const specialtyIds = new Set(SPECIALTY_CATEGORIES.map(s => s.id));
-assert.strictEqual(specialtyIds.size, 16, 'Specialty IDs must be unique');
+assert.strictEqual(specialtyIds.size, 17, 'Specialty IDs must be unique');
 
 // 2. Verify all catalog medicines have genuine clinical data (no hallucinations, no missing critical fields)
 const seenMedIds = new Set<string>();
 const expectedSpecialties: MedicalSpecialtyCategory[] = [
   'internal_medicine',
   'cardiology',
+  'hematology',
   'endocrinology',
   'pediatrics',
   'gynecology_obstetrics',

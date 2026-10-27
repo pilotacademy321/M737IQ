@@ -87,6 +87,8 @@ import {
 import { SmartMedicineSearch, SearchMedicineResult } from './SmartMedicineSearch';
 import { PrescriptionPdfModal } from './PrescriptionPdfModal';
 
+import { UnifiedChatWorkspace } from './UnifiedChatWorkspace';
+
 interface PatientPortalWorkspaceProps {
   onBackToHome: () => void;
 }
@@ -97,7 +99,7 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
 
   // Navigation tab
   const [activeTab, setActiveTab] = useState<
-    'dashboard' | 'doctors' | 'prescriptions' | 'referrals' | 'pharmacy' | 'labs' | 'radiology' | 'records' | 'notifications' | 'profile'
+    'dashboard' | 'doctors' | 'prescriptions' | 'referrals' | 'pharmacy' | 'labs' | 'radiology' | 'records' | 'notifications' | 'profile' | 'messages'
   >('dashboard');
 
   const [loading, setLoading] = useState(true);
@@ -1716,6 +1718,7 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
           { id: 'labs', labelAr: `التحاليل والمختبرات (${patientLabBookings.length})`, labelEn: `Lab Tests (${patientLabBookings.length})`, icon: FlaskConical },
           { id: 'radiology', labelAr: `الأشعة والسونار (${patientRadiologyBookings.length})`, labelEn: `Radiology (${patientRadiologyBookings.length})`, icon: Scan },
           { id: 'records', labelAr: `سجلي الطبي والتقارير (${personalRecords.length + patientRadiologyReports.length + patientLabResults.length})`, labelEn: `My Records (${personalRecords.length + patientRadiologyReports.length + patientLabResults.length})`, icon: FileCheck2 },
+          { id: 'messages', labelAr: 'الاستشارات والرسائل الطبية', labelEn: 'Medical Messages', icon: MessageSquare },
           { id: 'notifications', labelAr: `التنبيهات (${notifications.length})`, labelEn: `Alerts (${notifications.length})`, icon: Bell },
           { id: 'profile', labelAr: 'بيانات الطوارئ والصحة', labelEn: 'Health Profile', icon: Settings },
         ].map((tab) => {
@@ -1744,6 +1747,17 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
       </div>
 
       {/* ==================================================== */}
+      {/* TAB: UNIFIED CLINICAL MESSAGING */}
+      {activeTab === 'messages' && (
+        <div className="space-y-4">
+          <UnifiedChatWorkspace
+            currentRole="patient"
+            currentUserId={user?.uid || patientProfile?.patientId || 'patient_user'}
+            currentUserName={patientProfile?.fullName || userProfile?.displayName || (language === 'ar' ? 'المراجع المعتمد' : 'Patient')}
+          />
+        </div>
+      )}
+
       {/* TAB 1: DASHBOARD OVERVIEW & DIGITAL HEALTH PASSPORT */}
       {/* ==================================================== */}
       {activeTab === 'dashboard' && (

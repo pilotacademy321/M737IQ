@@ -76,6 +76,9 @@ import { SmartMedicineSearch, SearchMedicineResult } from './SmartMedicineSearch
 import { generateFacilityOrUserId, normalizeMedicalIdInput, isValidMedicalIdQuery } from '../utils/medicalId';
 import { CentralMedicineCatalogSection } from './CentralMedicineCatalogSection';
 import { PharmacyBulkImportModal } from './PharmacyBulkImportModal';
+import { AiMedicineAssistant } from './AiMedicineAssistant';
+
+import { UnifiedChatWorkspace } from './UnifiedChatWorkspace';
 
 interface PharmacyPortalWorkspaceProps {
   onBackToHome: () => void;
@@ -85,7 +88,7 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
   const { user, userProfile, isAdmin, refreshProfile } = useAuth();
   const { language, isRTL } = useLanguage();
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'prescriptions' | 'orders' | 'wholesale_b2b' | 'catalog' | 'central_catalog' | 'inventory' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'prescriptions' | 'orders' | 'wholesale_b2b' | 'catalog' | 'central_catalog' | 'ai_assistant' | 'inventory' | 'settings' | 'messages'>('dashboard');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -1423,12 +1426,14 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
       <div className="flex items-center gap-1 p-1.5 bg-slate-200/80 rounded-2xl overflow-x-auto text-xs font-bold">
         {[
           { id: 'dashboard', labelAr: 'لوحة المؤشرات', labelEn: 'Dashboard', icon: Activity },
+          { id: 'ai_assistant', labelAr: 'مساعد إضافة الأدوية بالذكاء الاصطناعي', labelEn: 'AI Medicine Assistant', icon: Sparkles },
           { id: 'prescriptions', labelAr: `الوصفات الإلكترونية المحالة (${incomingPrescriptions.length})`, labelEn: `e-Prescriptions (${incomingPrescriptions.length})`, icon: FileText },
-          { id: 'central_catalog', labelAr: 'دليل الأدوية المركزي (16 تخصص)', labelEn: 'Central Catalog (16 Specialties)', icon: Layers },
+          { id: 'central_catalog', labelAr: 'دليل الأدوية المركزي (17 تخصص)', labelEn: 'Central Catalog (17 Specialties)', icon: Layers },
           { id: 'catalog', labelAr: `مخزون صيدليتي (${medicines.length})`, labelEn: `My Medicines (${medicines.length})`, icon: Pill },
           { id: 'inventory', labelAr: 'إدارة المخزون والصلاحية', labelEn: 'Inventory & Expiry', icon: Package },
           { id: 'orders', labelAr: `طلبات وتجهيز الوصفات (${orders.length})`, labelEn: `Medicine Orders (${orders.length})`, icon: ShoppingBag },
           { id: 'wholesale_b2b', labelAr: `سوق الجملة والمذاخر (${b2bOrders.length})`, labelEn: `Wholesale Market (${b2bOrders.length})`, icon: Building2 },
+          { id: 'messages', labelAr: 'استفسارات ورسائل المرضى', labelEn: 'Patient Inquiries', icon: MessageSquare },
           { id: 'settings', labelAr: 'إعدادات الصيدلية والترخيص', labelEn: 'Pharmacy Profile & Hours', icon: Settings },
         ].map((tab) => {
           const Icon = tab.icon;
@@ -1457,6 +1462,18 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
           );
         })}
       </div>
+
+      {/* TAB: UNIFIED CLINICAL MESSAGING */}
+      {activeTab === 'messages' && (
+        <div className="space-y-4">
+          <UnifiedChatWorkspace
+            currentRole="pharmacy"
+            currentUserId={user?.uid || pharmacyProfile?.pharmacyId || 'pharmacy_user'}
+            currentUserName={pharmacyProfile?.pharmacyName || userProfile?.displayName || (language === 'ar' ? 'صيدلية النور' : 'Pharmacy')}
+            facilityName={pharmacyProfile?.pharmacyName}
+          />
+        </div>
+      )}
 
       {/* TAB 1: DASHBOARD OVERVIEW */}
       {activeTab === 'dashboard' && (
@@ -1687,7 +1704,22 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
         </div>
       )}
 
-      {/* TAB: CENTRAL MEDICINE CATALOG (16 MEDICAL SPECIALTIES) */}
+      {/* TAB: AI MEDICINE ASSISTANT */}
+      {activeTab === 'ai_assistant' && (
+        <AiMedicineAssistant
+          portalType="pharmacy"
+          currentUserId={user?.uid || pharmacyProfile?.pharmacyId || 'pharmacy_user'}
+          facilityName={pharmacyProfile?.pharmacyName || userProfile?.facilityName || 'الصيدلية'}
+          facilityPhone={pharmacyProfile?.phone || userProfile?.phone}
+          facilityGovernorate={pharmacyProfile?.governorate || userProfile?.governorate}
+          existingMedicines={medicines}
+          onMedicinesAdded={loadPharmacyData}
+          showToast={showToast}
+          isOperable={isOperable}
+        />
+      )}
+
+      {/* TAB: CENTRAL MEDICINE CATALOG (17 MEDICAL SPECIALTIES) */}
       {activeTab === 'central_catalog' && (
         <CentralMedicineCatalogSection
           existingMedicines={medicines}

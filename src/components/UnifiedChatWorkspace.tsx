@@ -76,7 +76,8 @@ export const UnifiedChatWorkspace: React.FC<UnifiedChatWorkspaceProps> = ({
   initialRecipient = null,
   onClose,
 }) => {
-  const { language, isRTL, isDemoMode } = useLanguage();
+  const { isDemoMode } = useAuth();
+  const { language, isRTL } = useLanguage();
 
   // State
   const [conversations, setConversations] = useState<ChatConversation[]>([]);

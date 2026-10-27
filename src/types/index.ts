@@ -612,8 +612,10 @@ export interface PharmacyProfile {
 export type MedicalSpecialtyCategory = 
   | 'internal_medicine'
   | 'gynecology_obstetrics'
+  | 'gynecology'
   | 'pediatrics'
   | 'cardiology'
+  | 'hematology'
   | 'dermatology'
   | 'ophthalmology'
   | 'ent'
@@ -625,7 +627,8 @@ export type MedicalSpecialtyCategory =
   | 'endocrinology'
   | 'psychiatry'
   | 'dentistry'
-  | 'general_medicine';
+  | 'general_medicine'
+  | 'general_emergency';
 
 export interface CatalogMedicineItem {
   id: string; // CAT-MED-XXXX
@@ -918,24 +921,6 @@ export interface WholesaleOrder {
   createdAt: string;
   updatedAt: string;
 }
-
-export type MedicalSpecialtyCategory =
-  | 'internal_medicine'
-  | 'cardiology'
-  | 'endocrinology'
-  | 'pediatrics'
-  | 'gynecology'
-  | 'dermatology'
-  | 'ophthalmology'
-  | 'ent'
-  | 'neurology'
-  | 'orthopedics'
-  | 'urology'
-  | 'respiratory'
-  | 'gastroenterology'
-  | 'psychiatry'
-  | 'dentistry'
-  | 'general_emergency';
 
 export interface SpecialtyCategoryMeta {
   id: MedicalSpecialtyCategory;

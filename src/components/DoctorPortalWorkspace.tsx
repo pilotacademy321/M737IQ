@@ -41,7 +41,8 @@ import {
   deleteDoc 
 } from 'firebase/firestore';
 import { 
-  Stethoscope, 
+  Stethoscope,
+  MessageSquare, 
   Calendar, 
   Clock, 
   FileText, 
@@ -87,6 +88,8 @@ import {
   AlertTriangle
 } from 'lucide-react';
 
+import { UnifiedChatWorkspace } from './UnifiedChatWorkspace';
+
 interface DoctorPortalWorkspaceProps {
   onBackToHome: () => void;
 }
@@ -95,7 +98,7 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
   const { user, userProfile, isAdmin, isDemoMode, refreshProfile } = useAuth();
   const { language, isRTL } = useLanguage();
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'appointments' | 'prescriptions' | 'referrals' | 'records' | 'schedule' | 'secretary'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'appointments' | 'prescriptions' | 'referrals' | 'records' | 'schedule' | 'secretary' | 'messages'>('dashboard');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
@@ -2117,6 +2120,7 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
           { id: 'referrals', labelAr: `التحويلات والفحوصات (${labOrders.length + radiologyOrders.length})`, labelEn: `Referrals (${labOrders.length + radiologyOrders.length})`, icon: FlaskConical },
           { id: 'records', labelAr: `الهوية والملف الطبي (${doctorChartsList.length})`, labelEn: `Patient ID & Charts (${doctorChartsList.length})`, icon: FolderLock },
           { id: 'schedule', labelAr: 'الدوام ومعلومات العيادة', labelEn: 'Schedule & Clinic', icon: Clock },
+          { id: 'messages', labelAr: 'الاستشارات والرسائل الطبية', labelEn: 'Patient Consultations', icon: MessageSquare },
           { id: 'secretary', labelAr: `السكرتارية (${delegations.length})`, labelEn: `Secretary (${delegations.length})`, icon: Users },
         ].map((tab) => {
           const Icon = tab.icon;
@@ -2142,6 +2146,18 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
           );
         })}
       </div>
+
+      {/* TAB: UNIFIED CLINICAL MESSAGING */}
+      {activeTab === 'messages' && (
+        <div className="space-y-4">
+          <UnifiedChatWorkspace
+            currentRole="doctor"
+            currentUserId={user?.uid || doctorProfile?.doctorId || 'doctor_user'}
+            currentUserName={doctorProfile?.fullName || userProfile?.displayName || (language === 'ar' ? 'د. استشاري' : 'Consultant Doctor')}
+            facilityName={doctorProfile?.clinicAddress || userProfile?.facilityName || 'عيادة الطبيب'}
+          />
+        </div>
+      )}
 
       {/* TAB 1: DASHBOARD OVERVIEW */}
       {activeTab === 'dashboard' && (
