@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
-import { AuthModal } from './AuthModal';
 import { 
   Menu, 
   X, 
@@ -80,6 +79,7 @@ export const Header: React.FC<HeaderProps> = ({
     user, 
     userProfile, 
     loading: authLoading, 
+    signInWithGoogle,
     signOut, 
     deleteOwnAccountPermanently,
     setShowDomainHelp,
@@ -87,8 +87,6 @@ export const Header: React.FC<HeaderProps> = ({
   } = useAuth();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authModalInitialMode, setAuthModalInitialMode] = useState<'signin' | 'signup' | 'reset'>('signin');
   const [showAccountDropdown, setShowAccountDropdown] = useState(false);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -124,8 +122,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   const handleSendTestNotification = async () => {
     if (!user) {
-      setAuthModalInitialMode('signin');
-      setAuthModalOpen(true);
+      await signInWithGoogle();
       return;
     }
     await sendRealInAppNotification({
@@ -422,125 +419,109 @@ export const Header: React.FC<HeaderProps> = ({
                 )}
               </div>
 
-              {/* User Profile Chip (Avatar + Name + Role + Dropdown) */}
-              <div className="relative" ref={accountRef}>
+              {/* User Profile Chip or Direct Google Sign In */}
+              {!user ? (
                 <button
-                  onClick={() => setShowAccountDropdown((prev) => !prev)}
-                  className="flex items-center gap-2.5 p-1 sm:ps-1 sm:pe-3 rounded-full hover:bg-slate-100 border border-slate-200/80 transition-colors cursor-pointer group"
+                  type="button"
+                  onClick={() => signInWithGoogle()}
+                  disabled={authLoading}
+                  className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-white border border-slate-300 hover:border-blue-400 hover:bg-slate-50 text-slate-800 text-xs sm:text-sm font-bold shadow-xs hover:shadow transition-all cursor-pointer"
                 >
-                  {/* User Avatar */}
-                  <div className="relative w-8 h-8 rounded-full overflow-hidden bg-gradient-to-tr from-blue-700 to-sky-400 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
-                    {user?.photoURL ? (
-                      <img src={user.photoURL} alt={currentDisplayName} className="w-full h-full object-cover" />
-                    ) : (
-                      <User size={16} />
-                    )}
-                    <span className="absolute bottom-0 end-0 w-2 h-2 rounded-full bg-emerald-500 border border-white" />
-                  </div>
-
-                  {/* Name and Role Title */}
-                  <div className="hidden sm:flex flex-col text-start leading-tight">
-                    <span className="text-xs font-bold text-slate-900 truncate max-w-[110px]">
-                      {currentDisplayName}
-                    </span>
-                    <span className="text-[10px] font-medium text-slate-500 truncate">
-                      {currentRoleLabel}
-                    </span>
-                  </div>
-
-                  <ChevronDown size={14} className="text-slate-400 group-hover:text-slate-700 transition-transform" />
+                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                    <path
+                      fill="#4285F4"
+                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                    />
+                    <path
+                      fill="#EA4335"
+                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                    />
+                  </svg>
+                  <span>
+                    {authLoading
+                      ? (language === 'ar' ? 'جاري الاتصال...' : 'Connecting...')
+                      : (language === 'ar' ? 'تسجيل الدخول عبر Google' : 'Sign in with Google')}
+                  </span>
                 </button>
+              ) : (
+                <div className="relative" ref={accountRef}>
+                  <button
+                    onClick={() => setShowAccountDropdown((prev) => !prev)}
+                    className="flex items-center gap-2.5 p-1 sm:ps-1 sm:pe-3 rounded-full hover:bg-slate-100 border border-slate-200/80 transition-colors cursor-pointer group"
+                  >
+                    {/* User Avatar */}
+                    <div className="relative w-8 h-8 rounded-full overflow-hidden bg-gradient-to-tr from-blue-700 to-sky-400 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+                      {user?.photoURL ? (
+                        <img src={user.photoURL} alt={currentDisplayName} className="w-full h-full object-cover" />
+                      ) : (
+                        <User size={16} />
+                      )}
+                      <span className="absolute bottom-0 end-0 w-2 h-2 rounded-full bg-emerald-500 border border-white" />
+                    </div>
 
-                {/* Account Actions Dropdown */}
-                {showAccountDropdown && (
-                  <div className="absolute top-full mt-2 end-0 w-64 bg-white rounded-2xl shadow-xl border border-slate-200 p-2 z-50 animate-in fade-in-50 zoom-in-95 duration-150">
-                    <div className="p-3 bg-slate-50 rounded-xl mb-1.5 border border-slate-100">
-                      <div className="text-xs font-black text-slate-900 truncate">{currentDisplayName}</div>
-                      <div className="text-[11px] text-slate-500 truncate">{user?.email || (language === 'ar' ? 'مستخدم المنصة' : 'Platform User')}</div>
-                      <div className="mt-1.5 inline-block text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-100 text-blue-800">
+                    {/* Name and Role Title */}
+                    <div className="hidden sm:flex flex-col text-start leading-tight">
+                      <span className="text-xs font-bold text-slate-900 truncate max-w-[110px]">
+                        {currentDisplayName}
+                      </span>
+                      <span className="text-[10px] font-medium text-slate-500 truncate">
                         {currentRoleLabel}
+                      </span>
+                    </div>
+
+                    <ChevronDown size={14} className="text-slate-400 group-hover:text-slate-700 transition-transform" />
+                  </button>
+
+                  {/* Account Actions Dropdown */}
+                  {showAccountDropdown && (
+                    <div className="absolute top-full mt-2 end-0 w-64 bg-white rounded-2xl shadow-xl border border-slate-200 p-2 z-50 animate-in fade-in-50 zoom-in-95 duration-150">
+                      <div className="p-3 bg-slate-50 rounded-xl mb-1.5 border border-slate-100">
+                        <div className="text-xs font-black text-slate-900 truncate">{currentDisplayName}</div>
+                        <div className="text-[11px] text-slate-500 truncate">{user?.email || (language === 'ar' ? 'مستخدم المنصة' : 'Platform User')}</div>
+                        <div className="mt-1.5 inline-block text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-100 text-blue-800">
+                          {currentRoleLabel}
+                        </div>
+                      </div>
+
+                      <div className="space-y-0.5 text-xs font-medium text-slate-700">
+                        <button
+                          onClick={() => {
+                            setShowAccountDropdown(false);
+                            setShowAccountModal(true);
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors text-start cursor-pointer"
+                        >
+                          <UserCheck size={15} className="text-blue-600" />
+                          <span>{language === 'ar' ? 'بيانات الحساب والاعتماد' : 'Account Details'}</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setShowAccountDropdown(false);
+                            signOut();
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-red-50 text-red-600 transition-colors text-start cursor-pointer"
+                        >
+                          <LogOut size={15} />
+                          <span>{language === 'ar' ? 'تسجيل الخروج' : 'Sign Out'}</span>
+                        </button>
                       </div>
                     </div>
-
-                    <div className="space-y-0.5 text-xs font-medium text-slate-700">
-                      {user ? (
-                        <>
-                          <button
-                            onClick={() => {
-                              setShowAccountDropdown(false);
-                              setShowAccountModal(true);
-                            }}
-                            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors text-start cursor-pointer"
-                          >
-                            <UserCheck size={15} className="text-blue-600" />
-                            <span>{language === 'ar' ? 'بيانات الحساب والاعتماد' : 'Account Details'}</span>
-                          </button>
-
-                          <button
-                            onClick={() => {
-                              setShowAccountDropdown(false);
-                              signOut();
-                            }}
-                            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-red-50 text-red-600 transition-colors text-start cursor-pointer"
-                          >
-                            <LogOut size={15} />
-                            <span>{language === 'ar' ? 'تسجيل الخروج' : 'Sign Out'}</span>
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            onClick={() => {
-                              setShowAccountDropdown(false);
-                              setAuthModalInitialMode('signin');
-                              setAuthModalOpen(true);
-                            }}
-                            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-blue-50 text-blue-700 transition-colors text-start font-bold cursor-pointer"
-                          >
-                            <LogIn size={15} />
-                            <span>{language === 'ar' ? 'تسجيل الدخول' : 'Sign In'}</span>
-                          </button>
-
-                          <button
-                            onClick={() => {
-                              setShowAccountDropdown(false);
-                              setAuthModalInitialMode('signup');
-                              setAuthModalOpen(true);
-                            }}
-                            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-emerald-50 text-emerald-700 transition-colors text-start font-bold cursor-pointer"
-                          >
-                            <UserPlus size={15} />
-                            <span>{language === 'ar' ? 'إنشاء حساب وتوثيق الرقم الصحي' : 'Register & Verify Health ID'}</span>
-                          </button>
-
-                          <button
-                            onClick={() => {
-                              setShowAccountDropdown(false);
-                              setAuthModalInitialMode('reset');
-                              setAuthModalOpen(true);
-                            }}
-                            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors text-start cursor-pointer"
-                          >
-                            <KeyRound size={15} />
-                            <span>{language === 'ar' ? 'استعادة كلمة المرور' : 'Reset Password'}</span>
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
       </header>
-
-      {/* Auth Modal */}
-      <AuthModal
-        isOpen={authModalOpen}
-        initialMode={authModalInitialMode}
-        onClose={() => setAuthModalOpen(false)}
-      />
 
       {/* Account Management Modal */}
       {showAccountModal && user && (

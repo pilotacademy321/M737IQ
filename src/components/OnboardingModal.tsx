@@ -32,8 +32,6 @@ export const OnboardingModal: React.FC = () => {
   const [facilityName, setFacilityName] = useState('');
   const [governorate, setGovernorate] = useState('بغداد (Baghdad)');
   const [phone, setPhone] = useState('');
-  const [customMedicalId, setCustomMedicalId] = useState('');
-  const [isEditingId, setIsEditingId] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   if (!needsOnboarding || !user) return null;
@@ -69,7 +67,7 @@ export const OnboardingModal: React.FC = () => {
     }
 
     if (selectedType === 'patient') {
-      await registerAsPatient(displayName, phone, customMedicalId.trim() || undefined);
+      await registerAsPatient(displayName, phone);
     } else {
       if (!licenseNumber.trim() || !facilityName.trim() || !phone.trim()) {
         setFormError(
@@ -87,7 +85,6 @@ export const OnboardingModal: React.FC = () => {
         facilityName,
         governorate,
         phone,
-        preferredAccountId: customMedicalId.trim() || undefined,
       });
     }
   };
