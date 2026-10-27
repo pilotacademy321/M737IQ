@@ -918,3 +918,96 @@ export interface WholesaleOrder {
   createdAt: string;
   updatedAt: string;
 }
+
+export type MedicalSpecialtyCategory =
+  | 'internal_medicine'
+  | 'cardiology'
+  | 'endocrinology'
+  | 'pediatrics'
+  | 'gynecology'
+  | 'dermatology'
+  | 'ophthalmology'
+  | 'ent'
+  | 'neurology'
+  | 'orthopedics'
+  | 'urology'
+  | 'respiratory'
+  | 'gastroenterology'
+  | 'psychiatry'
+  | 'dentistry'
+  | 'general_emergency';
+
+export interface SpecialtyCategoryMeta {
+  id: MedicalSpecialtyCategory;
+  nameAr: string;
+  nameEn: string;
+  iconName: string;
+  descriptionAr: string;
+  descriptionEn: string;
+}
+
+export interface MedicineCatalogItem {
+  id: string;
+  name: string;
+  nameAr: string;
+  activeIngredient: string;
+  specialtyCategory: MedicalSpecialtyCategory;
+  brand: string;
+  manufacturer: string;
+  strength: string;
+  dosageForm: string;
+  packageSize: string;
+  barcode?: string;
+  standardPriceIqd: number;
+  suggestedWholesaleIqd?: number;
+  requiresPrescription: boolean;
+  indications: string;
+  contraindications?: string;
+  storageCondition?: string;
+  isIraqiManufactured?: boolean;
+  atcCode?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type MessagingProviderRole = 'doctor' | 'pharmacy' | 'laboratory' | 'radiology_center' | 'secretary';
+
+export interface ChatConversation {
+  id: string;
+  patientId: string;
+  patientName: string;
+  patientPhone?: string;
+  providerId: string;
+  providerName: string;
+  providerRole: MessagingProviderRole;
+  facilityName?: string;
+  lastMessage: string;
+  lastMessageTimestamp: string;
+  lastSenderId: string;
+  unreadCountPatient: number;
+  unreadCountProvider: number;
+  status: 'active' | 'archived' | 'flagged';
+  safetyAuditStatus?: 'normal' | 'flagged_review' | 'verified_safe';
+  safetyAuditNotes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  senderName: string;
+  senderRole: 'patient' | MessagingProviderRole | 'super_admin';
+  recipientId: string;
+  recipientName: string;
+  recipientRole: 'patient' | MessagingProviderRole | 'super_admin';
+  text: string;
+  attachmentUrl?: string;
+  attachmentName?: string;
+  isFlaggedForSafety?: boolean;
+  read: boolean;
+  createdAt: string;
+}
+
+
