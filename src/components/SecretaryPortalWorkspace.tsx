@@ -634,10 +634,14 @@ export const SecretaryPortalWorkspace: React.FC<SecretaryPortalWorkspaceProps> =
       const apptId = `appt_walkin_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
       const now = new Date().toISOString();
 
+      const targetPatientId = walkinForm.patientId && walkinForm.patientId.trim()
+        ? walkinForm.patientId.trim()
+        : `pat_walkin_${walkinForm.patientPhone.replace(/\D/g, '') || Date.now()}`;
+
       const newAppt: Appointment = {
         id: apptId,
         doctorId: assignment.doctorId,
-        patientId: `pat_reception_${Date.now()}`,
+        patientId: targetPatientId,
         patientName: walkinForm.patientName.trim(),
         patientPhone: walkinForm.patientPhone.trim(),
         doctorName: assignment.doctorName,

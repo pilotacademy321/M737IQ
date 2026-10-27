@@ -474,17 +474,46 @@ service cloud.firestore {
       allow delete: if isAdmin() || isOwner(pharmacyId);
     }
 
+    // Safe medicine ownership verification helper
+    function isMedicineOwner(data) {
+      return isSignedIn() && (
+        // Direct UID match on primary ownership fields
+        data.get('pharmacyId', '') == request.auth.uid
+        || data.get('userId', '') == request.auth.uid
+        || data.get('ownerId', '') == request.auth.uid
+        || data.get('pharmacyUid', '') == request.auth.uid
+        // Match against pharmacy user's permanent accountId or license in users collection
+        || (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid))
+          && (
+            (data.get('pharmacyId', '') != '' && data.get('pharmacyId', '') == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('accountId', ''))
+            || (data.get('pharmacyId', '') != '' && data.get('pharmacyId', '') == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('licenseNumber', ''))
+          )
+        )
+      );
+    }
+
+    // Centralized Official Medicine Catalog (Iraqi National Formulary & MOH Accredited)
+    // Read-only for all signed-in users (Doctors, Pharmacies, Patients); Editable only by Super Admin
+    match /medicine_catalog/{catalogId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
     // Medicine Inventory: /medicines/{medicineId}
+    // Strictly owned by the individual pharmacy; no pharmacy can modify or delete another pharmacy's inventory
     match /medicines/{medicineId} {
       allow get, list: if isSignedIn();
       allow create: if isSignedIn() && (
-        incoming().pharmacyId == request.auth.uid || isAdmin()
+        incoming().get('pharmacyId', '') == request.auth.uid || isAdmin()
       );
       allow update: if isSignedIn() && (
-        existing().pharmacyId == request.auth.uid || isAdmin()
-      ) && incoming().pharmacyId == existing().pharmacyId;
+        (isMedicineOwner(existing()) || isAdmin())
+        && (incoming().get('pharmacyId', '') == existing().get('pharmacyId', '') || incoming().get('pharmacyId', '') == request.auth.uid)
+      );
       allow delete: if isSignedIn() && (
-        existing().pharmacyId == request.auth.uid || isAdmin()
+        isMedicineOwner(existing())
+        || isAdmin()
       );
     }
 

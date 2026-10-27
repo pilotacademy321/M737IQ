@@ -69,10 +69,13 @@ import {
   HeartPulse, 
   Settings,
   Building2,
-  Copy
+  Copy,
+  FileSpreadsheet
 } from 'lucide-react';
 import { SmartMedicineSearch, SearchMedicineResult } from './SmartMedicineSearch';
 import { generateFacilityOrUserId, normalizeMedicalIdInput, isValidMedicalIdQuery } from '../utils/medicalId';
+import { CentralMedicineCatalogSection } from './CentralMedicineCatalogSection';
+import { PharmacyBulkImportModal } from './PharmacyBulkImportModal';
 
 interface PharmacyPortalWorkspaceProps {
   onBackToHome: () => void;
@@ -82,10 +85,11 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
   const { user, userProfile, isAdmin, refreshProfile } = useAuth();
   const { language, isRTL } = useLanguage();
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'prescriptions' | 'orders' | 'wholesale_b2b' | 'catalog' | 'inventory' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'prescriptions' | 'orders' | 'wholesale_b2b' | 'catalog' | 'central_catalog' | 'inventory' | 'settings'>('dashboard');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [showBulkImportModal, setShowBulkImportModal] = useState(false);
 
   // Electronic Prescriptions State
   const [incomingPrescriptions, setIncomingPrescriptions] = useState<ElectronicPrescription[]>([]);
@@ -276,13 +280,37 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
         setPharmacyProfile(initialProfile);
       }
 
-      // 2. Fetch Pharmacy Medicines Inventory
+      // 2. Fetch Pharmacy Medicines Inventory (by user.uid and accountId)
+      let medList: MedicineItem[] = [];
+      const seenMedIds = new Set<string>();
       const medQuery = query(
         collection(db, 'medicines'),
         where('pharmacyId', '==', user.uid)
       );
       const medSnap = await getDocs(medQuery);
-      const medList = medSnap.docs.map(d => ({ id: d.id, ...d.data() } as MedicineItem));
+      medSnap.docs.forEach((d) => {
+        seenMedIds.add(d.id);
+        medList.push({ id: d.id, ...d.data() } as MedicineItem);
+      });
+
+      // Also include any medicines associated with this pharmacy's permanent accountId
+      if (userProfile?.accountId && userProfile.accountId !== user.uid) {
+        try {
+          const accQuery = query(
+            collection(db, 'medicines'),
+            where('pharmacyId', '==', userProfile.accountId)
+          );
+          const accSnap = await getDocs(accQuery);
+          accSnap.docs.forEach((d) => {
+            if (!seenMedIds.has(d.id)) {
+              seenMedIds.add(d.id);
+              medList.push({ id: d.id, ...d.data() } as MedicineItem);
+            }
+          });
+        } catch {
+          // ignore
+        }
+      }
       setMedicines(medList);
 
       // 3. Fetch Pharmacy Orders
@@ -320,19 +348,14 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
           setIncomingPrescriptions([]);
         }
 
-        // 6. Fetch Real Accredited Wholesalers from Firestore
+        // 6. Fetch Real Accredited Wholesalers from Firestore (accessible to signed in providers)
         try {
-          const wQuery = query(
-            collection(db, 'users'),
-            where('role', '==', 'wholesaler'),
-            where('status', '==', 'approved')
-          );
-          const wSnap = await getDocs(wQuery);
+          const wSnap = await getDocs(collection(db, 'wholesaler_profiles'));
           const realWholesalers = wSnap.docs.map(d => {
             const wData = d.data();
             return {
               id: d.id,
-              name: wData.facilityName || wData.displayName || 'مذخر أدوية معتمد',
+              name: wData.facilityName || wData.companyName || wData.wholesalerName || 'مذخر أدوية معتمد',
               governorate: wData.governorate || 'العراق',
               phone: wData.phone || '',
               licenseNumber: wData.licenseNumber || '',
@@ -765,11 +788,15 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
   };
 
   const handleDeleteMedicine = async (medId: string) => {
+    if (!medId || !user) return;
     try {
       await deleteDoc(doc(db, 'medicines', medId));
+      setMedicines((prev) => prev.filter((m) => m.id !== medId));
       showToast(language === 'ar' ? 'تم حذف الدواء من السجل بنجاح' : 'Medicine removed');
       await loadPharmacyData();
     } catch (err: unknown) {
+      console.error('Delete medicine error:', err);
+      await loadPharmacyData();
       handleFirestoreError(err, OperationType.DELETE, `medicines/${medId}`);
     }
   };
@@ -1359,6 +1386,14 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
               <span className="hidden sm:inline">{language === 'ar' ? 'تحديث' : 'Sync'}</span>
             </button>
             <button
+              onClick={() => setShowBulkImportModal(true)}
+              className="px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-xs flex items-center gap-2 transition-all cursor-pointer"
+              title={language === 'ar' ? 'استيراد شامل للأدوية عبر ملف Excel / CSV' : 'Bulk Import via Excel / CSV'}
+            >
+              <FileSpreadsheet size={15} />
+              <span className="hidden sm:inline">{language === 'ar' ? 'استيراد Excel' : 'Excel Import'}</span>
+            </button>
+            <button
               onClick={() => {
                 resetMedicineForm();
                 setEditingMedicine(null);
@@ -1389,7 +1424,8 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
         {[
           { id: 'dashboard', labelAr: 'لوحة المؤشرات', labelEn: 'Dashboard', icon: Activity },
           { id: 'prescriptions', labelAr: `الوصفات الإلكترونية المحالة (${incomingPrescriptions.length})`, labelEn: `e-Prescriptions (${incomingPrescriptions.length})`, icon: FileText },
-          { id: 'catalog', labelAr: `دليل ومحرك بحث الأدوية (${medicines.length})`, labelEn: `Medicine Catalog (${medicines.length})`, icon: Pill },
+          { id: 'central_catalog', labelAr: 'دليل الأدوية المركزي (16 تخصص)', labelEn: 'Central Catalog (16 Specialties)', icon: Layers },
+          { id: 'catalog', labelAr: `مخزون صيدليتي (${medicines.length})`, labelEn: `My Medicines (${medicines.length})`, icon: Pill },
           { id: 'inventory', labelAr: 'إدارة المخزون والصلاحية', labelEn: 'Inventory & Expiry', icon: Package },
           { id: 'orders', labelAr: `طلبات وتجهيز الوصفات (${orders.length})`, labelEn: `Medicine Orders (${orders.length})`, icon: ShoppingBag },
           { id: 'wholesale_b2b', labelAr: `سوق الجملة والمذاخر (${b2bOrders.length})`, labelEn: `Wholesale Market (${b2bOrders.length})`, icon: Building2 },
@@ -1651,32 +1687,61 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
         </div>
       )}
 
+      {/* TAB: CENTRAL MEDICINE CATALOG (16 MEDICAL SPECIALTIES) */}
+      {activeTab === 'central_catalog' && (
+        <CentralMedicineCatalogSection
+          existingMedicines={medicines}
+          pharmacyProfile={pharmacyProfile}
+          onMedicinesAdded={loadPharmacyData}
+          showToast={showToast}
+          isOperable={isOperable}
+        />
+      )}
+
       {/* TAB 2: MEDICINE CATALOG & PATIENT SEARCH ENGINE */}
       {activeTab === 'catalog' && (
         <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
             <div>
               <h2 className="text-xl font-bold text-slate-900">
-                {language === 'ar' ? 'دليل الأدوية ومحرك البحث العلمي والتجاري' : 'Medicine Catalog & Generic Search Engine'}
+                {language === 'ar' ? 'أدوية ومخزون صيدليتي' : 'My Pharmacy Medicines & Inventory'}
               </h2>
               <p className="text-xs text-slate-500 mt-1">
                 {language === 'ar'
-                  ? 'البحث السريع بالاسم التجاري أو المادة الفعالة العلمية للوصول للبدائل والمثائل الدوائية والتسعيرة بالدينار.'
-                  : 'Search by trade brand or generic active ingredient to find matching products and alternatives.'}
+                  ? 'الأدوية المسجلة في صيدليتك مع الأسعار بالدينار العراقي، حالة التوفر، والكميات المتبقية.'
+                  : 'Medicines registered in your pharmacy with IQD prices, availability, and stock levels.'}
               </p>
             </div>
 
-            <button
-              onClick={() => {
-                resetMedicineForm();
-                setEditingMedicine(null);
-                setShowNewMedicineModal(true);
-              }}
-              className="px-4 py-2.5 rounded-xl bg-[#00796b] hover:bg-teal-800 text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-xs"
-            >
-              <Plus size={16} />
-              <span>{language === 'ar' ? 'إضافة دواء جديد' : 'Add Medicine'}</span>
-            </button>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => setActiveTab('central_catalog')}
+                className="px-3.5 py-2.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-[#004d40] border border-teal-200 font-bold text-xs flex items-center gap-2 cursor-pointer shadow-xs transition-colors"
+              >
+                <Layers size={15} />
+                <span>{language === 'ar' ? 'تصفح الدليل المركزي (16 تخصص)' : 'Browse Central Catalog'}</span>
+              </button>
+
+              <button
+                onClick={() => setShowBulkImportModal(true)}
+                className="px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center gap-2 cursor-pointer shadow-xs transition-colors"
+              >
+                <FileSpreadsheet size={15} />
+                <span>{language === 'ar' ? 'استيراد Excel / CSV' : 'Import Excel'}</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  resetMedicineForm();
+                  setEditingMedicine(null);
+                  setShowNewMedicineModal(true);
+                }}
+                className="px-4 py-2.5 rounded-xl bg-[#00796b] hover:bg-teal-800 text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-xs"
+              >
+                <Plus size={16} />
+                <span>{language === 'ar' ? 'إضافة دواء جديد' : 'Add Medicine'}</span>
+              </button>
+            </div>
           </div>
 
           {/* Search Bar & Multi-Criteria Filters */}
@@ -3712,6 +3777,19 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
           onClose={() => setSelectedPrescriptionForPdf(null)}
         />
       )}
+
+      {/* ==================================================== */}
+      {/* MODAL: BULK EXCEL / CSV MEDICINE INVENTORY IMPORT   */}
+      {/* ==================================================== */}
+      <PharmacyBulkImportModal
+        isOpen={showBulkImportModal}
+        onClose={() => setShowBulkImportModal(false)}
+        existingMedicines={medicines}
+        pharmacyProfile={pharmacyProfile}
+        onSuccess={loadPharmacyData}
+        showToast={showToast}
+        isOperable={isOperable}
+      />
     </div>
   );
 };

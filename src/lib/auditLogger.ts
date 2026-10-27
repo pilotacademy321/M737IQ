@@ -17,7 +17,8 @@ export type AuditCategory =
   | 'profiles'
   | 'security'
   | 'patient_records'
-  | 'medical_records';
+  | 'medical_records'
+  | 'pharmacy_inventory';
 
 export type AuditActionType =
   | 'prescription_created'
@@ -55,7 +56,9 @@ export type AuditActionType =
   | 'wholesaler_profile_updated'
   | 'patient_search_by_medical_id'
   | 'doctor_chart_notes_updated'
-  | 'clinic_visit_logged';
+  | 'clinic_visit_logged'
+  | 'medicine_catalog_import'
+  | 'medicine_bulk_excel_import';
 
 export interface SystemAuditLogEntry {
   id: string;

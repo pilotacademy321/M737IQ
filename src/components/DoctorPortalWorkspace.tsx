@@ -911,9 +911,16 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
     try {
       const recordId = `rec_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
       const now = new Date().toISOString();
+
+      const targetPatientId = (activePatientProfile && activePatientProfile.fullName.trim() === newRecordData.patientName.trim())
+        ? activePatientProfile.patientId
+        : (activeDoctorChart && activeDoctorChart.patientName.trim() === newRecordData.patientName.trim())
+          ? activeDoctorChart.patientId
+          : (activePatientProfile?.patientId || activeDoctorChart?.patientId || `pat_rec_${Date.now()}`);
+
       const record: MedicalRecord = {
         id: recordId,
-        patientId: `pat_rec_${Date.now()}`,
+        patientId: targetPatientId,
         patientName: newRecordData.patientName,
         doctorId: user.uid,
         recordType: newRecordData.recordType,

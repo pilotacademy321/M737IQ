@@ -609,6 +609,48 @@ export interface PharmacyProfile {
   updatedAt: string;
 }
 
+export type MedicalSpecialtyCategory = 
+  | 'internal_medicine'
+  | 'gynecology_obstetrics'
+  | 'pediatrics'
+  | 'cardiology'
+  | 'dermatology'
+  | 'ophthalmology'
+  | 'ent'
+  | 'neurology'
+  | 'orthopedics'
+  | 'urology'
+  | 'respiratory'
+  | 'gastroenterology'
+  | 'endocrinology'
+  | 'psychiatry'
+  | 'dentistry'
+  | 'general_medicine';
+
+export interface CatalogMedicineItem {
+  id: string; // CAT-MED-XXXX
+  nameEn: string;
+  nameAr: string;
+  activeIngredient: string;
+  brand: string;
+  strength: string;
+  dosageForm: string;
+  packageSize: string;
+  manufacturer: string;
+  originCountry?: string;
+  categories: MedicalSpecialtyCategory[];
+  requiresPrescription: boolean;
+  registrationNumber?: string;
+  barcode?: string;
+  imageUrl?: string;
+  imageSource?: string;
+  sourceAuthority: string;
+  isVerified: boolean;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface MedicineItem {
   id: string;
   pharmacyId: string;
@@ -616,7 +658,11 @@ export interface MedicineItem {
   pharmacyPhone?: string;
   pharmacyGovernorate?: string;
   pharmacyAddress?: string;
+  catalogMedicineId?: string;
+  barcode?: string;
+  batchNumber?: string;
   name: string;
+  nameAr?: string;
   activeIngredient: string;
   brand: string;
   manufacturer: string;

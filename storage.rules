@@ -1,0 +1,61 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Default deny all unauthenticated or unmatched access
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isSuperAdmin() {
+      return isSignedIn() && request.auth.token.email in [
+        'bcgmoc@gmail.com',
+        'mustfa200633@gmail.com',
+        'mmrym2186@gmail.com'
+      ];
+    }
+
+    // Radiology Scans & DICOM Studies: /radiology_scans/{centerId}/{bookingId}/{fileName}
+    // Only authenticated medical personnel and patient involved, written only by center
+    match /radiology_scans/{centerId}/{bookingId}/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && (request.auth.uid == centerId || isSuperAdmin())
+        && request.resource.size < 50 * 1024 * 1024; // 50MB max limit
+      allow delete: if isSignedIn() && (request.auth.uid == centerId || isSuperAdmin());
+    }
+
+    // Patient Personal Medical Documents & Lab Uploads: /medical_documents/{patientId}/{fileName}
+    match /medical_documents/{patientId}/{fileName} {
+      allow read: if isSignedIn() && (request.auth.uid == patientId || isSuperAdmin());
+      allow write: if isSignedIn() && (request.auth.uid == patientId || isSuperAdmin())
+        && request.resource.size < 25 * 1024 * 1024; // 25MB max limit
+      allow delete: if isSignedIn() && (request.auth.uid == patientId || isSuperAdmin());
+    }
+
+    // Medicine Product Images: /medicine_images/{pharmacyId}/{fileName}
+    match /medicine_images/{pharmacyId}/{fileName} {
+      allow read: if true; // Publicly readable for catalog viewing
+      allow write: if isSignedIn() && (request.auth.uid == pharmacyId || isSuperAdmin())
+        && request.resource.size < 5 * 1024 * 1024 // 5MB max
+        && request.resource.contentType.matches('image/.*');
+      allow delete: if isSignedIn() && (request.auth.uid == pharmacyId || isSuperAdmin());
+    }
+
+    // Facility Logos & Avatars: /facility_logos/{facilityId}/{fileName}
+    match /facility_logos/{facilityId}/{fileName} {
+      allow read: if true; // Publicly viewable facility logo
+      allow write: if isSignedIn() && (request.auth.uid == facilityId || isSuperAdmin())
+        && request.resource.size < 2 * 1024 * 1024 // 2MB max
+        && request.resource.contentType.matches('image/.*');
+      allow delete: if isSignedIn() && (request.auth.uid == facilityId || isSuperAdmin());
+    }
+  }
+}
