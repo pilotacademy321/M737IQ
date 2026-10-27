@@ -87,6 +87,7 @@ export const OnboardingModal: React.FC = () => {
         facilityName,
         governorate,
         phone,
+        preferredAccountId: customMedicalId.trim() || undefined,
       });
     }
   };

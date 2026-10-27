@@ -78,13 +78,13 @@ export function isValidAccountIdFormat(id: string, expectedRole?: UserRole): boo
     const expectedPrefix = PORTAL_ID_PREFIXES[expectedRole];
     if (!expectedPrefix || !clean.startsWith(expectedPrefix)) return false;
     const suffix = clean.slice(expectedPrefix.length);
-    return /^[A-Z0-9]{4,16}$/.test(suffix);
+    return /^[A-Z0-9_-]{3,24}$/.test(suffix);
   }
 
   const matchingPrefix = Object.values(PORTAL_ID_PREFIXES).find(p => clean.startsWith(p));
   if (!matchingPrefix) return false;
   const suffix = clean.slice(matchingPrefix.length);
-  return /^[A-Z0-9]{4,16}$/.test(suffix);
+  return /^[A-Z0-9_-]{3,24}$/.test(suffix);
 }
 
 /**
@@ -707,7 +707,7 @@ export async function updateUserAccountId(
     const expectedPrefix = PORTAL_ID_PREFIXES[role] || 'M737-PAT-';
     return { 
       success: false, 
-      error: `صيغة الرقم الصحي غير صالحة. يجب أن تبدأ بـ ${expectedPrefix} وتتكون من 4 إلى 16 رمزاً أبجدياً رقمياً.` 
+      error: `صيغة الرقم الصحي غير صالحة. يجب أن تبدأ بـ ${expectedPrefix} وتتكون من 3 إلى 24 رمزاً معتمداً.` 
     };
   }
 

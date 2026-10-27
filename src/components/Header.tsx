@@ -16,6 +16,7 @@ import {
   Trash2, 
   UserCheck, 
   User, 
+  UserPlus,
   ShieldCheck, 
   CheckCircle2,
   Calendar,
@@ -87,7 +88,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   const [searchQuery, setSearchQuery] = useState('');
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authModalInitialMode, setAuthModalInitialMode] = useState<'signin' | 'reset'>('signin');
+  const [authModalInitialMode, setAuthModalInitialMode] = useState<'signin' | 'signup' | 'reset'>('signin');
   const [showAccountDropdown, setShowAccountDropdown] = useState(false);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -497,7 +498,19 @@ export const Header: React.FC<HeaderProps> = ({
                             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-blue-50 text-blue-700 transition-colors text-start font-bold cursor-pointer"
                           >
                             <LogIn size={15} />
-                            <span>{language === 'ar' ? 'تسجيل الدخول / إنشاء حساب' : 'Sign In / Register'}</span>
+                            <span>{language === 'ar' ? 'تسجيل الدخول' : 'Sign In'}</span>
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              setShowAccountDropdown(false);
+                              setAuthModalInitialMode('signup');
+                              setAuthModalOpen(true);
+                            }}
+                            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-emerald-50 text-emerald-700 transition-colors text-start font-bold cursor-pointer"
+                          >
+                            <UserPlus size={15} />
+                            <span>{language === 'ar' ? 'إنشاء حساب وتوثيق الرقم الصحي' : 'Register & Verify Health ID'}</span>
                           </button>
 
                           <button

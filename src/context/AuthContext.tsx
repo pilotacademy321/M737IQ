@@ -39,7 +39,7 @@ interface AuthContextType {
   firebaseProjectId: string;
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, pass: string) => Promise<void>;
-  signUpWithEmail: (email: string, pass: string, displayName: string, role: UserRole, phone?: string) => Promise<void>;
+  signUpWithEmail: (email: string, pass: string, displayName: string, role: UserRole, phone?: string, preferredMedicalId?: string) => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
   signInAsDemoUser?: (role: UserRole, customName?: string) => Promise<void>;
   exitDemoMode?: () => void;
@@ -54,6 +54,7 @@ interface AuthContextType {
     facilityName: string;
     governorate: string;
     phone: string;
+    preferredAccountId?: string;
   }) => Promise<void>;
   refreshProfile: () => Promise<void>;
   updateUserStatusByAdmin: (targetUid: string, newStatus: AccountStatus) => Promise<void>;
@@ -331,7 +332,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     pass: string, 
     displayName: string, 
     role: UserRole, 
-    phone?: string
+    phone?: string,
+    preferredMedicalId?: string
   ) => {
     setLoading(true);
     setAuthError(null);
@@ -349,7 +351,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         : 'pending';
 
       const now = new Date().toISOString();
-      const assignedId = await ensureUserAccountId(
+      let assignedId = await ensureUserAccountId(
         db,
         user.uid,
         effectiveRole,
@@ -358,6 +360,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user.email || email.trim(),
         phone || ''
       );
+
+      // If user specified custom Health ID / account ID, update and register it in account_ids registry
+      if (preferredMedicalId && preferredMedicalId.trim() && preferredMedicalId.trim().toUpperCase() !== assignedId) {
+        const updateRes = await updateUserAccountId(db, user.uid, preferredMedicalId.trim(), effectiveRole);
+        if (updateRes.success && updateRes.finalId) {
+          assignedId = updateRes.finalId;
+        }
+      }
 
       const profile: UserProfile = {
         uid: user.uid,
@@ -373,6 +383,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
 
       await setDoc(doc(db, 'users', user.uid), profile);
+
+      // Create persistent patient_profiles document for patients
+      if (effectiveRole === 'patient') {
+        try {
+          const pRef = doc(db, 'patient_profiles', user.uid);
+          const pDoc: PatientProfile = {
+            patientId: user.uid,
+            fullName: profile.displayName,
+            medicalId: assignedId,
+            email: profile.email,
+            phone: profile.phone || '',
+            governorate: 'بغداد (Baghdad)',
+            address: 'العراق',
+            bloodType: 'Unknown',
+            chronicDiseases: [],
+            allergies: [],
+            currentMedications: [],
+            createdAt: now,
+            updatedAt: now,
+          };
+          await setDoc(pRef, pDoc, { merge: true });
+        } catch (e) {
+          console.warn('Patient profile document initialization notice:', e);
+        }
+      }
 
       if (effectiveRole === 'super_admin' || isVerifiedSuperAdminEmail) {
         await setDoc(doc(db, 'admins', user.uid), {
@@ -590,13 +625,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     facilityName: string;
     governorate: string;
     phone: string;
+    preferredAccountId?: string;
   }) => {
     if (!user) throw new Error('User must be authenticated');
     setLoading(true);
     setAuthError(null);
     try {
       const now = new Date().toISOString();
-      const assignedId = await ensureUserAccountId(
+      let assignedId = await ensureUserAccountId(
         db,
         user.uid,
         payload.role,
@@ -605,6 +641,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user.email || '',
         payload.phone
       );
+
+      // If user specified custom facility / professional account ID, register and update it
+      if (payload.preferredAccountId && payload.preferredAccountId.trim() && payload.preferredAccountId.trim().toUpperCase() !== assignedId) {
+        const updateRes = await updateUserAccountId(db, user.uid, payload.preferredAccountId.trim(), payload.role);
+        if (updateRes.success && updateRes.finalId) {
+          assignedId = updateRes.finalId;
+        }
+      }
 
       const profile: UserProfile = {
         uid: user.uid,

@@ -619,7 +619,7 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
           address: initialProfile.address,
           emergencyContactName: '',
           emergencyContactPhone: '',
-          bloodType: 'Unknown',
+          bloodType: 'O+' as any,
           chronicDiseases: '',
           allergies: '',
           currentMedications: '',

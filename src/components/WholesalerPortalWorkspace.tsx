@@ -58,7 +58,6 @@ import { generateFacilityOrUserId } from '../utils/medicalId';
 import { SmartMedicineSearch, SearchMedicineResult } from './SmartMedicineSearch';
 import { logAuditEvent } from '../lib/auditLogger';
 import { validateAndCompressImage, formatWhatsAppUrl } from '../utils/mediaUtils';
-import { AiMedicineAssistant } from './AiMedicineAssistant';
 
 interface WholesalerPortalWorkspaceProps {
   onBackToHome: () => void;
@@ -68,7 +67,7 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
   const { user, userProfile, isAdmin, refreshProfile } = useAuth();
   const { language, isRTL } = useLanguage();
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'ai_assistant' | 'catalog' | 'orders' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'catalog' | 'orders' | 'settings'>('dashboard');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -819,7 +818,6 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
       <div className="flex items-center gap-2 border-b border-slate-200 overflow-x-auto pb-1">
         {[
           { id: 'dashboard', labelAr: 'لوحة القيادة والمؤشرات', labelEn: 'Dashboard & Metrics', icon: Sparkles },
-          { id: 'ai_assistant', labelAr: 'مساعد إضافة الأدوية بالذكاء الاصطناعي', labelEn: 'AI Medicine Assistant', icon: Sparkles },
           { id: 'catalog', labelAr: `كتالوج الأدوية والجملة (${medicines.length})`, labelEn: `Wholesale Catalog (${medicines.length})`, icon: Package },
           { id: 'orders', labelAr: `طلبيات الصيدليات الواردة (${orders.length})`, labelEn: `Incoming B2B Orders (${orders.length})`, icon: Truck },
           { id: 'settings', labelAr: 'إعدادات المذخر والتوريد', labelEn: 'Warehouse Settings', icon: Settings },
@@ -842,24 +840,6 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
           );
         })}
       </div>
-
-      {/* TAB: AI MEDICINE ASSISTANT */}
-      {activeTab === 'ai_assistant' && (
-        <AiMedicineAssistant
-          portalType="wholesaler"
-          currentUserId={user?.uid || wholesalerProfile?.wholesalerId || 'wholesaler_user'}
-          facilityName={wholesalerProfile?.warehouseName || userProfile?.facilityName || 'مذخر الأدوية'}
-          facilityPhone={wholesalerProfile?.phone || userProfile?.phone}
-          facilityGovernorate={wholesalerProfile?.governorate || userProfile?.governorate}
-          existingMedicines={medicines}
-          onMedicinesAdded={loadWholesalerData}
-          showToast={(text, type = 'success') => {
-            setFeedbackMsg({ type, text });
-            setTimeout(() => setFeedbackMsg(null), 3500);
-          }}
-          isOperable={userProfile?.status === 'approved' || isAdmin}
-        />
-      )}
 
       {/* TAB 1: DASHBOARD & METRICS */}
       {activeTab === 'dashboard' && (
@@ -1020,14 +1000,6 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
-              <button
-                onClick={() => setActiveTab('ai_assistant')}
-                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-teal-700 to-teal-900 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-sm hover:opacity-90"
-              >
-                <Sparkles size={16} className="text-teal-300" />
-                <span>{language === 'ar' ? 'مساعد الإدخال الذكي والبحث' : 'Smart Intake Assistant'}</span>
-              </button>
-
               <button
                 onClick={openNewModal}
                 className="px-4 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"

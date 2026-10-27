@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { PORTALS_DATA } from '../data/portalsData';
 import { PortalId, UserRole, UserProfile, AccountStatus } from '../types';
+import { AuthModal } from './AuthModal';
 import { 
   ArrowLeft, 
   ArrowRight, 
@@ -33,7 +34,8 @@ import {
   Activity,
   Layers,
   Sparkles,
-  Trash2
+  Trash2,
+  UserPlus
 } from 'lucide-react';
 
 // Lazy-loaded Workspaces for optimal bundle splitting and low memory footprint
@@ -61,6 +63,17 @@ const SecretaryPortalWorkspace = React.lazy(() =>
 const SuperAdminPortalWorkspace = React.lazy(() =>
   import('./SuperAdminPortalWorkspace').then((m) => ({ default: m.SuperAdminPortalWorkspace }))
 );
+
+const PORTAL_ROLE_MAP: Record<string, UserRole> = {
+  doctor: 'doctor',
+  radiology: 'radiology_center',
+  laboratory: 'laboratory',
+  pharmacy: 'pharmacy',
+  wholesaler: 'wholesaler',
+  patient: 'patient',
+  super_admin: 'super_admin',
+  secretary: 'secretary',
+};
 
 interface PortalShellViewProps {
   portalId: PortalId;
@@ -94,6 +107,8 @@ export const PortalShellView: React.FC<PortalShellViewProps> = ({
   const [showSelfDeleteModal, setShowSelfDeleteModal] = useState(false);
   const [isDeletingOwnAccount, setIsDeletingOwnAccount] = useState(false);
   const [selfDeleteError, setSelfDeleteError] = useState<string | null>(null);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup' | 'reset'>('signin');
 
   const handleConfirmSelfDelete = async () => {
     setIsDeletingOwnAccount(true);
@@ -353,17 +368,43 @@ export const PortalShellView: React.FC<PortalShellViewProps> = ({
                     </div>
                   )}
 
-                  <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+                  <div className="mt-8 flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3">
+                    <button
+                      onClick={() => {
+                        setAuthModalMode('signup');
+                        setAuthModalOpen(true);
+                      }}
+                      className="w-full sm:w-auto px-6 py-3 rounded-xl text-sm font-bold text-white bg-[#003366] hover:bg-[#002244] shadow-md hover:shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <UserPlus size={18} />
+                      <span>
+                        {language === 'ar' ? 'إنشاء حساب وتوثيق الرقم الصحي' : 'Register & Assign Health ID'}
+                      </span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setAuthModalMode('signin');
+                        setAuthModalOpen(true);
+                      }}
+                      className="w-full sm:w-auto px-5 py-3 rounded-xl text-sm font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <LogIn size={18} className="text-[#003366]" />
+                      <span>
+                        {language === 'ar' ? 'دخول بالبريد الإلكتروني' : 'Sign in with Email'}
+                      </span>
+                    </button>
+
                     <button
                       onClick={signInWithGoogle}
                       disabled={authLoading}
-                      className="w-full sm:w-auto px-7 py-3 rounded-xl text-sm font-bold text-white brand-gradient-btn shadow-md hover:shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2.5 cursor-pointer"
+                      className="w-full sm:w-auto px-5 py-3 rounded-xl text-sm font-bold text-white brand-gradient-btn shadow-md hover:shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2.5 cursor-pointer"
                     >
-                      <LogIn size={18} />
+                      <Sparkles size={16} />
                       <span>
                         {authLoading
-                          ? (language === 'ar' ? 'جاري الاتصال بـ Firebase...' : 'Connecting to Firebase...')
-                          : (language === 'ar' ? 'تسجيل الدخول عبر Google' : 'Sign In with Google')}
+                          ? (language === 'ar' ? 'جاري الاتصال...' : 'Connecting...')
+                          : (language === 'ar' ? 'تسجيل عبر Google' : 'Google Auth')}
                       </span>
                     </button>
 
@@ -772,6 +813,14 @@ export const PortalShellView: React.FC<PortalShellViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Embedded Auth Modal with dynamic ID customization */}
+      <AuthModal
+        isOpen={authModalOpen}
+        initialMode={authModalMode}
+        initialRole={(PORTAL_ROLE_MAP[portal.id] || 'patient') as UserRole}
+        onClose={() => setAuthModalOpen(false)}
+      />
     </div>
   );
 };

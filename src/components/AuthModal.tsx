@@ -1,11 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import { UserRole } from '../types';
+import { 
+  PORTAL_ID_PREFIXES, 
+  generateDeterministicId, 
+  normalizeMedicalIdInput,
+  isValidAccountIdFormat
+} from '../utils/medicalId';
 import { 
   X, 
   Mail, 
   Lock, 
   LogIn, 
+  UserPlus,
   KeyRound, 
   CheckCircle2, 
   AlertCircle, 
@@ -13,38 +21,70 @@ import {
   ArrowLeft,
   Sparkles,
   RefreshCw,
-  ShieldCheck
+  ShieldCheck,
+  User,
+  Phone,
+  Edit3,
+  BadgeCheck,
+  Stethoscope,
+  Pill,
+  FlaskConical,
+  Scan,
+  Building2,
+  Users
 } from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  initialMode?: 'signin' | 'reset';
+  initialMode?: 'signin' | 'signup' | 'reset';
+  initialRole?: UserRole;
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({
   isOpen,
   onClose,
   initialMode = 'signin',
+  initialRole = 'patient',
 }) => {
   const { 
     user,
     signInWithEmail, 
+    signUpWithEmail,
     signInWithGoogle, 
     sendPasswordReset, 
     loading, 
     authError, 
     clearAuthError,
-    setShowDomainHelp
   } = useAuth();
   const { language, isRTL } = useLanguage();
 
-  const [mode, setMode] = useState<'signin' | 'reset'>(initialMode);
+  const [mode, setMode] = useState<'signin' | 'signup' | 'reset'>(initialMode);
+  
+  // Sign In / Reset Fields
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  
+  // Sign Up Fields
+  const [displayName, setDisplayName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [selectedRole, setSelectedRole] = useState<UserRole>(initialRole);
+  const [customHealthId, setCustomHealthId] = useState('');
+  const [isEditingCustomId, setIsEditingCustomId] = useState(false);
+
   const [formError, setFormError] = useState<string | null>(null);
   const [resetSuccessEmail, setResetSuccessEmail] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Sync mode and role when props change
+  useEffect(() => {
+    if (isOpen) {
+      setMode(initialMode);
+      setSelectedRole(initialRole);
+      setFormError(null);
+      clearAuthError();
+    }
+  }, [isOpen, initialMode, initialRole]);
 
   // Auto-close modal when user signs in successfully
   useEffect(() => {
@@ -62,18 +102,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     onClose();
   };
 
-  const handleSwitchToReset = () => {
-    clearAuthError();
-    setFormError(null);
-    setResetSuccessEmail(null);
-    setMode('reset');
-  };
+  // Derive dynamic account ID based on role and entered email or seed
+  const prefix = PORTAL_ID_PREFIXES[selectedRole] || 'M737-PAT-';
+  const candidateSeed = email.trim() || 'REGISTRATION';
+  const autoDerivedId = generateDeterministicId(selectedRole, candidateSeed);
+  const activeDisplayedId = customHealthId.trim() || autoDerivedId;
 
-  const handleSwitchToSignIn = () => {
+  const handleSwitchToMode = (newMode: 'signin' | 'signup' | 'reset') => {
     clearAuthError();
     setFormError(null);
     setResetSuccessEmail(null);
-    setMode('signin');
+    setMode(newMode);
   };
 
   const handleSignInSubmit = async (e: React.FormEvent) => {
@@ -94,6 +133,59 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     try {
       setSubmitting(true);
       await signInWithEmail(cleanEmail, password);
+      handleClose();
+    } catch {
+      // Error handled in AuthContext and state
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleSignUpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError(null);
+    clearAuthError();
+
+    const cleanEmail = email.trim();
+    const cleanName = displayName.trim();
+    if (!cleanName) {
+      setFormError(language === 'ar' ? 'يرجى إدخال الاسم الكامل' : 'Please enter full name');
+      return;
+    }
+    if (!cleanEmail) {
+      setFormError(language === 'ar' ? 'يرجى إدخال البريد الإلكتروني' : 'Please enter email');
+      return;
+    }
+    if (!password || password.length < 6) {
+      setFormError(language === 'ar' ? 'كلمة المرور يجب أن تتكون من 6 أحرف على الأقل' : 'Password must be at least 6 characters');
+      return;
+    }
+
+    // Format and validate preferred Health ID / Account ID
+    let finalPreferredId: string | undefined = undefined;
+    if (customHealthId.trim()) {
+      const normalized = normalizeMedicalIdInput(customHealthId.trim(), selectedRole);
+      if (!isValidAccountIdFormat(normalized, selectedRole)) {
+        setFormError(
+          language === 'ar' 
+            ? `صيغة الرقم الصحي غير صالحة. يجب أن تبدأ بـ ${prefix} وتتكون من 3 إلى 24 رمزاً.`
+            : `Invalid ID format. Must start with ${prefix} and have 3-24 characters.`
+        );
+        return;
+      }
+      finalPreferredId = normalized;
+    }
+
+    try {
+      setSubmitting(true);
+      await signUpWithEmail(
+        cleanEmail,
+        password,
+        cleanName,
+        selectedRole,
+        phoneNumber.trim() || undefined,
+        finalPreferredId
+      );
       handleClose();
     } catch {
       // Error handled in AuthContext and state
@@ -140,32 +232,41 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
-  const handleOpenSandbox = () => {
-    handleClose();
-    setShowDomainHelp(true);
-  };
+  const rolesConfig: { id: UserRole; labelAr: string; labelEn: string; icon: any }[] = [
+    { id: 'patient', labelAr: 'مريض / مراجع', labelEn: 'Patient', icon: User },
+    { id: 'doctor', labelAr: 'طبيب استشاري', labelEn: 'Doctor', icon: Stethoscope },
+    { id: 'pharmacy', labelAr: 'صيدلية أهلية', labelEn: 'Pharmacy', icon: Pill },
+    { id: 'laboratory', labelAr: 'مختبر تحاليل', labelEn: 'Laboratory', icon: FlaskConical },
+    { id: 'radiology_center', labelAr: 'مركز أشعة وسونار', labelEn: 'Radiology Center', icon: Scan },
+    { id: 'wholesaler', labelAr: 'مجهز أدوية بالجملة', labelEn: 'Wholesaler', icon: Building2 },
+    { id: 'secretary', labelAr: 'سكرتارية واستقبال', labelEn: 'Secretary', icon: Users },
+  ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
       <div 
-        className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden my-auto"
+        className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden my-auto max-h-[92vh] flex flex-col"
         dir={isRTL ? 'rtl' : 'ltr'}
       >
         {/* Header */}
-        <div className="px-6 py-5 bg-gradient-to-r from-slate-900 to-[#003366] text-white flex items-center justify-between shrink-0">
+        <div className="px-6 py-4 bg-gradient-to-r from-slate-900 to-[#003366] text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-white">
-              {mode === 'reset' ? <KeyRound size={20} /> : <LogIn size={20} />}
+              {mode === 'reset' ? <KeyRound size={20} /> : mode === 'signup' ? <UserPlus size={20} /> : <LogIn size={20} />}
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-bold tracking-tight">
                 {mode === 'reset' 
                   ? (language === 'ar' ? 'استعادة كلمة المرور' : 'Reset Password')
+                  : mode === 'signup'
+                  ? (language === 'ar' ? 'إنشاء حساب جديد وتوثيق الرقم الصحي' : 'Register & Assign Health ID')
                   : (language === 'ar' ? 'تسجيل الدخول إلى M737' : 'Sign in to M737')}
               </h2>
               <p className="text-xs text-slate-300">
                 {mode === 'reset'
-                  ? (language === 'ar' ? 'إرسال رابط إعادة التعيين الرسمي' : 'Official Firebase password reset')
+                  ? (language === 'ar' ? 'إرسال رابط إعادة التعيين الرسمي عبر البريد' : 'Official Firebase password reset')
+                  : mode === 'signup'
+                  ? (language === 'ar' ? 'رقم صحي حقيقي موحد مرتبط بحسابك' : 'Authentic dynamic ID tied to your account')
                   : (language === 'ar' ? 'البوابة الطبية الموحدة للرعاية الصحية' : 'Unified Digital Healthcare Platform')}
               </p>
             </div>
@@ -179,8 +280,45 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </button>
         </div>
 
+        {/* Navigation Mode Tabs */}
+        <div className="flex items-center border-b border-slate-200 bg-slate-50 px-6 pt-2 shrink-0 text-xs font-bold">
+          <button
+            type="button"
+            onClick={() => handleSwitchToMode('signin')}
+            className={`pb-2.5 px-3 border-b-2 transition-all cursor-pointer ${
+              mode === 'signin'
+                ? 'border-[#003366] text-[#003366]'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            {language === 'ar' ? 'تسجيل الدخول' : 'Sign In'}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSwitchToMode('signup')}
+            className={`pb-2.5 px-3 border-b-2 transition-all cursor-pointer ${
+              mode === 'signup'
+                ? 'border-[#003366] text-[#003366]'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            {language === 'ar' ? 'إنشاء حساب جديد' : 'Create Account'}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSwitchToMode('reset')}
+            className={`pb-2.5 px-3 border-b-2 transition-all cursor-pointer ${
+              mode === 'reset'
+                ? 'border-[#003366] text-[#003366]'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            {language === 'ar' ? 'استعادة الرمز' : 'Reset'}
+          </button>
+        </div>
+
         {/* Body Content */}
-        <div className="p-6 space-y-4 text-slate-800 text-sm">
+        <div className="p-6 space-y-4 text-slate-800 text-sm overflow-y-auto flex-1">
           {/* Active Error Alerts */}
           {(formError || authError) && (
             <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs flex items-start gap-2.5 leading-relaxed animate-in fade-in">
@@ -220,7 +358,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   </div>
                   <button
                     type="button"
-                    onClick={handleSwitchToSignIn}
+                    onClick={() => handleSwitchToMode('signin')}
                     className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-[#003366] hover:bg-[#002244] shadow-sm transition-all cursor-pointer flex items-center justify-center gap-1.5"
                   >
                     <span>{language === 'ar' ? 'العودة لتسجيل الدخول' : 'Back to Sign In'}</span>
@@ -279,7 +417,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
                     <button
                       type="button"
-                      onClick={handleSwitchToSignIn}
+                      onClick={() => handleSwitchToMode('signin')}
                       className="w-full py-2 px-4 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
                     >
                       {language === 'ar' ? 'العودة إلى تسجيل الدخول' : 'Back to Sign In'}
@@ -288,6 +426,225 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </form>
               )}
             </div>
+          )}
+
+          {/* MODE: Sign Up (Registration with Dynamic Health ID) */}
+          {mode === 'signup' && (
+            <form onSubmit={handleSignUpSubmit} className="space-y-4">
+              {/* Role Selection */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  {language === 'ar' ? 'صفة الحساب / نوع البوابة *' : 'Account Category & Portal *'}
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {rolesConfig.map((r) => {
+                    const IconComp = r.icon;
+                    const isSelected = selectedRole === r.id;
+                    return (
+                      <button
+                        key={r.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedRole(r.id);
+                          // Auto update ID prefix
+                          if (!isEditingCustomId) {
+                            setCustomHealthId('');
+                          }
+                        }}
+                        className={`p-2.5 rounded-xl border text-start transition-all cursor-pointer flex items-center gap-2 text-xs font-bold ${
+                          isSelected
+                            ? 'border-[#003366] bg-blue-50/80 text-[#003366] shadow-xs'
+                            : 'border-slate-200 hover:border-slate-300 text-slate-600 bg-white'
+                        }`}
+                      >
+                        <IconComp size={16} className={isSelected ? 'text-[#003366]' : 'text-slate-400'} />
+                        <span className="truncate">{language === 'ar' ? r.labelAr : r.labelEn}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* DYNAMIC HEALTH ID / ACCOUNT ID DISPLAY & EDIT */}
+              <div className="p-3.5 rounded-2xl bg-sky-50/80 border border-sky-200">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-2">
+                    <BadgeCheck size={18} className="text-[#003366] shrink-0" />
+                    <div>
+                      <span className="text-xs font-bold text-slate-900 block">
+                        {selectedRole === 'patient'
+                          ? (language === 'ar' ? 'الرقم الصحي الموحد للحساب:' : 'Patient Health ID:')
+                          : (language === 'ar' ? 'معرّف المنشأة / الترخيص المعتمد:' : 'Facility Account ID:')}
+                      </span>
+                      <span className="text-[11px] text-slate-500">
+                        {language === 'ar' 
+                          ? 'غير وهمي — يتولد من حسابك ويمكنك تعديله وتخصيصه' 
+                          : 'Real account ID — can be customized'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {!isEditingCustomId ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!customHealthId) setCustomHealthId(autoDerivedId);
+                        setIsEditingCustomId(true);
+                      }}
+                      className="px-2.5 py-1 text-xs font-bold rounded-lg bg-white border border-sky-300 text-[#003366] hover:bg-sky-100 flex items-center gap-1 cursor-pointer"
+                    >
+                      <Edit3 size={12} />
+                      <span>{language === 'ar' ? 'تعديل' : 'Edit'}</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCustomHealthId('');
+                        setIsEditingCustomId(false);
+                      }}
+                      className="px-2.5 py-1 text-xs font-bold rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center gap-1 cursor-pointer"
+                    >
+                      <RefreshCw size={12} />
+                      <span>{language === 'ar' ? 'تلقائي' : 'Auto'}</span>
+                    </button>
+                  )}
+                </div>
+
+                {!isEditingCustomId ? (
+                  <div className="flex items-center justify-between bg-white px-3 py-2 rounded-xl border border-sky-100 font-mono text-xs font-extrabold text-[#003366]">
+                    <span>{activeDisplayedId}</span>
+                    <span className="text-[10px] font-sans px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold">
+                      {language === 'ar' ? 'حساب حقيقي' : 'Authentic'}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <input
+                      type="text"
+                      value={customHealthId}
+                      onChange={(e) => setCustomHealthId(e.target.value.toUpperCase())}
+                      placeholder={autoDerivedId}
+                      className="w-full px-3 py-2 rounded-xl border border-sky-400 font-mono text-xs text-[#003366] font-bold uppercase bg-white focus:outline-none focus:ring-2 focus:ring-[#003366]"
+                    />
+                    <span className="text-[10px] text-slate-500 block">
+                      {language === 'ar'
+                        ? `يمكنك كتابة رقم بطاقتك الصحية أو رمزك المفضل بالبادئة (${prefix}).`
+                        : `You may enter your official health card number or preferred code (${prefix}).`}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Full Name */}
+              <div className="space-y-1">
+                <label className="block text-xs font-bold text-slate-700">
+                  {language === 'ar' ? 'الاسم الكامل أو اسم المنشأة *' : 'Full Name or Facility Name *'}
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none text-slate-400">
+                    <User size={16} />
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    placeholder={language === 'ar' ? 'مثال: سارة حيدر / د. أحمد علي' : 'Full Name'}
+                    className="w-full ps-9 pe-3 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#003366]"
+                  />
+                </div>
+              </div>
+
+              {/* Email & Phone */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-slate-700">
+                    {language === 'ar' ? 'البريد الإلكتروني *' : 'Email *'}
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none text-slate-400">
+                      <Mail size={16} />
+                    </div>
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="user@example.com"
+                      className="w-full ps-9 pe-3 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#003366]"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-slate-700">
+                    {language === 'ar' ? 'رقم الهاتف (واتساب)' : 'Phone (WhatsApp)'}
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none text-slate-400">
+                      <Phone size={16} />
+                    </div>
+                    <input
+                      type="tel"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      placeholder="07XXXXXXXXX"
+                      className="w-full ps-9 pe-3 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#003366]"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Password */}
+              <div className="space-y-1">
+                <label className="block text-xs font-bold text-slate-700">
+                  {language === 'ar' ? 'كلمة المرور (6 أحرف على الأقل) *' : 'Password (6+ characters) *'}
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none text-slate-400">
+                    <Lock size={16} />
+                  </div>
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full ps-9 pe-3 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#003366]"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={submitting || loading}
+                className="w-full mt-2 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold text-white bg-[#003366] hover:bg-[#002244] disabled:opacity-50 shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                {submitting ? (
+                  <>
+                    <RefreshCw size={15} className="animate-spin" />
+                    <span>{language === 'ar' ? 'جارٍ تسجيل الحساب واعتماد المعرّف...' : 'Creating Account...'}</span>
+                  </>
+                ) : (
+                  <>
+                    <UserPlus size={16} />
+                    <span>{language === 'ar' ? 'تسجيل الحساب وتوثيق الرقم الصحي' : 'Register & Verify Health ID'}</span>
+                  </>
+                )}
+              </button>
+
+              <div className="text-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => handleSwitchToMode('signin')}
+                  className="text-xs text-slate-600 hover:text-[#003366] font-semibold cursor-pointer"
+                >
+                  {language === 'ar' ? 'لديك حساب مسجل بالفعل؟ تسجيل الدخول' : 'Already have an account? Sign In'}
+                </button>
+              </div>
+            </form>
           )}
 
           {/* MODE: Sign In */}
@@ -319,7 +676,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   </label>
                   <button
                     type="button"
-                    onClick={handleSwitchToReset}
+                    onClick={() => handleSwitchToMode('reset')}
                     className="text-[11px] font-bold text-[#003366] hover:text-[#c4152e] hover:underline cursor-pointer transition-colors"
                   >
                     {language === 'ar' ? 'نسيت كلمة المرور؟' : 'Forgot Password?'}
@@ -357,6 +714,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   </>
                 )}
               </button>
+
+              <div className="text-center pt-1">
+                <button
+                  type="button"
+                  onClick={() => handleSwitchToMode('signup')}
+                  className="text-xs text-slate-600 hover:text-[#003366] font-semibold cursor-pointer"
+                >
+                  {language === 'ar' ? 'ليس لديك حساب؟ إنشاء حساب جديد وتحديد الرقم الصحي' : "Don't have an account? Register now"}
+                </button>
+              </div>
 
               <div className="relative my-4">
                 <div className="absolute inset-0 flex items-center">
@@ -404,7 +771,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500 shrink-0">
           <div className="flex items-center gap-1">
             <ShieldCheck size={14} className="text-emerald-600" />
-            <span>{language === 'ar' ? 'مصادقة Firebase مشفرة' : 'Encrypted Firebase Auth'}</span>
+            <span>{language === 'ar' ? 'مصادقة Firebase مشفرة ورقم صحي حقيقي' : 'Firebase Auth & Authentic Health ID'}</span>
           </div>
           <button
             type="button"

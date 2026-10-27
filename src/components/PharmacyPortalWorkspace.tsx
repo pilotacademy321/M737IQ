@@ -76,7 +76,6 @@ import { SmartMedicineSearch, SearchMedicineResult } from './SmartMedicineSearch
 import { generateFacilityOrUserId, normalizeMedicalIdInput, isValidMedicalIdQuery } from '../utils/medicalId';
 import { CentralMedicineCatalogSection } from './CentralMedicineCatalogSection';
 import { PharmacyBulkImportModal } from './PharmacyBulkImportModal';
-import { AiMedicineAssistant } from './AiMedicineAssistant';
 
 import { UnifiedChatWorkspace } from './UnifiedChatWorkspace';
 
@@ -88,7 +87,7 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
   const { user, userProfile, isAdmin, refreshProfile } = useAuth();
   const { language, isRTL } = useLanguage();
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'prescriptions' | 'orders' | 'wholesale_b2b' | 'catalog' | 'central_catalog' | 'ai_assistant' | 'inventory' | 'settings' | 'messages'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'prescriptions' | 'orders' | 'wholesale_b2b' | 'catalog' | 'central_catalog' | 'inventory' | 'settings' | 'messages'>('dashboard');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -1426,7 +1425,6 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
       <div className="flex items-center gap-1 p-1.5 bg-slate-200/80 rounded-2xl overflow-x-auto text-xs font-bold">
         {[
           { id: 'dashboard', labelAr: 'لوحة المؤشرات', labelEn: 'Dashboard', icon: Activity },
-          { id: 'ai_assistant', labelAr: 'مساعد إضافة الأدوية بالذكاء الاصطناعي', labelEn: 'AI Medicine Assistant', icon: Sparkles },
           { id: 'prescriptions', labelAr: `الوصفات الإلكترونية المحالة (${incomingPrescriptions.length})`, labelEn: `e-Prescriptions (${incomingPrescriptions.length})`, icon: FileText },
           { id: 'central_catalog', labelAr: 'دليل الأدوية المركزي (17 تخصص)', labelEn: 'Central Catalog (17 Specialties)', icon: Layers },
           { id: 'catalog', labelAr: `مخزون صيدليتي (${medicines.length})`, labelEn: `My Medicines (${medicines.length})`, icon: Pill },
@@ -1704,21 +1702,6 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
         </div>
       )}
 
-      {/* TAB: AI MEDICINE ASSISTANT */}
-      {activeTab === 'ai_assistant' && (
-        <AiMedicineAssistant
-          portalType="pharmacy"
-          currentUserId={user?.uid || pharmacyProfile?.pharmacyId || 'pharmacy_user'}
-          facilityName={pharmacyProfile?.pharmacyName || userProfile?.facilityName || 'الصيدلية'}
-          facilityPhone={pharmacyProfile?.phone || userProfile?.phone}
-          facilityGovernorate={pharmacyProfile?.governorate || userProfile?.governorate}
-          existingMedicines={medicines}
-          onMedicinesAdded={loadPharmacyData}
-          showToast={showToast}
-          isOperable={isOperable}
-        />
-      )}
-
       {/* TAB: CENTRAL MEDICINE CATALOG (17 MEDICAL SPECIALTIES) */}
       {activeTab === 'central_catalog' && (
         <CentralMedicineCatalogSection
@@ -1746,14 +1729,6 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
-              <button
-                onClick={() => setActiveTab('ai_assistant')}
-                className="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-teal-700 to-teal-900 text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-sm transition-all hover:opacity-90"
-              >
-                <Sparkles size={15} className="text-teal-300" />
-                <span>{language === 'ar' ? 'مساعد الإدخال الذكي والبحث' : 'Smart Intake Assistant'}</span>
-              </button>
-
               <button
                 onClick={() => setActiveTab('central_catalog')}
                 className="px-3.5 py-2.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-[#004d40] border border-teal-200 font-bold text-xs flex items-center gap-2 cursor-pointer shadow-xs transition-colors"
