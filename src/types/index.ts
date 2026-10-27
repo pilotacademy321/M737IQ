@@ -717,6 +717,7 @@ export interface MedicineItem {
   pharmacyAddress?: string;
   catalogMedicineId?: string;
   barcode?: string;
+  qrCode?: string;
   batchNumber?: string;
   name: string;
   nameAr?: string;
@@ -912,12 +913,14 @@ export interface WholesaleMedicineItem {
   wholesalerPhone?: string;
   name: string;
   nameAr?: string;
+  brand?: string;
   activeIngredient: string;
   manufacturer: string;
   originCountry: string;
   strength: string;
   dosageForm: string;
   packSize: string;
+  packageSize?: string;
   cartonCapacity: number;
   batchNumber: string;
   productionDate: string;
@@ -926,7 +929,10 @@ export interface WholesaleMedicineItem {
   wholesalePriceUsd?: number;
   cartonPriceIqd?: number;
   stockPacks: number;
+  quantity?: number;
   minOrderQuantity: number;
+  barcode?: string;
+  qrCode?: string;
   isAvailable: boolean;
   category: string;
   notes?: string;

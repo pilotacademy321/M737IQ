@@ -70,12 +70,16 @@ import {
   Settings,
   Building2,
   Copy,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Camera,
+  Barcode,
+  QrCode
 } from 'lucide-react';
 import { SmartMedicineSearch, SearchMedicineResult } from './SmartMedicineSearch';
 import { generateFacilityOrUserId, normalizeMedicalIdInput, isValidMedicalIdQuery } from '../utils/medicalId';
 import { CentralMedicineCatalogSection } from './CentralMedicineCatalogSection';
-import { PharmacyBulkImportModal } from './PharmacyBulkImportModal';
+import { MedicineScanModal } from './MedicineScanModal';
+import { MedicineBulkImportWizard } from './MedicineBulkImportWizard';
 
 import { UnifiedChatWorkspace } from './UnifiedChatWorkspace';
 
@@ -92,6 +96,7 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
   const [refreshing, setRefreshing] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [showBulkImportModal, setShowBulkImportModal] = useState(false);
+  const [showScanModal, setShowScanModal] = useState(false);
 
   // Electronic Prescriptions State
   const [incomingPrescriptions, setIncomingPrescriptions] = useState<ElectronicPrescription[]>([]);
@@ -115,6 +120,7 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
   // Medicine Form State
   const [medicineForm, setMedicineForm] = useState({
     name: '',
+    nameAr: '',
     activeIngredient: '',
     brand: '',
     manufacturer: '',
@@ -125,6 +131,9 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
     quantity: 50,
     minStockAlert: 10,
     expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    batchNumber: '',
+    barcode: '',
+    qrCode: '',
     benefits: '',
     sideEffects: '',
     requiresPrescription: false,
@@ -682,6 +691,7 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
         // Update existing medicine
         await updateDoc(doc(db, 'medicines', editingMedicine.id), {
           name: medicineForm.name,
+          nameAr: medicineForm.nameAr || '',
           activeIngredient: medicineForm.activeIngredient,
           brand: medicineForm.brand || medicineForm.name,
           manufacturer: medicineForm.manufacturer,
@@ -692,6 +702,9 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
           quantity: Number(medicineForm.quantity),
           minStockAlert: Number(medicineForm.minStockAlert),
           expiryDate: medicineForm.expiryDate,
+          batchNumber: medicineForm.batchNumber || '',
+          barcode: medicineForm.barcode || '',
+          qrCode: medicineForm.qrCode || '',
           benefits: medicineForm.benefits || '',
           sideEffects: medicineForm.sideEffects || '',
           requiresPrescription: medicineForm.requiresPrescription,
@@ -702,7 +715,7 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
           pharmacyAddress: pharmacyProfile?.address || userProfile?.facilityName || '',
           updatedAt: now,
         });
-        showToast(language === 'ar' ? 'تم تحديث بيانات الدواء والفوائد والمحاذير بالمخزون' : 'Medicine updated');
+        showToast(language === 'ar' ? 'تم تحديث بيانات الدواء والمخزون بنجاح' : 'Medicine updated');
       } else {
         // Create new medicine item
         const mId = `med_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
@@ -714,6 +727,7 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
           pharmacyGovernorate: pharmacyProfile?.governorate || userProfile?.governorate || 'بغداد (Baghdad)',
           pharmacyAddress: pharmacyProfile?.address || userProfile?.facilityName || '',
           name: medicineForm.name,
+          nameAr: medicineForm.nameAr || '',
           activeIngredient: medicineForm.activeIngredient,
           brand: medicineForm.brand || medicineForm.name,
           manufacturer: medicineForm.manufacturer,
@@ -724,6 +738,9 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
           quantity: Number(medicineForm.quantity),
           minStockAlert: Number(medicineForm.minStockAlert),
           expiryDate: medicineForm.expiryDate,
+          batchNumber: medicineForm.batchNumber || '',
+          barcode: medicineForm.barcode || '',
+          qrCode: medicineForm.qrCode || '',
           benefits: medicineForm.benefits || '',
           sideEffects: medicineForm.sideEffects || '',
           requiresPrescription: medicineForm.requiresPrescription,
@@ -748,6 +765,7 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
   const resetMedicineForm = () => {
     setMedicineForm({
       name: '',
+      nameAr: '',
       activeIngredient: '',
       brand: '',
       manufacturer: '',
@@ -758,6 +776,9 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
       quantity: 50,
       minStockAlert: 10,
       expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      batchNumber: '',
+      barcode: '',
+      qrCode: '',
       benefits: '',
       sideEffects: '',
       requiresPrescription: false,
@@ -766,10 +787,23 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
     });
   };
 
+  const openNewMedicineWithPrefill = (prefilled: Partial<typeof medicineForm>) => {
+    resetMedicineForm();
+    setEditingMedicine(null);
+    setMedicineForm((prev) => ({
+      ...prev,
+      ...prefilled,
+      price: prefilled.price !== undefined ? prefilled.price : prev.price,
+      quantity: prefilled.quantity !== undefined ? prefilled.quantity : prev.quantity,
+    }));
+    setShowNewMedicineModal(true);
+  };
+
   const handleEditClick = (m: MedicineItem) => {
     setEditingMedicine(m);
     setMedicineForm({
       name: m.name,
+      nameAr: m.nameAr || '',
       activeIngredient: m.activeIngredient,
       brand: m.brand,
       manufacturer: m.manufacturer,
@@ -780,6 +814,9 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
       quantity: m.quantity,
       minStockAlert: m.minStockAlert || 5,
       expiryDate: m.expiryDate,
+      batchNumber: m.batchNumber || '',
+      barcode: m.barcode || '',
+      qrCode: m.qrCode || '',
       benefits: m.benefits || '',
       sideEffects: m.sideEffects || '',
       requiresPrescription: m.requiresPrescription,
@@ -1219,10 +1256,14 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
       if (searchQuery.trim()) {
         const queryStr = searchQuery.toLowerCase().trim();
         const matchesName = m.name.toLowerCase().includes(queryStr);
+        const matchesNameAr = m.nameAr?.toLowerCase().includes(queryStr);
         const matchesIngredient = m.activeIngredient.toLowerCase().includes(queryStr);
         const matchesBrand = m.brand?.toLowerCase().includes(queryStr);
         const matchesManufacturer = m.manufacturer?.toLowerCase().includes(queryStr);
-        if (!matchesName && !matchesIngredient && !matchesBrand && !matchesManufacturer) {
+        const matchesBarcode = m.barcode?.toLowerCase().includes(queryStr);
+        const matchesQr = m.qrCode?.toLowerCase().includes(queryStr);
+        const matchesBatch = m.batchNumber?.toLowerCase().includes(queryStr);
+        if (!matchesName && !matchesNameAr && !matchesIngredient && !matchesBrand && !matchesManufacturer && !matchesBarcode && !matchesQr && !matchesBatch) {
           return false;
         }
       }
@@ -1742,8 +1783,16 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
                 onClick={() => setShowBulkImportModal(true)}
                 className="px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center gap-2 cursor-pointer shadow-xs transition-colors"
               >
-                <FileSpreadsheet size={15} />
-                <span>{language === 'ar' ? 'استيراد Excel / CSV' : 'Import Excel'}</span>
+                <FileSpreadsheet size={15} className="text-emerald-700" />
+                <span>{language === 'ar' ? 'استيراد أدوية (Excel / CSV)' : 'Import Excel / CSV'}</span>
+              </button>
+
+              <button
+                onClick={() => setShowScanModal(true)}
+                className="px-3.5 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold text-xs flex items-center gap-2 cursor-pointer shadow-xs transition-colors"
+              >
+                <Camera size={15} className="text-emerald-700" />
+                <span>{language === 'ar' ? 'مسح دواء بالكاميرا (باركود / QR / OCR)' : 'Scan Medicine (Camera)'}</span>
               </button>
 
               <button
@@ -1755,7 +1804,7 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
                 className="px-4 py-2.5 rounded-xl bg-[#00796b] hover:bg-teal-800 text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-xs"
               >
                 <Plus size={16} />
-                <span>{language === 'ar' ? 'إضافة دواء جديد' : 'Add Medicine'}</span>
+                <span>{language === 'ar' ? 'إضافة دواء يدوياً' : 'Add Medicine'}</span>
               </button>
             </div>
           </div>
@@ -1862,12 +1911,34 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
                       </div>
 
                       {/* Medicine Trade & Scientific Name */}
-                      <h4 className="font-bold text-base text-slate-900 mb-1">{m.name}</h4>
+                      <h4 className="font-bold text-base text-slate-900 mb-0.5">{m.name}</h4>
+                      {m.nameAr && <div className="text-xs text-slate-600 mb-1">{m.nameAr}</div>}
                       
                       <div className="text-xs text-[#004d40] font-semibold mb-2 flex items-center gap-1">
                         <span className="text-slate-400">{language === 'ar' ? 'المادة الفعالة:' : 'Generic:'}</span>
                         <span>{m.activeIngredient}</span>
                       </div>
+
+                      {/* Barcode & Batch Pills */}
+                      {(m.barcode || m.qrCode || m.batchNumber) && (
+                        <div className="flex items-center gap-1.5 flex-wrap mb-2 text-[10px] font-mono">
+                          {m.barcode && (
+                            <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
+                              {language === 'ar' ? 'باركود: ' : 'Barcode: '}{m.barcode}
+                            </span>
+                          )}
+                          {m.qrCode && (
+                            <span className="px-2 py-0.5 rounded bg-cyan-50 text-cyan-800 border border-cyan-200">
+                              QR: {m.qrCode}
+                            </span>
+                          )}
+                          {m.batchNumber && (
+                            <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700">
+                              LOT: {m.batchNumber}
+                            </span>
+                          )}
+                        </div>
+                      )}
 
                       <div className="text-xs text-slate-500 space-y-1 mb-3">
                         <div className="flex justify-between">
@@ -3340,16 +3411,72 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">{language === 'ar' ? 'المادة الفعالة العلمية (Active Ingredient) *' : 'Active Generic Ingredient *'}</label>
+                  <label className="block font-bold text-slate-700 mb-1">{language === 'ar' ? 'الاسم بالعربية' : 'Arabic Name'}</label>
                   <input
                     type="text"
-                    required
-                    value={medicineForm.activeIngredient}
-                    onChange={(e) => setMedicineForm({ ...medicineForm, activeIngredient: e.target.value })}
-                    placeholder="Paracetamol, Amoxicillin, etc."
+                    value={medicineForm.nameAr}
+                    onChange={(e) => setMedicineForm({ ...medicineForm, nameAr: e.target.value })}
+                    placeholder="بانادول إكسترا، أوجمنتين..."
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-[#00796b]"
                   />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">{language === 'ar' ? 'الباركود (Barcode)' : 'Barcode'}</label>
+                  <div className="flex gap-1.5">
+                    <input
+                      type="text"
+                      value={medicineForm.barcode}
+                      onChange={(e) => setMedicineForm({ ...medicineForm, barcode: e.target.value })}
+                      placeholder="6281000..."
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowScanModal(true)}
+                      className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-700 shrink-0 cursor-pointer"
+                      title={language === 'ar' ? 'مسح بالكاميرا' : 'Scan'}
+                    >
+                      <Camera size={16} />
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">{language === 'ar' ? 'رمز QR / التتبع' : 'QR Code'}</label>
+                  <input
+                    type="text"
+                    value={medicineForm.qrCode}
+                    onChange={(e) => setMedicineForm({ ...medicineForm, qrCode: e.target.value })}
+                    placeholder="QR-MED-..."
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">{language === 'ar' ? 'رقم التشغيلة (Batch / Lot)' : 'Batch Number'}</label>
+                  <input
+                    type="text"
+                    value={medicineForm.batchNumber}
+                    onChange={(e) => setMedicineForm({ ...medicineForm, batchNumber: e.target.value })}
+                    placeholder="LOT-2026-X1"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-mono"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">{language === 'ar' ? 'المادة الفعالة العلمية (Active Ingredient) *' : 'Active Generic Ingredient *'}</label>
+                <input
+                  type="text"
+                  required
+                  value={medicineForm.activeIngredient}
+                  onChange={(e) => setMedicineForm({ ...medicineForm, activeIngredient: e.target.value })}
+                  placeholder="Paracetamol, Amoxicillin, etc."
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-[#00796b]"
+                />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -3795,16 +3922,33 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
       )}
 
       {/* ==================================================== */}
+      {/* MODAL: MEDICINE CAMERA & BARCODE SCANNER            */}
+      {/* ==================================================== */}
+      <MedicineScanModal
+        isOpen={showScanModal}
+        onClose={() => setShowScanModal(false)}
+        role="pharmacy"
+        existingMedicines={medicines}
+        onSelectExistingForUpdate={(med) => handleEditClick(med)}
+        onOpenNewMedicineWithPrefill={(prefilled) => openNewMedicineWithPrefill(prefilled)}
+        showToast={showToast}
+      />
+
+      {/* ==================================================== */}
       {/* MODAL: BULK EXCEL / CSV MEDICINE INVENTORY IMPORT   */}
       {/* ==================================================== */}
-      <PharmacyBulkImportModal
+      <MedicineBulkImportWizard
         isOpen={showBulkImportModal}
         onClose={() => setShowBulkImportModal(false)}
+        role="pharmacy"
+        userId={user?.uid || ''}
+        businessName={pharmacyProfile?.pharmacyName || userProfile?.facilityName || 'صيدلية معتمدة'}
+        businessPhone={pharmacyProfile?.phone || userProfile?.phone || ''}
+        businessGovernorate={pharmacyProfile?.governorate || userProfile?.governorate || 'بغداد (Baghdad)'}
+        businessAddress={pharmacyProfile?.address || ''}
         existingMedicines={medicines}
-        pharmacyProfile={pharmacyProfile}
-        onSuccess={loadPharmacyData}
+        onImportComplete={loadPharmacyData}
         showToast={showToast}
-        isOperable={isOperable}
       />
     </div>
   );
