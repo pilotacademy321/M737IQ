@@ -1019,13 +1019,23 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
               </p>
             </div>
 
-            <button
-              onClick={openNewModal}
-              className="px-4 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
-            >
-              <Plus size={16} />
-              <span>{language === 'ar' ? 'إضافة دواء للكتالوج' : 'Add Medication'}</span>
-            </button>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => setActiveTab('ai_assistant')}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-teal-700 to-teal-900 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-sm hover:opacity-90"
+              >
+                <Sparkles size={16} className="text-teal-300" />
+                <span>{language === 'ar' ? 'مساعد الإدخال الذكي والبحث' : 'Smart Intake Assistant'}</span>
+              </button>
+
+              <button
+                onClick={openNewModal}
+                className="px-4 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
+              >
+                <Plus size={16} />
+                <span>{language === 'ar' ? 'إضافة دواء للكتالوج' : 'Add Medication'}</span>
+              </button>
+            </div>
           </div>
 
           {/* Search & Filters */}

@@ -687,3 +687,107 @@ export async function auditAndMigrateAccountIds(db: Firestore): Promise<AccountI
   return report;
 }
 
+/**
+ * Safely updates or customizes an authenticated user's Medical ID or Account ID.
+ * Ensures the new ID is strictly validated, not already claimed by another account,
+ * registered in the account_ids registry, and synchronized across users/{uid} and profile documents.
+ */
+export async function updateUserAccountId(
+  db: Firestore,
+  uid: string,
+  newAccountId: string,
+  role: UserRole = 'patient'
+): Promise<{ success: boolean; error?: string; finalId?: string }> {
+  if (!uid || !newAccountId || typeof newAccountId !== 'string') {
+    return { success: false, error: 'User ID and new Medical ID are required.' };
+  }
+
+  const normalized = normalizeMedicalIdInput(newAccountId, role);
+  if (!isValidAccountIdFormat(normalized, role)) {
+    const expectedPrefix = PORTAL_ID_PREFIXES[role] || 'M737-PAT-';
+    return { 
+      success: false, 
+      error: `صيغة الرقم الصحي غير صالحة. يجب أن تبدأ بـ ${expectedPrefix} وتتكون من 4 إلى 16 رمزاً أبجدياً رقمياً.` 
+    };
+  }
+
+  try {
+    const regRef = doc(db, 'account_ids', normalized);
+    const regSnap = await getDoc(regRef);
+
+    if (regSnap.exists()) {
+      const reg = regSnap.data() as AccountIdentifierRecord;
+      if (reg.uid && reg.uid !== uid) {
+        return { 
+          success: false, 
+          error: 'الرقم الصحي المدخل محجوز بالفعل لحساب مستخدم آخر. يرجى اختيار رقم صحي فريد.' 
+        };
+      }
+    }
+
+    const now = new Date().toISOString();
+    const userRef = doc(db, 'users', uid);
+    const userSnap = await getDoc(userRef);
+    const uData = userSnap.exists() ? userSnap.data() : {};
+    const oldId = uData.accountId || (role === 'patient' ? uData.medicalId : null);
+
+    // 1. Create or update registry entry
+    const regRecord: AccountIdentifierRecord = {
+      accountId: normalized,
+      uid,
+      role,
+      displayName: uData.displayName || 'User',
+      facilityName: uData.facilityName || '',
+      email: uData.email || '',
+      phone: uData.phone || '',
+      createdAt: uData.createdAt || now,
+      updatedAt: now,
+    };
+    await setDoc(regRef, regRecord);
+
+    // 2. Update user profile document in /users/{uid}
+    const userUpdate: Record<string, any> = {
+      accountId: normalized,
+      updatedAt: now,
+    };
+    if (role === 'patient') {
+      userUpdate.medicalId = normalized;
+    }
+    await updateDoc(userRef, userUpdate);
+
+    // 3. Update role-specific profile document
+    if (role === 'patient') {
+      const pRef = doc(db, 'patient_profiles', uid);
+      const pSnap = await getDoc(pRef);
+      if (pSnap.exists()) {
+        await updateDoc(pRef, { medicalId: normalized, updatedAt: now });
+      } else {
+        await setDoc(pRef, {
+          patientId: uid,
+          fullName: uData.displayName || 'مريض مسجل',
+          medicalId: normalized,
+          email: uData.email || '',
+          phone: uData.phone || '',
+          createdAt: now,
+          updatedAt: now
+        }, { merge: true });
+      }
+    } else if (role === 'doctor') {
+      const dRef = doc(db, 'doctor_profiles', uid);
+      const dSnap = await getDoc(dRef);
+      if (dSnap.exists()) {
+        await updateDoc(dRef, { doctorId: normalized, updatedAt: now });
+      }
+    }
+
+    return { success: true, finalId: normalized };
+  } catch (err: unknown) {
+    console.error('Failed to update user account ID:', err);
+    return { 
+      success: false, 
+      error: err instanceof Error ? err.message : 'فشل تحديث الرقم الصحي في قاعدة البيانات.' 
+    };
+  }
+}
+
+

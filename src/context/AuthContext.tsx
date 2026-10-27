@@ -20,7 +20,7 @@ import {
 } from 'firebase/firestore';
 import { auth, db, googleProvider, validateFirestoreConnection, handleFirestoreError, OperationType } from '../lib/firebase';
 import { UserProfile, UserRole, AccountStatus, PatientProfile } from '../types';
-import { generateUniqueMedicalId, ensureUserAccountId } from '../utils/medicalId';
+import { generateUniqueMedicalId, ensureUserAccountId, updateUserAccountId } from '../utils/medicalId';
 import firebaseConfig from '@/firebase-applet-config.json';
 import { recordRealMetricEvent } from '../lib/platformMetrics';
 
@@ -45,7 +45,8 @@ interface AuthContextType {
   exitDemoMode?: () => void;
   signOut: () => Promise<void>;
   clearAuthError: () => void;
-  registerAsPatient: (displayName?: string, phone?: string) => Promise<void>;
+  registerAsPatient: (displayName?: string, phone?: string, preferredMedicalId?: string) => Promise<void>;
+  updateAccountMedicalId: (newMedicalId: string) => Promise<{ success: boolean; error?: string; finalId?: string }>;
   applyForProfessionalRole: (payload: {
     role: UserRole;
     displayName: string;
@@ -485,13 +486,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAuthError(null);
   };
 
-  const registerAsPatient = async (displayName?: string, phone?: string) => {
+  const registerAsPatient = async (displayName?: string, phone?: string, preferredMedicalId?: string) => {
     if (!user) throw new Error('User must be authenticated');
     setLoading(true);
     setAuthError(null);
     try {
       const now = new Date().toISOString();
-      const medicalId = await ensureUserAccountId(
+      let medicalId = await ensureUserAccountId(
         db,
         user.uid,
         'patient',
@@ -500,6 +501,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user.email || '',
         phone || ''
       );
+
+      // If user provided a custom preferred Medical ID, update to it safely
+      if (preferredMedicalId && preferredMedicalId.trim() && preferredMedicalId.trim().toUpperCase() !== medicalId) {
+        const updateRes = await updateUserAccountId(db, user.uid, preferredMedicalId.trim(), 'patient');
+        if (updateRes.success && updateRes.finalId) {
+          medicalId = updateRes.finalId;
+        }
+      }
+
       const profile: UserProfile = {
         uid: user.uid,
         email: user.email || '',
@@ -515,7 +525,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       await setDoc(doc(db, 'users', user.uid), profile);
 
-      // Ensure persistent patient_profiles document exists with medicalId
+      // Ensure persistent patient_profiles document exists with real dynamic medicalId
       try {
         const pRef = doc(db, 'patient_profiles', user.uid);
         const pSnap = await getDoc(pRef);
@@ -536,7 +546,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             updatedAt: now,
           };
           await setDoc(pRef, initialPatientDoc);
-        } else if (!pSnap.data().medicalId) {
+        } else {
           await updateDoc(pRef, { medicalId, updatedAt: now });
         }
       } catch (e) {
@@ -551,6 +561,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setLoading(false);
     }
+  };
+
+  const updateAccountMedicalId = async (
+    newMedicalId: string
+  ): Promise<{ success: boolean; error?: string; finalId?: string }> => {
+    if (!user) throw new Error('User must be authenticated');
+    const role = userProfile?.role || 'patient';
+    const result = await updateUserAccountId(db, user.uid, newMedicalId, role);
+    if (result.success && result.finalId) {
+      setUserProfile((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          accountId: result.finalId!,
+          medicalId: role === 'patient' ? result.finalId! : prev.medicalId,
+          updatedAt: new Date().toISOString()
+        };
+      });
+    }
+    return result;
   };
 
   const applyForProfessionalRole = async (payload: {
@@ -766,6 +796,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signOut,
         clearAuthError,
         registerAsPatient,
+        updateAccountMedicalId,
         applyForProfessionalRole,
         refreshProfile,
         updateUserStatusByAdmin,

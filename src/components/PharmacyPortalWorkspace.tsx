@@ -1747,6 +1747,14 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
 
             <div className="flex items-center gap-2 flex-wrap">
               <button
+                onClick={() => setActiveTab('ai_assistant')}
+                className="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-teal-700 to-teal-900 text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-sm transition-all hover:opacity-90"
+              >
+                <Sparkles size={15} className="text-teal-300" />
+                <span>{language === 'ar' ? 'مساعد الإدخال الذكي والبحث' : 'Smart Intake Assistant'}</span>
+              </button>
+
+              <button
                 onClick={() => setActiveTab('central_catalog')}
                 className="px-3.5 py-2.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-[#004d40] border border-teal-200 font-bold text-xs flex items-center gap-2 cursor-pointer shadow-xs transition-colors"
               >

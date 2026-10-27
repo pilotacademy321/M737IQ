@@ -19,6 +19,7 @@ import {
   checkInventoryDuplicate,
   AssistantInterpretationResult 
 } from '../lib/aiMedicineAssistantService';
+import { DosageFormVisual } from './DosageFormVisual';
 import { 
   Sparkles, 
   Mic, 
@@ -44,7 +45,12 @@ import {
   RefreshCw, 
   AlertTriangle,
   FileCheck,
-  Volume2
+  Volume2,
+  BookmarkCheck,
+  ShieldAlert,
+  ArrowRight,
+  GitCompare,
+  CheckCircle
 } from 'lucide-react';
 
 interface AiMedicineAssistantProps {
@@ -59,18 +65,34 @@ interface AiMedicineAssistantProps {
   isOperable: boolean;
 }
 
-// Preset Quick Example Queries requested in spec
+// Preset Quick Iraqi & Arabic Conversational Prompts
 const QUICK_PROMPT_EXAMPLES = [
   { ar: 'أريد أدوية اختصاص القلب والضغط', en: 'Cardiology & blood pressure medicines' },
+  { ar: 'اعرضلي أصناف الأطفال', en: 'Pediatric medicines' },
+  { ar: 'ابحثلي عن هذا الدواء وإذا مو موجود شوف البدائل المكافئة', en: 'Search drug and show bioequivalent substitutes' },
+  { ar: 'شنو بديل البنادول', en: 'What is the equivalent for Panadol?' },
+  { ar: 'أريد أدوية العظام والكسور وآلام المفاصل', en: 'Orthopedics & joint medicines' },
   { ar: 'جهزلي أدوية السكري والغدد', en: 'Diabetes & endocrinology medicines' },
-  { ar: 'أريد أدوية الأطفال', en: 'Pediatric medicines' },
-  { ar: 'أريد أدوية النسائية والتوليد', en: 'Obstetrics & gynecology medicines' },
-  { ar: 'أريد أدوية العظام والكسور', en: 'Orthopedics & joint medicines' },
-  { ar: 'أريد أدوية الدم', en: 'Hematology medicines' },
-  { ar: 'أريد أدوية الجهاز التنفسي', en: 'Respiratory medicines' },
-  { ar: 'أريد أدوية الجهاز الهضمي', en: 'Gastroenterology medicines' },
-  { ar: 'أريد قائمة شاملة من أدوية القلب', en: 'Comprehensive cardiology catalog list' },
+  { ar: 'أريد أدوية أمراض الدم والتخثر', en: 'Hematology medicines' },
+  { ar: 'أدوية الجهاز التنفسي والربو', en: 'Respiratory & asthma medications' },
+  { ar: 'أدوية الجهاز الهضمي والمعدة', en: 'Gastroenterology medicines' },
+  { ar: 'أدوية النسائية والتوليد', en: 'Obstetrics & gynecology medicines' },
+  { ar: 'أدوية المسالك البولية والكلى', en: 'Urology & renal medicines' },
+  { ar: 'أدوية العيون والقطرات', en: 'Ophthalmology medicines' },
+  { ar: 'أدوية الأنف والأذن والحنجرة', en: 'ENT medications' },
+  { ar: 'أدوية الأعصاب والتشنجات', en: 'Neurology medications' },
+  { ar: 'أدوية الجلدية والأكزيما', en: 'Dermatology medicines' },
+  { ar: 'الطب العام والمسكنات', en: 'General medicine & analgesics' },
 ];
+
+interface CustomRowConfig {
+  price: number;
+  quantity: number;
+  cartonPrice?: number;
+  minOrderQuantity?: number;
+  batchNumber: string;
+  expiryDate: string;
+}
 
 export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
   portalType,
@@ -108,20 +130,20 @@ export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
     failed: { id: string; name: string; error: string }[];
   } | null>(null);
 
-  // Batch Configuration Form Values
-  // For Pharmacy
+  // Common Batch Configuration Form Values
   const [pharmacyUnitPrice, setPharmacyUnitPrice] = useState<number | ''>(5000);
   const [pharmacyQuantity, setPharmacyQuantity] = useState<number | ''>(20);
-  // For Wholesaler
   const [wholesalePackPrice, setWholesalePackPrice] = useState<number | ''>(4000);
   const [wholesaleCartonPrice, setWholesaleCartonPrice] = useState<number | ''>(100000);
   const [wholesaleStockPacks, setWholesaleStockPacks] = useState<number | ''>(500);
   const [wholesaleMinOrder, setWholesaleMinOrder] = useState<number | ''>(10);
-  // Common Batch Values
   const [commonBatchNumber, setCommonBatchNumber] = useState('');
   const [commonExpiryDate, setCommonExpiryDate] = useState(
     new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   );
+
+  // Per-row customization override dictionary
+  const [customRowConfigs, setCustomRowConfigs] = useState<Record<string, CustomRowConfig>>({});
 
   // Load default prompt on initial render to showcase the feature
   useEffect(() => {
@@ -164,7 +186,7 @@ export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
         };
 
         recognition.onerror = (event: any) => {
-          console.warn('Speech recognition event error:', event.error);
+          console.warn('Speech recognition error:', event.error);
           setIsListening(false);
           if (event.error === 'not-allowed') {
             setMicError(
@@ -172,9 +194,7 @@ export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
                 ? 'تم حظر إذن الميكروفون من المتصفح. يرجى تفعيل الميكروفون أو استخدام الكتابة النصية.'
                 : 'Microphone permission denied. Please allow microphone access or use text input.'
             );
-          } else if (event.error === 'no-speech') {
-            // User did not speak, quiet timeout
-          } else {
+          } else if (event.error !== 'no-speech') {
             setMicError(
               language === 'ar'
                 ? `تعذر التعرف الصوتي (${event.error}). تم تحويل الإدخال للكتابة اليدوية.`
@@ -198,7 +218,7 @@ export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
         try {
           recognitionRef.current.abort();
         } catch {
-          // ignore cleanup abort error
+          // ignore cleanup abort
         }
       }
     };
@@ -241,7 +261,7 @@ export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
     }
   };
 
-  // Execute Natural Language Catalog Interpretation
+  // Execute Natural Language Catalog Interpretation with 4-Tier Support
   const handleExecuteQuery = async (queryText: string) => {
     const q = queryText.trim();
     if (!q) return;
@@ -251,52 +271,9 @@ export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
     setSelectedIds(new Set()); // Reset selections on new search
 
     try {
-      // 1. Try server-side proxy if running
-      let serverResult: any = null;
-      try {
-        const res = await fetch('/api/ai-medicine-assistant', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: q, language }),
-        });
-        if (res.ok) {
-          const json = await res.json();
-          if (json.success && json.data) {
-            serverResult = json.data;
-          }
-        }
-      } catch {
-        // Fallback to local deterministic clinical engine
-      }
-
-      // 2. Compute verified interpretation using local clinical catalog matcher
+      // 1. Compute verified interpretation using local clinical catalog & 4-tier engine
       const localResult = interpretMedicineQueryLocally(q);
-
-      // If server returned valid category, reconcile with local matched catalog
-      if (serverResult && serverResult.category) {
-        const catKey = serverResult.category as MedicalSpecialtyCategory;
-        const specialtyDef = SPECIALTY_CATEGORIES.find((c) => c.id === catKey);
-        const filtered = VERIFIED_CENTRAL_CATALOG_MEDICINES.filter((m) =>
-          m.categories.includes(catKey)
-        );
-        const total = VERIFIED_CENTRAL_CATALOG_MEDICINES.filter((m) => m.categories.includes(catKey)).length;
-
-        setActiveInterpretation({
-          query: q,
-          detectedCategory: catKey,
-          categoryTitleAr: specialtyDef?.nameAr || localResult.categoryTitleAr,
-          categoryTitleEn: specialtyDef?.nameEn || localResult.categoryTitleEn,
-          isComprehensiveRequest: Boolean(serverResult.isComprehensive || localResult.isComprehensiveRequest),
-          interpretedIntentAr: serverResult.explanationAr || localResult.interpretedIntentAr,
-          interpretedIntentEn: serverResult.explanationEn || localResult.interpretedIntentEn,
-          matchedMedicines: filtered.length > 0 ? filtered : localResult.matchedMedicines,
-          totalMatches: filtered.length > 0 ? filtered.length : localResult.totalMatches,
-          isCompleteCatalogSet: filtered.length === total,
-          noMatchReason: filtered.length === 0 ? localResult.noMatchReason : undefined,
-        });
-      } else {
-        setActiveInterpretation(localResult);
-      }
+      setActiveInterpretation(localResult);
     } catch (err) {
       console.error('Error executing AI medicine query:', err);
       showToast(language === 'ar' ? 'فشل معالجة الطلب الدوائي' : 'Failed to process medicine query', 'error');
@@ -325,6 +302,20 @@ export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
     }
   };
 
+  // Selected items array
+  const selectedMedicines = useMemo(() => {
+    if (!activeInterpretation) return [];
+    return activeInterpretation.matchedMedicines.filter((m) => selectedIds.has(m.id));
+  }, [activeInterpretation, selectedIds]);
+
+  // Check if any selected item is already in inventory
+  const duplicateWarnings = useMemo(() => {
+    return selectedMedicines.map((item) => {
+      const check = checkInventoryDuplicate(item, existingMedicines);
+      return { item, ...check };
+    });
+  }, [selectedMedicines, existingMedicines]);
+
   // Open Review & Inventory Addition Modal
   const handleOpenReviewModal = () => {
     if (selectedIds.size === 0) {
@@ -341,23 +332,86 @@ export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
       );
       return;
     }
+
+    // Populate initial row configurations
+    const initialConfigs: Record<string, CustomRowConfig> = {};
+    const defaultBatch = commonBatchNumber.trim() || `LOT-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const defaultExp = commonExpiryDate;
+
+    selectedMedicines.forEach((med) => {
+      if (portalType === 'pharmacy') {
+        initialConfigs[med.id] = {
+          price: typeof pharmacyUnitPrice === 'number' ? pharmacyUnitPrice : 5000,
+          quantity: typeof pharmacyQuantity === 'number' ? pharmacyQuantity : 20,
+          batchNumber: defaultBatch,
+          expiryDate: defaultExp,
+        };
+      } else {
+        const pPrice = typeof wholesalePackPrice === 'number' ? wholesalePackPrice : 4000;
+        initialConfigs[med.id] = {
+          price: pPrice,
+          cartonPrice: typeof wholesaleCartonPrice === 'number' ? wholesaleCartonPrice : pPrice * 24,
+          quantity: typeof wholesaleStockPacks === 'number' ? wholesaleStockPacks : 500,
+          minOrderQuantity: typeof wholesaleMinOrder === 'number' ? wholesaleMinOrder : 10,
+          batchNumber: defaultBatch,
+          expiryDate: defaultExp,
+        };
+      }
+    });
+
+    setCustomRowConfigs(initialConfigs);
     setBatchResultSummary(null);
     setShowReviewModal(true);
   };
 
-  // Selected items array
-  const selectedMedicines = useMemo(() => {
-    if (!activeInterpretation) return [];
-    return activeInterpretation.matchedMedicines.filter((m) => selectedIds.has(m.id));
-  }, [activeInterpretation, selectedIds]);
+  // Update a single field in customRowConfigs
+  const handleUpdateRowConfig = (id: string, field: keyof CustomRowConfig, value: any) => {
+    setCustomRowConfigs((prev) => ({
+      ...prev,
+      [id]: {
+        ...(prev[id] || {
+          price: 5000,
+          quantity: 20,
+          batchNumber: '',
+          expiryDate: commonExpiryDate,
+        }),
+        [field]: value,
+      },
+    }));
+  };
 
-  // Check if any selected item is already in inventory
-  const duplicateWarnings = useMemo(() => {
-    return selectedMedicines.map((item) => {
-      const check = checkInventoryDuplicate(item, existingMedicines);
-      return { item, ...check };
+  // Apply common defaults to all selected rows
+  const handleApplyDefaultsToAll = () => {
+    const updated: Record<string, CustomRowConfig> = {};
+    const defaultBatch = commonBatchNumber.trim() || `LOT-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    selectedMedicines.forEach((med) => {
+      if (portalType === 'pharmacy') {
+        updated[med.id] = {
+          price: typeof pharmacyUnitPrice === 'number' ? pharmacyUnitPrice : 5000,
+          quantity: typeof pharmacyQuantity === 'number' ? pharmacyQuantity : 20,
+          batchNumber: defaultBatch,
+          expiryDate: commonExpiryDate,
+        };
+      } else {
+        const pPrice = typeof wholesalePackPrice === 'number' ? wholesalePackPrice : 4000;
+        updated[med.id] = {
+          price: pPrice,
+          cartonPrice: typeof wholesaleCartonPrice === 'number' ? wholesaleCartonPrice : pPrice * 24,
+          quantity: typeof wholesaleStockPacks === 'number' ? wholesaleStockPacks : 500,
+          minOrderQuantity: typeof wholesaleMinOrder === 'number' ? wholesaleMinOrder : 10,
+          batchNumber: defaultBatch,
+          expiryDate: commonExpiryDate,
+        };
+      }
     });
-  }, [selectedMedicines, existingMedicines]);
+
+    setCustomRowConfigs(updated);
+    showToast(
+      language === 'ar' ? 'تم تطبيق القيم الافتراضية على كافة الأصناف المحددة' : 'Applied defaults to all selected items',
+      'success'
+    );
+  };
 
   // Execute Batch Write to Firestore (Strict Isolation & Decoupling)
   const handleConfirmBatchAddition = async () => {
@@ -371,15 +425,23 @@ export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
 
     for (let i = 0; i < selectedMedicines.length; i++) {
       const catItem = selectedMedicines[i];
+      const rowCfg = customRowConfigs[catItem.id] || {
+        price: 5000,
+        quantity: 20,
+        batchNumber: `LOT-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+        expiryDate: commonExpiryDate,
+      };
+
       try {
         if (portalType === 'pharmacy') {
           // ==========================================
           // PHARMACY INVENTORY RECORD
+          // Target Collection: /medicines/{medId}
+          // Strict Tenancy: pharmacyId == user.uid
           // ==========================================
           const medId = `med_ai_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-          const unitPrice = typeof pharmacyUnitPrice === 'number' && pharmacyUnitPrice > 0 ? pharmacyUnitPrice : 0;
-          const qty = typeof pharmacyQuantity === 'number' && pharmacyQuantity >= 0 ? pharmacyQuantity : 0;
-          // Decoupling Invariant: Available ONLY if both quantity and price > 0
+          const unitPrice = Number(rowCfg.price) > 0 ? Number(rowCfg.price) : 0;
+          const qty = Number(rowCfg.quantity) >= 0 ? Number(rowCfg.quantity) : 0;
           const isAvail = qty > 0 && unitPrice > 0;
 
           const pharmacyRecord: MedicineItem = {
@@ -391,6 +453,7 @@ export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
             pharmacyAddress: facilityGovernorate || '',
             catalogMedicineId: catItem.id,
             name: catItem.nameEn,
+            nameAr: catItem.nameAr,
             activeIngredient: catItem.activeIngredient,
             brand: catItem.brand,
             manufacturer: catItem.manufacturer,
@@ -398,11 +461,11 @@ export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
             dosageForm: catItem.dosageForm,
             packageSize: catItem.packageSize,
             barcode: catItem.barcode,
-            batchNumber: commonBatchNumber.trim() || `LOT-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+            batchNumber: rowCfg.batchNumber || `LOT-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
             price: unitPrice,
             quantity: qty,
             minStockAlert: 5,
-            expiryDate: commonExpiryDate,
+            expiryDate: rowCfg.expiryDate || commonExpiryDate,
             benefits: `${catItem.nameAr} - ${catItem.notes || ''}`.trim(),
             sideEffects: catItem.requiresPrescription ? 'صرف بموجب وصفة طبية أصولية من طبيب اختصاص.' : '',
             requiresPrescription: catItem.requiresPrescription,
@@ -423,17 +486,19 @@ export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
             resourceId: medId,
             resourceNumber: catItem.registrationNumber || medId,
             status: 'success',
-            details: `إضافة دواء (${catItem.nameEn}) بسعر ${unitPrice} د.ع وكمية ${qty} (التوفر: ${isAvail ? 'متوفر' : 'غير متوفر'})`,
+            details: `إضافة دواء (${catItem.nameEn}) بسعر ${unitPrice} د.ع وكمية ${qty} وجبة ${pharmacyRecord.batchNumber}`,
           });
         } else {
           // ==========================================
           // WHOLESALER INVENTORY RECORD
+          // Target Collection: /wholesale_medicines/{medId}
+          // Strict Tenancy: wholesalerId == user.uid
           // ==========================================
           const medId = `wmed_ai_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-          const packPrice = typeof wholesalePackPrice === 'number' && wholesalePackPrice > 0 ? wholesalePackPrice : 0;
-          const cartonPrice = typeof wholesaleCartonPrice === 'number' && wholesaleCartonPrice > 0 ? wholesaleCartonPrice : packPrice * 24;
-          const packs = typeof wholesaleStockPacks === 'number' && wholesaleStockPacks >= 0 ? wholesaleStockPacks : 0;
-          const moq = typeof wholesaleMinOrder === 'number' && wholesaleMinOrder > 0 ? wholesaleMinOrder : 1;
+          const packPrice = Number(rowCfg.price) > 0 ? Number(rowCfg.price) : 0;
+          const cartonPrice = Number(rowCfg.cartonPrice) > 0 ? Number(rowCfg.cartonPrice) : packPrice * 24;
+          const packs = Number(rowCfg.quantity) >= 0 ? Number(rowCfg.quantity) : 0;
+          const moq = Number(rowCfg.minOrderQuantity) > 0 ? Number(rowCfg.minOrderQuantity) : 1;
           const isAvail = packs > 0 && packPrice > 0;
 
           const wholesalerRecord: WholesaleMedicineItem = {
@@ -450,9 +515,9 @@ export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
             dosageForm: catItem.dosageForm,
             packSize: catItem.packageSize,
             cartonCapacity: 24,
-            batchNumber: commonBatchNumber.trim() || `WBAT-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+            batchNumber: rowCfg.batchNumber || `WBAT-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
             productionDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            expiryDate: commonExpiryDate,
+            expiryDate: rowCfg.expiryDate || commonExpiryDate,
             wholesalePriceIqd: packPrice,
             cartonPriceIqd: cartonPrice,
             stockPacks: packs,
@@ -501,7 +566,7 @@ export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
     if (failedList.length === 0) {
       showToast(
         language === 'ar'
-          ? `تمت إضافة جميع المستحضرات المحددة (${succeededList.length}) بنجاح إلى مخزونك`
+          ? `تمت إضافة كافة المستحضرات المحددة (${succeededList.length}) بنجاح إلى مخزونك`
           : `Successfully added all ${succeededList.length} medicines to your inventory`,
         'success'
       );
@@ -531,12 +596,12 @@ export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
               </span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-black tracking-tight flex items-center gap-3">
-              <span>{language === 'ar' ? 'مساعد إضافة الأدوية بالذكاء الاصطناعي' : 'AI Medicine Assistant'}</span>
+              <span>{language === 'ar' ? 'مساعد إدخال الأدوية والبحث الذكي' : 'AI Medicine Intake & Smart Search Assistant'}</span>
             </h2>
             <p className="text-sm text-teal-100/90 max-w-2xl leading-relaxed">
               {language === 'ar'
-                ? 'تحدث صوتياً أو اكتب باللغة العربية والعراقية للبحث التلقائي في الدليل الدوائي العراقي المعتمد (كيماديا) وإضافة الأصناف دفعة واحدة إلى مخزونك الخاص.'
-                : 'Speak or type in Arabic or English to query verified Iraqi Formulary (Kimadia) catalog items and bulk-add them to your inventory.'}
+                ? 'يفهم الأوامر الصوتية والنصية بالعربية واللهجة العراقية، والإنجليزية، للبحث في كتالوج الأدوية المعتمد، وفرز البدائل والمكافئ الحيوي وفق هرمية سريرية صارمة، والإضافة المجمعة للمخزون.'
+                : 'Understands Arabic, Iraqi dialect, and English speech & text to query the central formulary, analyze 4-tier bioequivalence, and batch-intake items into inventory.'}
             </p>
           </div>
 
@@ -569,24 +634,24 @@ export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
         </div>
       </div>
 
-      {/* Mandatory Clinical Safety & Decoupling Banner */}
+      {/* Mandatory Clinical Safety & Strict 4-Tier Equivalence Banner */}
       <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-950 flex items-start gap-3 text-xs leading-relaxed">
         <ShieldCheck size={20} className="text-amber-600 shrink-0 mt-0.5" />
         <div className="space-y-1">
-          <strong>
+          <strong className="block text-amber-900 font-bold">
             {language === 'ar'
-              ? 'ضوابط الأمان السريري وفصل المخزون:'
-              : 'Clinical Safety & Inventory Decoupling Protocol:'}
+              ? 'ميثاق الأمان الصيدلاني وهرمية البدائل الأربعة:'
+              : 'Pharmaceutical Safety & 4-Tier Equivalence Protocol:'}
           </strong>
           <p className="text-amber-900">
             {language === 'ar'
-              ? 'هذا المساعد مخصص حصراً للبحث والتصنيف الصيدلاني والإضافة المجمعة للمخزون، ولا يقدم أي استشارات طبية أو وصفات للمرضى. اختيار أي دواء من الدليل لا يجعله متوفراً تلقائياً؛ يجب تحديد الرصيد والسعر الفعلي لاعتباره متوفراً للبيع.'
-              : 'This assistant operates strictly for catalog retrieval, categorization, and inventory addition. It does not prescribe medications. Catalog items remain unavailable until physical stock and prices are confirmed.'}
+              ? 'يتبع النظام هرمية إلزامية صارمة: (1) الدواء الأصلي إن وُجد بنفس التركيز والشكل، (2) بديل يحتوي على نفس المادة الفعالة مع مقارنة التركيز والشكل، (3) مكافئ حيوي معتمد طبياً وموثق. وإذا لم يتوفر ذلك يُرفض تغيير المادة الفعالة ويصدر إشعار التنبيه الصريح لمراجعة الصيدلي أو الطبيب.'
+              : 'Strict 4-tier hierarchy: (1) Original exact formulation, (2) Same active ingredient with strength & form comparison, (3) Documented bioequivalent alternative, (4) Strict rejection of different compositions with explicit pharmacist consultation notice.'}
           </p>
         </div>
       </div>
 
-      {/* Interactive Conversational Input Bar (Voice & Text) */}
+      {/* Interactive Input Bar (Voice & Text with Iraqi Dialect Support) */}
       <div className="p-6 rounded-3xl bg-white border border-slate-200 shadow-sm space-y-4">
         <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
           {language === 'ar' ? 'تحدث عبر الميكروفون أو اكتب طلبك باللغة الطبيعية:' : 'Speak via microphone or type your natural query:'}
@@ -605,7 +670,7 @@ export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
               placeholder={
                 isListening
                   ? (language === 'ar' ? 'جاري الاستماع لصوتك الآن...' : 'Listening to your voice...')
-                  : (language === 'ar' ? 'مثال: أريد أدوية اختصاص القلب والضغط أو جهزلي أدوية الأطفال...' : 'e.g. I need pediatric medicines or cardiology medications...')
+                  : (language === 'ar' ? 'مثال: «أريد أدوية القلب والضغط» أو «اعرضلي أصناف الأطفال» أو «ابحثلي عن هذا الدواء وإذا مو موجود شوف البدائل المكافئة»' : 'e.g. «I need pediatric medicines» or «Search Plavix and show bioequivalent alternatives»')
               }
               className={`w-full px-5 py-4 rounded-2xl text-sm border transition-all outline-none ${
                 isListening
@@ -616,7 +681,7 @@ export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
             {inputText && (
               <button
                 onClick={() => setInputText('')}
-                className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+                className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
               >
                 <X size={16} />
               </button>
@@ -649,7 +714,7 @@ export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
               <RefreshCw size={18} className="animate-spin" />
             ) : (
               <>
-                <span>{language === 'ar' ? 'بحث ذكي' : 'Search'}</span>
+                <span>{language === 'ar' ? 'معالجة ذكية' : 'Process Query'}</span>
                 <Send size={16} className={isRTL ? 'rotate-180' : ''} />
               </>
             )}
@@ -685,7 +750,7 @@ export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
           </div>
         )}
 
-        {/* Microphone Error Alert with Immediate Text Fallback Guide */}
+        {/* Microphone Error Alert */}
         {micError && (
           <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 flex items-center gap-3 text-xs">
             <AlertCircle size={18} className="text-amber-600 shrink-0" />
@@ -695,10 +760,11 @@ export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
 
         {/* Quick Voice / Prompt Suggestion Chips */}
         <div className="space-y-2 pt-2 border-t border-slate-100">
-          <div className="text-[11px] font-bold text-slate-500">
-            {language === 'ar' ? 'أمثلة جاهزة للنقر الفوري أو التحدث بها:' : 'Quick examples to click or speak:'}
+          <div className="text-[11px] font-bold text-slate-500 flex items-center justify-between">
+            <span>{language === 'ar' ? 'أوامر شائعة باللهجة العراقية والعربية يمكنك النقر عليها أو نطقها:' : 'Common Iraqi & Arabic voice prompts:'}</span>
+            <span className="text-[10px] text-teal-700 font-semibold">{QUICK_PROMPT_EXAMPLES.length} خيار جاهز</span>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto pr-1">
             {QUICK_PROMPT_EXAMPLES.map((ex, idx) => (
               <button
                 key={idx}
@@ -708,7 +774,7 @@ export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
                 }}
                 className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-teal-50 hover:text-teal-800 hover:border-teal-300 border border-slate-200 text-xs font-medium text-slate-700 transition-all cursor-pointer flex items-center gap-1.5"
               >
-                <Sparkles size={12} className="text-teal-600" />
+                <Sparkles size={12} className="text-teal-600 shrink-0" />
                 <span>{language === 'ar' ? ex.ar : ex.en}</span>
               </button>
             ))}
@@ -716,7 +782,7 @@ export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
         </div>
       </div>
 
-      {/* Interpretation & Feedback Box */}
+      {/* Assistant Interpretation & Feedback Box */}
       {activeInterpretation && (
         <div className="p-5 rounded-3xl bg-teal-50/80 border border-teal-200/80 shadow-sm space-y-3">
           <div className="flex items-center justify-between flex-wrap gap-2">
@@ -724,7 +790,7 @@ export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
               <div className="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center font-bold text-xs shadow-sm">
                 AI
               </div>
-              <span className="text-xs font-bold text-teal-900">
+              <span className="text-xs font-bold text-teal-900 leading-snug">
                 {language === 'ar' ? activeInterpretation.interpretedIntentAr : activeInterpretation.interpretedIntentEn}
               </span>
             </div>
@@ -737,9 +803,53 @@ export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
             )}
           </div>
 
+          {/* Equivalence / Substitute Summary Header */}
+          {activeInterpretation.equivalenceResult && (
+            <div className="p-3.5 rounded-2xl bg-white border border-teal-200/80 space-y-2 text-xs">
+              <div className="flex items-center gap-2 font-bold text-slate-800">
+                <GitCompare size={15} className="text-teal-600" />
+                <span>
+                  {language === 'ar' ? 'تحليل البدائل والمكافئ الحيوي:' : 'Bioequivalence & Substitute Analysis:'}
+                </span>
+                {activeInterpretation.targetDrugForSubstitute && (
+                  <span className="font-mono text-teal-700 font-bold bg-teal-50 px-2 py-0.5 rounded-md">
+                    "{activeInterpretation.targetDrugForSubstitute}"
+                  </span>
+                )}
+              </div>
+
+              {activeInterpretation.equivalenceResult.isRejectedTier4 ? (
+                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 flex items-start gap-2.5">
+                  <ShieldAlert size={18} className="text-rose-600 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <strong className="block font-bold">المستوى الرابع: تنبيه سريري إلزامي</strong>
+                    <p className="font-semibold text-rose-800 leading-relaxed">
+                      «{activeInterpretation.equivalenceResult.mandatoryNoticeAr}»
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-[11px]">
+                  <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900">
+                    <div className="font-bold">المستوى 1: الدواء الأصلي</div>
+                    <div>{activeInterpretation.equivalenceResult.tier1ExactMatches.length} مستحضر مطابق</div>
+                  </div>
+                  <div className="p-2 rounded-xl bg-teal-50 border border-teal-200 text-teal-900">
+                    <div className="font-bold">المستوى 2: نفس المادة الفعالة</div>
+                    <div>{activeInterpretation.equivalenceResult.tier2SameActiveSubstitutes.length} بدائل بنفس المادة</div>
+                  </div>
+                  <div className="p-2 rounded-xl bg-blue-50 border border-blue-200 text-blue-900">
+                    <div className="font-bold">المستوى 3: مكافئ حيوي معتمد</div>
+                    <div>{activeInterpretation.equivalenceResult.tier3BioequivalentSubstitutes.length} مكافئ موثق سريرياً</div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="text-xs text-teal-800/90 flex items-center justify-between flex-wrap gap-2 pt-1 border-t border-teal-200/50">
             <div>
-              <span>{language === 'ar' ? 'المستحضرات المطابقة المسترجعة:' : 'Matched records retrieved:'} </span>
+              <span>{language === 'ar' ? 'المستحضرات المسترجعة:' : 'Matched records retrieved:'} </span>
               <strong className="font-mono text-sm font-black text-teal-950">
                 {activeInterpretation.totalMatches}
               </strong>{' '}
@@ -747,14 +857,16 @@ export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
             </div>
 
             <div className="flex items-center gap-3">
-              <button
-                onClick={handleSelectAll}
-                className="text-xs font-bold text-teal-900 hover:text-teal-700 underline cursor-pointer"
-              >
-                {selectedIds.size === activeInterpretation.matchedMedicines.length
-                  ? (language === 'ar' ? 'إلغاء تحديد الكل' : 'Deselect All')
-                  : (language === 'ar' ? 'تحديد كل النتائج' : 'Select All Results')}
-              </button>
+              {activeInterpretation.matchedMedicines.length > 0 && (
+                <button
+                  onClick={handleSelectAll}
+                  className="text-xs font-bold text-teal-900 hover:text-teal-700 underline cursor-pointer"
+                >
+                  {selectedIds.size === activeInterpretation.matchedMedicines.length
+                    ? (language === 'ar' ? 'إلغاء تحديد الكل' : 'Deselect All')
+                    : (language === 'ar' ? 'تحديد كل النتائج' : 'Select All Results')}
+                </button>
+              )}
               {selectedIds.size > 0 && (
                 <button
                   onClick={handleOpenReviewModal}
@@ -780,15 +892,15 @@ export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
           <h3 className="text-base font-bold text-slate-800">
             {language === 'ar' ? 'لا توجد أدوية مطابقة في الدليل المعتمد' : 'No matching medicines in verified catalog'}
           </h3>
-          <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+          <p className="text-xs text-slate-600 max-w-lg mx-auto leading-relaxed">
             {language === 'ar'
-              ? 'حرصاً على السلامة السريرية، لا يقوم النظام بابتكار أو تخمين أسماء أدوية وهمية. يرجى تجربة البحث باسم التخصص الطبي (مثل: القلبية، الأطفال، السكري، العظام، أو الدم).'
-              : 'To preserve patient safety, the system never fabricates fictitious drugs. Try searching by medical specialty (e.g., Cardiology, Pediatrics, Diabetes, Orthopedics, or Hematology).'}
+              ? '«لم نعثر على بديل مكافئ مؤكّد في الكتالوج. يمكن مراجعة الصيدلي المختص أو الطبيب للتحقق من الخيارات المناسبة». حرصاً على السلامة السريرية، يمتنع النظام عن توليد أو اختلاق أي أدوية وهمية.'
+              : '«No confirmed equivalent substitute found in the catalog. Please consult the attending pharmacist or physician to verify suitable therapeutic alternatives». Fictitious drugs are never fabricated.'}
           </p>
         </div>
       )}
 
-      {/* Matched Medicines Grid */}
+      {/* Matched Medicines Grid with Dosage Form Visual */}
       {activeInterpretation && activeInterpretation.matchedMedicines.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -808,6 +920,18 @@ export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
               const isSelected = selectedIds.has(item.id);
               const { isDuplicate, existingRecord } = checkInventoryDuplicate(item, existingMedicines);
 
+              // Check if item belongs to a specific tier in equivalence analysis
+              let tierBadge: { labelAr: string; color: string } | null = null;
+              if (activeInterpretation.equivalenceResult) {
+                if (activeInterpretation.equivalenceResult.tier1ExactMatches.some((m) => m.medicine.id === item.id)) {
+                  tierBadge = { labelAr: 'المستوى 1: أصلي مطابق', color: 'bg-emerald-600 text-white' };
+                } else if (activeInterpretation.equivalenceResult.tier2SameActiveSubstitutes.some((m) => m.medicine.id === item.id)) {
+                  tierBadge = { labelAr: 'المستوى 2: نفس المادة', color: 'bg-teal-600 text-white' };
+                } else if (activeInterpretation.equivalenceResult.tier3BioequivalentSubstitutes.some((m) => m.medicine.id === item.id)) {
+                  tierBadge = { labelAr: 'المستوى 3: مكافئ حيوي', color: 'bg-blue-600 text-white' };
+                }
+              }
+
               return (
                 <div
                   key={item.id}
@@ -819,16 +943,29 @@ export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
                   }`}
                 >
                   {/* Top Details & Selection Checkbox */}
-                  <div className="space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1">
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      {/* Pharmaceutical Dosage Form Visual / Photo */}
+                      <DosageFormVisual
+                        dosageForm={item.dosageForm}
+                        photoUrl={item.imageUrl}
+                        name={item.nameEn}
+                        size="md"
+                      />
+
+                      <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-xs font-mono font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded-lg border border-teal-200">
+                          <span className="text-[10px] font-mono font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">
                             {item.id}
                           </span>
+                          {tierBadge && (
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${tierBadge.color}`}>
+                              {tierBadge.labelAr}
+                            </span>
+                          )}
                           {item.requiresPrescription ? (
                             <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-red-100 text-red-800">
-                              Rx وصفة إلزامية
+                              Rx وصفة
                             </span>
                           ) : (
                             <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800">
@@ -836,10 +973,11 @@ export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
                             </span>
                           )}
                         </div>
-                        <h4 className="text-sm font-black text-slate-900 mt-1 leading-snug">
+
+                        <h4 className="text-sm font-black text-slate-900 mt-1 leading-snug truncate">
                           {item.nameEn}
                         </h4>
-                        <p className="text-xs font-bold text-teal-700">{item.nameAr}</p>
+                        <p className="text-xs font-bold text-teal-700 truncate">{item.nameAr}</p>
                       </div>
 
                       {/* Checkbox indicator */}
@@ -861,32 +999,38 @@ export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
                         <strong className="text-slate-800">{item.activeIngredient}</strong>
                       </div>
                       <div className="flex items-center justify-between text-[11px]">
-                        <span>{item.strength}</span>
+                        <span className="font-mono font-bold text-slate-700">{item.strength}</span>
                         <span className="text-slate-500">{item.dosageForm}</span>
                       </div>
-                      <div className="text-[11px] text-slate-500">
+                      <div className="text-[11px] text-slate-500 truncate">
                         {item.packageSize} • {item.manufacturer}
                       </div>
                     </div>
                   </div>
 
-                  {/* Stock Status Badge */}
+                  {/* Stock Status & Duplicate Detection Badge */}
                   <div className="mt-3 pt-2 border-t border-slate-100">
                     {isDuplicate ? (
-                      <div className="flex items-center gap-1.5 text-[11px] font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-xl border border-amber-200">
-                        <AlertTriangle size={13} className="shrink-0" />
-                        <span>
-                          {language === 'ar'
-                            ? 'مسجل مسبقاً في مخزونك'
-                            : 'Already in your inventory'}
-                        </span>
+                      <div className="flex items-center justify-between text-[11px] font-bold text-amber-800 bg-amber-50 px-2.5 py-1 rounded-xl border border-amber-200">
+                        <div className="flex items-center gap-1.5">
+                          <AlertTriangle size={13} className="shrink-0 text-amber-600" />
+                          <span>{language === 'ar' ? 'مسجل مسبقاً بالمخزون' : 'Already in inventory'}</span>
+                        </div>
+                        {existingRecord && 'price' in existingRecord && (
+                          <span className="font-mono text-[10px] text-amber-900">
+                            {existingRecord.price} د.ع (رصيد: {existingRecord.quantity})
+                          </span>
+                        )}
+                        {existingRecord && 'wholesalePriceIqd' in existingRecord && (
+                          <span className="font-mono text-[10px] text-amber-900">
+                            {existingRecord.wholesalePriceIqd} د.ع (باكت: {existingRecord.stockPacks})
+                          </span>
+                        )}
                       </div>
                     ) : (
                       <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500 bg-slate-50 px-2.5 py-1 rounded-xl border border-slate-200">
                         <Pill size={13} className="text-slate-400 shrink-0" />
-                        <span>
-                          {language === 'ar' ? 'صنف جديد غير مسجل' : 'New uncataloged item'}
-                        </span>
+                        <span>{language === 'ar' ? 'صنف جديد غير مسجل' : 'New uncataloged item'}</span>
                       </div>
                     )}
                   </div>
@@ -910,31 +1054,31 @@ export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
             className="px-5 py-2 rounded-xl bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-xs shadow-md transition-all cursor-pointer flex items-center gap-1.5"
           >
             <FileCheck size={15} />
-            <span>{language === 'ar' ? 'متابعة وإدخال الأسعار والمخزون' : 'Set Stock & Prices'}</span>
+            <span>{language === 'ar' ? 'متابعة وتأكيد المخزون والأسعار' : 'Set Stock & Prices'}</span>
           </button>
         </div>
       )}
 
-      {/* Review & Batch Addition Modal */}
+      {/* Meticulous Bulk Review & Intake Checklist Modal */}
       {showReviewModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 p-6 space-y-6">
+          <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[92vh] overflow-y-auto shadow-2xl border border-slate-200 p-6 space-y-6">
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-200">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-teal-600 text-white flex items-center justify-center font-bold">
-                  <Plus size={20} />
+                  <BookmarkCheck size={20} />
                 </div>
                 <div>
                   <h3 className="text-lg font-black text-slate-900">
                     {language === 'ar'
-                      ? 'مراجعة وتأكيد الإضافة المجمعة للمخزون'
-                      : 'Review & Confirm Batch Inventory Addition'}
+                      ? 'قائمة المراجعة الدقيقة وتأكيد الإضافة المجمعة'
+                      : 'Bulk Intake Checklist & Inventory Review'}
                   </h3>
                   <p className="text-xs text-slate-500">
                     {language === 'ar'
-                      ? `سيتم حفظ ${selectedMedicines.length} مستحضراً في قاعدة بيانات منشأتك الرسمية.`
-                      : `Saving ${selectedMedicines.length} medicines into your official database.`}
+                      ? `مراجعة ${selectedMedicines.length} مستحضراً قبل الحفظ في مخزون ${facilityName}.`
+                      : `Reviewing ${selectedMedicines.length} medicines before committing to ${facilityName}.`}
                   </p>
                 </div>
               </div>
@@ -947,28 +1091,37 @@ export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
               </button>
             </div>
 
-            {/* Inventory Decoupling Warning */}
+            {/* Inventory Decoupling & Duplicate Protection Notice */}
             <div className="p-4 rounded-2xl bg-blue-50 border border-blue-200 text-blue-950 text-xs leading-relaxed flex items-start gap-3">
               <Info size={18} className="text-blue-600 shrink-0 mt-0.5" />
               <div>
-                <strong>{language === 'ar' ? 'مبدأ الفصل السريري للمخزون:' : 'Clinical Inventory Decoupling:'}</strong>{' '}
+                <strong>{language === 'ar' ? 'ضوابط الإدخال السريري:' : 'Clinical Intake Protocol:'}</strong>{' '}
                 {language === 'ar'
-                  ? 'لن يظهر أي دواء كمتوفر (isAvailable = false) للمرضى أو الصيدليات ما لم تقم بتحديد سعر صالح ورصيد فيزيائي أكبر من صفر.'
-                  : 'Items remain unavailable (isAvailable = false) until physical stock and price greater than zero are set.'}
+                  ? 'يتطلب النظام تأكيد الكمية، السعر، رقم الوجبة (Batch Number)، وتاريخ انتهاء الصلاحية لكل صنف. لن يظهر أي دواء كمتوفر (isAvailable) ما لم يكن سعره ورصيده أكبر من صفر لمنع طلبات غير متوفرة.'
+                  : 'Requires confirming quantity, price, batch number, and expiry date. Items remain unavailable unless stock and price are confirmed.'}
               </div>
             </div>
 
-            {/* Batch Configuration Inputs */}
+            {/* Common Defaults Section */}
             <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-4">
-              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                {language === 'ar' ? 'إعدادات الوجبة والأسعار الموحدة:' : 'Batch & Pricing Defaults:'}
-              </h4>
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  {language === 'ar' ? 'إعدادات موحدة لتطبيقها على كافة الأصناف:' : 'Common Defaults for All Items:'}
+                </h4>
+                <button
+                  type="button"
+                  onClick={handleApplyDefaultsToAll}
+                  className="text-xs font-bold text-teal-700 hover:text-teal-900 underline cursor-pointer"
+                >
+                  {language === 'ar' ? 'تطبيق على كل القائمة' : 'Apply to all rows'}
+                </button>
+              </div>
 
               {portalType === 'pharmacy' ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
                   <div>
                     <label className="block font-bold text-slate-700 mb-1">
-                      {language === 'ar' ? 'سعر البيع الافتراضي (دينار عراقي IQD):' : 'Default Retail Price (IQD):'}
+                      {language === 'ar' ? 'سعر البيع (دينار عراقي IQD):' : 'Retail Price (IQD):'}
                     </label>
                     <input
                       type="number"
@@ -980,13 +1133,36 @@ export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
                   </div>
                   <div>
                     <label className="block font-bold text-slate-700 mb-1">
-                      {language === 'ar' ? 'الكمية الافتراضية بالمخزن (قطع):' : 'Default Quantity (Packs):'}
+                      {language === 'ar' ? 'الكمية المتوفرة (قطع):' : 'Quantity (Packs):'}
                     </label>
                     <input
                       type="number"
                       value={pharmacyQuantity}
                       onChange={(e) => setPharmacyQuantity(e.target.value === '' ? '' : Number(e.target.value))}
                       min={0}
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-300 font-mono bg-white text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">
+                      {language === 'ar' ? 'رقم الوجبة (Batch Number):' : 'Batch / Lot Number:'}
+                    </label>
+                    <input
+                      type="text"
+                      value={commonBatchNumber}
+                      onChange={(e) => setCommonBatchNumber(e.target.value)}
+                      placeholder={`LOT-${new Date().getFullYear()}-001`}
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-300 font-mono bg-white text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">
+                      {language === 'ar' ? 'تاريخ انتهاء الصلاحية:' : 'Expiry Date:'}
+                    </label>
+                    <input
+                      type="date"
+                      value={commonExpiryDate}
+                      onChange={(e) => setCommonExpiryDate(e.target.value)}
                       className="w-full px-3 py-2.5 rounded-xl border border-slate-300 font-mono bg-white text-sm"
                     />
                   </div>
@@ -1043,55 +1219,114 @@ export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
                   </div>
                 </div>
               )}
-
-              {/* Expiry Date and Batch Number */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs pt-2 border-t border-slate-200">
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">
-                    {language === 'ar' ? 'تاريخ انتهاء الصلاحية:' : 'Expiry Date:'}
-                  </label>
-                  <input
-                    type="date"
-                    value={commonExpiryDate}
-                    onChange={(e) => setCommonExpiryDate(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-300 font-mono bg-white text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">
-                    {language === 'ar' ? 'رقم الوجبة / التشغيلة (Batch/Lot Number):' : 'Batch / Lot Number:'}
-                  </label>
-                  <input
-                    type="text"
-                    value={commonBatchNumber}
-                    onChange={(e) => setCommonBatchNumber(e.target.value)}
-                    placeholder={`LOT-${new Date().getFullYear()}-001`}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-300 font-mono bg-white text-sm"
-                  />
-                </div>
-              </div>
             </div>
 
-            {/* Selected Items Review Table */}
-            <div className="space-y-2">
-              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                {language === 'ar' ? 'قائمة المستحضرات المحددة للإضافة:' : 'Medicines Queued for Addition:'}
-              </h4>
-              <div className="max-h-48 overflow-y-auto rounded-2xl border border-slate-200 divide-y divide-slate-100">
-                {duplicateWarnings.map(({ item, isDuplicate }) => (
-                  <div key={item.id} className="p-3 flex items-center justify-between text-xs hover:bg-slate-50">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-800">{item.nameEn}</span>
-                      <span className="text-slate-500 font-normal">({item.nameAr})</span>
-                      {isDuplicate && (
-                        <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200">
-                          {language === 'ar' ? 'مكرر' : 'Duplicate'}
-                        </span>
-                      )}
+            {/* Individual Item Checklist & Review Table */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  {language === 'ar' ? 'جدول تدقيق ومطابقة الأصناف المحددة:' : 'Item-by-Item Verification Table:'}
+                </h4>
+                <span className="text-xs text-slate-500 font-medium">
+                  {selectedMedicines.length} {language === 'ar' ? 'مستحضر' : 'items'}
+                </span>
+              </div>
+
+              <div className="max-h-72 overflow-y-auto rounded-2xl border border-slate-200 divide-y divide-slate-100">
+                {duplicateWarnings.map(({ item, isDuplicate, existingRecord }) => {
+                  const cfg = customRowConfigs[item.id] || {
+                    price: 5000,
+                    quantity: 20,
+                    batchNumber: commonBatchNumber || 'LOT-2026',
+                    expiryDate: commonExpiryDate,
+                  };
+
+                  return (
+                    <div key={item.id} className="p-3.5 space-y-2.5 hover:bg-slate-50 text-xs">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                          <DosageFormVisual
+                            dosageForm={item.dosageForm}
+                            photoUrl={item.imageUrl}
+                            name={item.nameEn}
+                            size="sm"
+                          />
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-bold text-slate-900">{item.nameEn}</span>
+                              <span className="text-slate-500">({item.nameAr})</span>
+                              {isDuplicate && (
+                                <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-md border border-amber-300 flex items-center gap-1">
+                                  <AlertTriangle size={11} />
+                                  <span>{language === 'ar' ? 'صنف مكرر بالمخزون' : 'Duplicate in stock'}</span>
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[11px] text-slate-500 mt-0.5">
+                              <span>المادة: {item.activeIngredient}</span> • <span>التركيز: {item.strength}</span> • <span>الشكل: {item.dosageForm}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={() => toggleSelect(item.id)}
+                          title={language === 'ar' ? 'استبعاد من الإضافة' : 'Remove item'}
+                          className="text-slate-400 hover:text-red-600 p-1 cursor-pointer"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+
+                      {/* Row Inputs: Price, Qty, Batch, Expiry */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                        <div>
+                          <label className="text-[10px] text-slate-500 block mb-0.5">
+                            {language === 'ar' ? 'السعر (د.ع)' : 'Price (IQD)'}
+                          </label>
+                          <input
+                            type="number"
+                            value={cfg.price}
+                            onChange={(e) => handleUpdateRowConfig(item.id, 'price', Number(e.target.value))}
+                            className="w-full px-2 py-1.5 rounded-lg border border-slate-300 font-mono text-xs bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-slate-500 block mb-0.5">
+                            {language === 'ar' ? 'الكمية' : 'Quantity'}
+                          </label>
+                          <input
+                            type="number"
+                            value={cfg.quantity}
+                            onChange={(e) => handleUpdateRowConfig(item.id, 'quantity', Number(e.target.value))}
+                            className="w-full px-2 py-1.5 rounded-lg border border-slate-300 font-mono text-xs bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-slate-500 block mb-0.5">
+                            {language === 'ar' ? 'رقم الوجبة' : 'Batch #'}
+                          </label>
+                          <input
+                            type="text"
+                            value={cfg.batchNumber}
+                            onChange={(e) => handleUpdateRowConfig(item.id, 'batchNumber', e.target.value)}
+                            className="w-full px-2 py-1.5 rounded-lg border border-slate-300 font-mono text-xs bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-slate-500 block mb-0.5">
+                            {language === 'ar' ? 'تاريخ الصلاحية' : 'Expiry'}
+                          </label>
+                          <input
+                            type="date"
+                            value={cfg.expiryDate}
+                            onChange={(e) => handleUpdateRowConfig(item.id, 'expiryDate', e.target.value)}
+                            className="w-full px-2 py-1.5 rounded-lg border border-slate-300 font-mono text-xs bg-white"
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <span className="font-mono text-slate-500 text-[11px]">{item.strength}</span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -1111,14 +1346,14 @@ export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
               </div>
             )}
 
-            {/* Batch Result Summary if completed */}
+            {/* Batch Result Summary */}
             {batchResultSummary && (
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2">
                 <div className="font-bold text-slate-800 flex items-center gap-2">
                   <CheckCircle2 size={16} className="text-emerald-600" />
                   <span>
                     {language === 'ar'
-                      ? `اكتملت العملية: تمت إضافة ${batchResultSummary.succeeded.length} مستحضراً.`
+                      ? `اكتملت العملية: تمت إضافة ${batchResultSummary.succeeded.length} مستحضراً بنجاح.`
                       : `Operation completed: Added ${batchResultSummary.succeeded.length} medicines.`}
                   </span>
                 </div>
@@ -1144,7 +1379,7 @@ export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
               {!batchResultSummary && (
                 <button
                   onClick={handleConfirmBatchAddition}
-                  disabled={isSubmittingBatch}
+                  disabled={isSubmittingBatch || selectedMedicines.length === 0}
                   className="px-6 py-2.5 rounded-xl bg-[#00796b] hover:bg-[#00695c] text-white font-bold text-xs shadow-md transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50"
                 >
                   {isSubmittingBatch ? (
@@ -1154,8 +1389,8 @@ export const AiMedicineAssistant: React.FC<AiMedicineAssistantProps> = ({
                   )}
                   <span>
                     {language === 'ar'
-                      ? `تأكيد وإضافة (${selectedMedicines.length}) مستحضرات`
-                      : `Confirm & Add (${selectedMedicines.length}) Medicines`}
+                      ? `تأكيد وحفظ (${selectedMedicines.length}) مستحضرات في المخزون`
+                      : `Confirm & Commit (${selectedMedicines.length}) to Inventory`}
                   </span>
                 </button>
               )}

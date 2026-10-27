@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { db, handleFirestoreError, OperationType, sanitizeForFirestore } from '../lib/firebase';
 import { recordRealMetricEvent } from '../lib/platformMetrics';
-import { generateUniqueMedicalId } from '../utils/medicalId';
+import { generateUniqueMedicalId, generateFacilityOrUserId, isValidAccountIdFormat } from '../utils/medicalId';
 import { 
   UserProfile,
   PatientProfile, 
@@ -78,6 +78,7 @@ import {
   Sparkles, 
   Building2, 
   BadgeAlert, 
+  BadgeCheck,
   Layers, 
   Settings,
   MessageSquare,
@@ -94,7 +95,7 @@ interface PatientPortalWorkspaceProps {
 }
 
 export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ onBackToHome }) => {
-  const { user, userProfile, refreshProfile, signOut, deleteOwnAccountPermanently, isDemoMode } = useAuth();
+  const { user, userProfile, refreshProfile, signOut, deleteOwnAccountPermanently, isDemoMode, updateAccountMedicalId } = useAuth();
   const { language, isRTL } = useLanguage();
 
   // Navigation tab
@@ -138,7 +139,9 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
 
   // 1. Patient Profile State
   const [patientProfile, setPatientProfile] = useState<PatientProfile | null>(null);
+  const [isUpdatingMedicalId, setIsUpdatingMedicalId] = useState(false);
   const [editProfileForm, setEditProfileForm] = useState({
+    medicalId: '',
     fullName: '',
     phone: '',
     governorate: 'بغداد (Baghdad)',
@@ -555,43 +558,47 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
       }
 
       if (pData) {
+        const resolvedMedicalId = pData.medicalId || userProfile?.medicalId || userProfile?.accountId || generateFacilityOrUserId('patient', user.uid);
         setPatientProfile(pData);
         setEditProfileForm({
-          fullName: pData.fullName || userProfile?.displayName || user.displayName || 'مريض منصة M737',
+          medicalId: resolvedMedicalId,
+          fullName: pData.fullName || userProfile?.displayName || user.displayName || user.email?.split('@')[0] || 'مريض مسجل',
           phone: pData.phone || userProfile?.phone || '',
           governorate: pData.governorate || userProfile?.governorate || 'بغداد (Baghdad)',
           address: pData.address || '',
           emergencyContactName: pData.emergencyContactName || '',
           emergencyContactPhone: pData.emergencyContactPhone || '',
-          bloodType: (pData.bloodType as any) || 'O+',
+          bloodType: (pData.bloodType as any) || 'Unknown',
           chronicDiseases: (pData.chronicDiseases || []).join(', '),
           allergies: (pData.allergies || []).join(', '),
           currentMedications: (pData.currentMedications || []).join(', '),
           heightCm: pData.heightCm || 170,
           weightKg: pData.weightKg || 70,
-          dateOfBirth: pData.dateOfBirth || '1995-01-01',
+          dateOfBirth: pData.dateOfBirth || '2000-01-01',
           gender: pData.gender || 'male',
           photoURL: pData.photoURL || user.photoURL || '',
         });
       } else {
+        const authenticMedicalId = userProfile?.medicalId || userProfile?.accountId || generateFacilityOrUserId('patient', user.uid);
+        const authenticFullName = userProfile?.displayName || user.displayName || user.email?.split('@')[0] || 'مريض مسجل';
         const initialProfile: PatientProfile = {
           patientId: user.uid,
-          fullName: userProfile?.displayName || user.displayName || 'سارة حيدر العراقي',
-          medicalId: generateMedicalId(user.uid),
-          email: user.email || 'patient@m737.iq',
-          phone: userProfile?.phone || '07809988776',
+          fullName: authenticFullName,
+          medicalId: authenticMedicalId,
+          email: user.email || userProfile?.email || '',
+          phone: userProfile?.phone || '',
           governorate: userProfile?.governorate || 'بغداد (Baghdad)',
-          address: 'العراق، بغداد، المنصور',
-          emergencyContactName: 'حيدر العراقي (الأب)',
-          emergencyContactPhone: '07801122334',
-          bloodType: 'O+',
-          chronicDiseases: ['حساسية موسمية خفيفة'],
-          allergies: ['البنسلين (Penicillin Allergy)'],
-          currentMedications: ['فيتامين د 50000 وحدة أسبوعياً'],
-          heightCm: 165,
-          weightKg: 62,
-          dateOfBirth: '1996-04-12',
-          gender: 'female',
+          address: '',
+          emergencyContactName: '',
+          emergencyContactPhone: '',
+          bloodType: 'Unknown',
+          chronicDiseases: [],
+          allergies: [],
+          currentMedications: [],
+          heightCm: 170,
+          weightKg: 70,
+          dateOfBirth: '2000-01-01',
+          gender: 'male',
           photoURL: user.photoURL || '',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -605,20 +612,21 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
         }
         setPatientProfile(initialProfile);
         setEditProfileForm({
-          fullName: initialProfile.fullName,
+          medicalId: authenticMedicalId,
+          fullName: authenticFullName,
           phone: initialProfile.phone,
           governorate: initialProfile.governorate,
           address: initialProfile.address,
-          emergencyContactName: initialProfile.emergencyContactName || '',
-          emergencyContactPhone: initialProfile.emergencyContactPhone || '',
-          bloodType: initialProfile.bloodType as any,
-          chronicDiseases: (initialProfile.chronicDiseases || []).join(', '),
-          allergies: (initialProfile.allergies || []).join(', '),
-          currentMedications: (initialProfile.currentMedications || []).join(', '),
-          heightCm: initialProfile.heightCm || 165,
-          weightKg: initialProfile.weightKg || 62,
-          dateOfBirth: initialProfile.dateOfBirth || '1996-04-12',
-          gender: initialProfile.gender || 'female',
+          emergencyContactName: '',
+          emergencyContactPhone: '',
+          bloodType: 'Unknown',
+          chronicDiseases: '',
+          allergies: '',
+          currentMedications: '',
+          heightCm: 170,
+          weightKg: 70,
+          dateOfBirth: '2000-01-01',
+          gender: 'male',
           photoURL: initialProfile.photoURL || '',
         });
       }
@@ -923,7 +931,7 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
       } catch (e) {
         console.warn('Prescriptions fetch fallback:', e);
       }
-      if (rxList.length === 0) {
+      if (rxList.length === 0 && isDemoMode) {
         rxList = [
           {
             id: 'demo_rx_sara_1',
@@ -936,10 +944,10 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
             clinicName: 'عيادة الرافدين الاستشارية التخصصية',
             clinicAddress: 'بغداد، ساحة الواثق، مجمع الأطباء الاستشاري',
             patientId: user.uid,
-            patientName: patientProfile?.fullName || userProfile?.displayName || 'سارة حيدر العراقي',
-            patientGender: 'female',
-            patientAge: 29,
-            patientPhone: userProfile?.phone || '07809988776',
+            patientName: patientProfile?.fullName || userProfile?.displayName || user.displayName || 'مريض مسجل',
+            patientGender: 'male',
+            patientAge: 30,
+            patientPhone: userProfile?.phone || '',
             targetPharmacyId: 'demo_pharmacy_alnoor',
             targetPharmacyName: 'صيدلية النور النموذجية',
             diagnosis: 'Essential Hypertension Grade 1 with mild tension headaches',
@@ -1028,7 +1036,7 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
       } catch (e) {
         console.warn('Lab orders fetch fallback:', e);
       }
-      if (labOrdersList.length === 0) {
+      if (labOrdersList.length === 0 && isDemoMode) {
         labOrdersList = [
           {
             id: 'demo_lab_ref_sara',
@@ -1039,8 +1047,8 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
             doctorPhone: '07801234567',
             clinicName: 'عيادة الرافدين الاستشارية',
             patientId: user.uid,
-            patientName: patientProfile?.fullName || userProfile?.displayName || 'سارة حيدر العراقي',
-            patientPhone: userProfile?.phone || '07809988776',
+            patientName: patientProfile?.fullName || userProfile?.displayName || user.displayName || 'مريض مسجل',
+            patientPhone: userProfile?.phone || '',
             targetLabId: 'demo_lab_baghdad',
             targetLabName: 'مختبر الرافدين المركزي التخصصي',
             tests: [
@@ -1074,7 +1082,7 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
       } catch (e) {
         console.warn('Radiology orders fetch fallback:', e);
       }
-      if (radOrdersList.length === 0) {
+      if (radOrdersList.length === 0 && isDemoMode) {
         radOrdersList = [
           {
             id: 'demo_rad_ref_sara',
@@ -1085,8 +1093,8 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
             doctorPhone: '07802233445',
             clinicName: 'عيادة بغداد التخصصية',
             patientId: user.uid,
-            patientName: patientProfile?.fullName || userProfile?.displayName || 'سارة حيدر العراقي',
-            patientPhone: userProfile?.phone || '07809988776',
+            patientName: patientProfile?.fullName || userProfile?.displayName || user.displayName || 'مريض مسجل',
+            patientPhone: userProfile?.phone || '',
             targetCenterId: 'demo_rad_baghdad',
             targetCenterName: 'مركز النور للأشعة التخصصي',
             modality: 'mri',
@@ -1116,16 +1124,33 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
   }, [user]);
 
   // ==========================================
-  // ACTION: SAVE PATIENT HEALTH PROFILE
+  // ACTION: SAVE PATIENT HEALTH PROFILE & MEDICAL ID
   // ==========================================
   const handleSavePatientProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
     const now = new Date().toISOString();
+
+    let targetMedicalId = (editProfileForm.medicalId || patientProfile?.medicalId || generateFacilityOrUserId('patient', user.uid)).trim().toUpperCase();
+
+    // If Medical ID was modified by the user, validate and synchronize through updateUserAccountId
+    if (patientProfile?.medicalId && targetMedicalId !== patientProfile.medicalId) {
+      setIsUpdatingMedicalId(true);
+      const updateIdRes = await updateAccountMedicalId(targetMedicalId);
+      setIsUpdatingMedicalId(false);
+      if (!updateIdRes.success) {
+        showToast(updateIdRes.error || (language === 'ar' ? 'فشل تعديل الرقم الصحي' : 'Failed to update Health ID'), 'error');
+        return;
+      }
+      if (updateIdRes.finalId) {
+        targetMedicalId = updateIdRes.finalId;
+      }
+    }
+
     const updatedProfile: PatientProfile = {
       patientId: user.uid,
       fullName: editProfileForm.fullName,
-      medicalId: patientProfile?.medicalId || generateMedicalId(user.uid),
+      medicalId: targetMedicalId,
       email: user.email || '',
       phone: editProfileForm.phone,
       governorate: editProfileForm.governorate,
@@ -1152,7 +1177,8 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
     };
 
     setPatientProfile(updatedProfile);
-    showToast(language === 'ar' ? 'تم تحديث الملف الصحي الشخصي بنجاح' : 'Health profile updated');
+    setEditProfileForm(prev => ({ ...prev, medicalId: targetMedicalId }));
+    showToast(language === 'ar' ? 'تم تحديث الملف الصحي الشخصي والرقم الصحي بنجاح' : 'Health profile & ID updated');
 
     if (!isDemoMode) {
       try {
@@ -1161,6 +1187,8 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
           displayName: editProfileForm.fullName,
           governorate: editProfileForm.governorate,
           phone: editProfileForm.phone,
+          medicalId: targetMedicalId,
+          accountId: targetMedicalId,
           updatedAt: now,
         });
         await refreshProfile();
@@ -1168,6 +1196,29 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
         console.warn('Patient profile update firestore warning:', err);
       }
     }
+  };
+
+  const handleUpdateMedicalIdOnly = async () => {
+    if (!user || !editProfileForm.medicalId.trim()) return;
+    const cleanId = editProfileForm.medicalId.trim().toUpperCase();
+    setIsUpdatingMedicalId(true);
+    const updateIdRes = await updateAccountMedicalId(cleanId);
+    setIsUpdatingMedicalId(false);
+    if (!updateIdRes.success) {
+      showToast(updateIdRes.error || (language === 'ar' ? 'فشل تعديل الرقم الصحي' : 'Failed to update Health ID'), 'error');
+      return;
+    }
+    const finalId = updateIdRes.finalId || cleanId;
+    setPatientProfile(prev => prev ? { ...prev, medicalId: finalId } : null);
+    setEditProfileForm(prev => ({ ...prev, medicalId: finalId }));
+    showToast(language === 'ar' ? `تم اعتماد وتوثيق الرقم الصحي: ${finalId}` : `Health ID verified & updated: ${finalId}`);
+  };
+
+  const handleRegenerateDefaultMedicalId = () => {
+    if (!user) return;
+    const autoId = generateFacilityOrUserId('patient', user.uid);
+    setEditProfileForm(prev => ({ ...prev, medicalId: autoId }));
+    showToast(language === 'ar' ? `تم توليد الرقم المعتمد من الحساب: ${autoId}` : `Generated account ID: ${autoId}`);
   };
 
   // ==========================================
@@ -3499,13 +3550,93 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
               </h2>
               <p className="text-xs text-slate-500 mt-1">
                 {language === 'ar'
-                  ? 'تحديث بيانات الهوية الشخصية، فصيلة الدم، أرقام الطوارئ، الأمراض المزمنة والتحسسات.'
-                  : 'Maintain personal credentials, emergency contacts, blood group, allergies and medications.'}
+                  ? 'تحديث بيانات الهوية الشخصية، الرقم الصحي، فصيلة الدم، أرقام الطوارئ، الأمراض المزمنة والتحسسات.'
+                  : 'Maintain personal credentials, Health ID, emergency contacts, blood group, allergies and medications.'}
               </p>
             </div>
 
-            <div className="text-xs font-mono font-bold px-3 py-1.5 rounded-xl bg-slate-100 text-slate-800">
-              {patientProfile?.medicalId || generateMedicalId(user?.uid || '')}
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 flex items-center gap-1">
+                <BadgeCheck size={14} />
+                <span>{language === 'ar' ? 'معتمد حسابياً' : 'Account Verified'}</span>
+              </span>
+            </div>
+          </div>
+
+          {/* DYNAMIC EDITABLE HEALTH ID CARD */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-linear-to-r from-sky-50 via-blue-50/60 to-slate-50 border border-sky-200">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck size={20} className="text-[#003366] shrink-0" />
+                  <span className="font-extrabold text-sm sm:text-base text-slate-900">
+                    {language === 'ar' ? 'الرقم الصحي الموحد لحساب المريض:' : 'Unified Patient Health ID:'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 leading-relaxed max-w-xl">
+                  {language === 'ar'
+                    ? 'هذا الرقم الصحي يرتبط بحسابك الحقيقي، ويتغير أو يُعدل حسب رغبتك بالصيغة المعتمدة (M737-PAT-XXXXXX) مع التحقق الفوري لمنع التكرار في قاعدة البيانات.'
+                    : 'This Health ID is tied directly to your genuine authenticated account. You may adjust or regenerate it at any time.'}
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const idToCopy = editProfileForm.medicalId || patientProfile?.medicalId || '';
+                    if (idToCopy) {
+                      navigator.clipboard.writeText(idToCopy);
+                      showToast(language === 'ar' ? 'تم نسخ الرقم الصحي' : 'Health ID copied');
+                    }
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                >
+                  <Copy size={13} />
+                  <span>{language === 'ar' ? 'نسخ' : 'Copy'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleRegenerateDefaultMedicalId}
+                  className="px-3 py-1.5 rounded-xl bg-white border border-sky-200 hover:bg-sky-50 text-sky-800 font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                  title={language === 'ar' ? 'إعادة توليد المعرف تلقائياً من UID الحساب' : 'Regenerate from UID'}
+                >
+                  <RefreshCw size={13} />
+                  <span>{language === 'ar' ? 'توليد تلقائي' : 'Regenerate'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleUpdateMedicalIdOnly}
+                  disabled={isUpdatingMedicalId}
+                  className="px-4 py-1.5 rounded-xl bg-[#003366] hover:bg-[#002244] text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50"
+                >
+                  <CheckCircle2 size={13} />
+                  <span>{isUpdatingMedicalId ? (language === 'ar' ? 'جاري الحفظ...' : 'Saving...') : (language === 'ar' ? 'اعتماد الرقم' : 'Verify & Set')}</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-3.5 pt-3 border-t border-sky-200/70 grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
+              <div className="sm:col-span-2">
+                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  {language === 'ar' ? 'تعديل الرقم الصحي (قابل للتخصيص):' : 'Edit Health ID (Customizable):'}
+                </label>
+                <input
+                  type="text"
+                  value={editProfileForm.medicalId}
+                  onChange={(e) => setEditProfileForm({ ...editProfileForm, medicalId: e.target.value.toUpperCase() })}
+                  placeholder={patientProfile?.medicalId || (user ? generateFacilityOrUserId('patient', user.uid) : 'M737-PAT-XXXXXX')}
+                  className="w-full px-3.5 py-2 rounded-xl border border-sky-300 font-mono text-sm font-black text-[#003366] uppercase bg-white focus:outline-none focus:ring-2 focus:ring-[#003366]"
+                />
+              </div>
+              <div className="text-[11px] text-slate-500 bg-white/80 p-2.5 rounded-xl border border-sky-100">
+                <div className="font-semibold text-slate-700 mb-0.5">
+                  {language === 'ar' ? 'البادئة الرسمية:' : 'Standard Prefix:'}
+                </div>
+                <div className="font-mono text-xs text-sky-800 font-bold">M737-PAT-[كود_خاص]</div>
+              </div>
             </div>
           </div>
 
