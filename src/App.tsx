@@ -20,6 +20,8 @@ import { AuthDomainGuideModal } from './components/AuthDomainGuideModal';
 import { FeaturesGuideModal } from './components/FeaturesGuideModal';
 import { NotificationPermissionBanner } from './components/NotificationPermissionBanner';
 import { NotificationSettingsModal } from './components/NotificationSettingsModal';
+import { NotificationInbox } from './components/NotificationInbox';
+import { InstallUpdatePage } from './components/InstallUpdatePage';
 import { registerPushServiceWorker } from './lib/pushNotificationService';
 import { PortalId } from './types';
 import { parseCurrentRoute, navigateTo, RouteState } from './utils/navigation';
@@ -31,6 +33,7 @@ const MainAppContent: React.FC = () => {
   const [featuresGuideOpen, setFeaturesGuideOpen] = useState(false);
   const [domainHelpOpen, setDomainHelpOpen] = useState(false);
   const [notificationSettingsOpen, setNotificationSettingsOpen] = useState(false);
+  const [notificationInboxOpen, setNotificationInboxOpen] = useState(false);
 
   // Initialize and register background push Service Worker on boot
   useEffect(() => {
@@ -132,7 +135,29 @@ const MainAppContent: React.FC = () => {
       );
     }
 
-    // 5. Dedicated Welcome Landing Page (Default: / or /home matching mockup)
+    // 5. Dedicated Notification Inbox Page (/notifications)
+    if (routeState.route === 'notifications') {
+      return (
+        <div className="py-2 sm:py-4">
+          <NotificationInbox
+            onSelectPortal={handleSelectPortal}
+            onOpenSettings={() => setNotificationSettingsOpen(true)}
+          />
+        </div>
+      );
+    }
+
+    // 6. Dedicated Official Installation & Update Page (/install)
+    if (routeState.route === 'install') {
+      return (
+        <InstallUpdatePage
+          onNavigateHome={handleResetToHome}
+          onNavigatePortals={handleNavigateToPortals}
+        />
+      );
+    }
+
+    // 7. Dedicated Welcome Landing Page (Default: / or /home matching mockup)
     return (
       <HomePageView
         onNavigate={handleNavigate}
@@ -170,6 +195,7 @@ const MainAppContent: React.FC = () => {
           onToggleSidebar={() => setSidebarMobileOpen((prev) => !prev)}
           onSelectPortal={handleSelectPortal}
           onOpenNotificationSettings={() => setNotificationSettingsOpen(true)}
+          onOpenNotificationInbox={() => setNotificationInboxOpen(true)}
         />
 
         {/* Routed View Container */}
@@ -190,6 +216,23 @@ const MainAppContent: React.FC = () => {
         isOpen={notificationSettingsOpen}
         onClose={() => setNotificationSettingsOpen(false)}
       />
+
+      {/* Notification Inbox Modal */}
+      {notificationInboxOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 animate-in fade-in duration-150">
+          <div className="w-full max-w-4xl max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-150">
+            <NotificationInbox
+              isModal
+              onClose={() => setNotificationInboxOpen(false)}
+              onSelectPortal={handleSelectPortal}
+              onOpenSettings={() => {
+                setNotificationInboxOpen(false);
+                setNotificationSettingsOpen(true);
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Legal Terms & Privacy Modal */}
       <LegalModal

@@ -20,7 +20,9 @@ import {
   ChevronRight,
   X,
   Sparkles,
-  ExternalLink
+  ExternalLink,
+  Bell,
+  Download
 } from 'lucide-react';
 
 interface AppSidebarProps {
@@ -211,6 +213,48 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                 <span>{language === 'ar' ? 'الرئيسية' : 'Home'}</span>
               </div>
               <div className="w-1.5 h-1.5 rounded-full bg-white opacity-80" />
+            </button>
+
+            {/* 2. صندوق الإشعارات (Notification Inbox) */}
+            <button
+              onClick={() => {
+                onNavigate('notifications');
+                onCloseMobile();
+              }}
+              className={`w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all group cursor-pointer ${
+                currentRoute === 'notifications'
+                  ? 'bg-blue-600/30 text-sky-300 font-bold border border-blue-500/40'
+                  : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <Bell size={18} className={currentRoute === 'notifications' ? 'text-sky-300' : 'text-slate-400 group-hover:text-slate-200'} />
+                <span>{language === 'ar' ? 'صندوق الإشعارات' : 'Notification Inbox'}</span>
+              </div>
+              <span className="text-slate-500 group-hover:text-slate-300 text-xs">
+                {isRTL ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
+              </span>
+            </button>
+
+            {/* 3. تثبيت التطبيق الرسمي (Install App - Android & iPhone) */}
+            <button
+              onClick={() => {
+                onNavigate('install');
+                onCloseMobile();
+              }}
+              className={`w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all group cursor-pointer ${
+                currentRoute === 'install'
+                  ? 'bg-emerald-600/30 text-emerald-300 font-bold border border-emerald-500/40'
+                  : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <Download size={18} className={currentRoute === 'install' ? 'text-emerald-300' : 'text-emerald-400 group-hover:text-emerald-300'} />
+                <span>{language === 'ar' ? 'تثبيت التطبيق (أندرويد وآيفون)' : 'Install App (Android & iOS)'}</span>
+              </div>
+              <span className="text-slate-500 group-hover:text-slate-300 text-xs">
+                {isRTL ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
+              </span>
             </button>
 
             {/* Portals List (Exact matching to screenshot) */}

@@ -5,6 +5,8 @@ export type AppRoute =
   | 'portals'
   | 'about'
   | 'support'
+  | 'notifications'
+  | 'install'
   | PortalId;
 
 export const VALID_PORTAL_IDS: PortalId[] = [
@@ -64,6 +66,14 @@ export function parseCurrentRoute(): RouteState {
     return { route: 'support', portalId: null, path: '/support' };
   }
 
+  if (token === 'notifications' || token === 'inbox' || token === 'alerts') {
+    return { route: 'notifications', portalId: null, path: '/notifications' };
+  }
+
+  if (token === 'install' || token === 'download' || token === 'app' || token === 'get-app') {
+    return { route: 'install', portalId: null, path: '/install' };
+  }
+
   // Portal paths, e.g. /portal/doctor or /doctor
   let portalKey = token;
   if (portalKey.startsWith('portal/')) {
@@ -109,6 +119,12 @@ export function navigateTo(target: AppRoute | string) {
   } else if (target === 'support' || target === 'contact' || target === '/support') {
     targetPath = '/support';
     targetRoute = 'support';
+  } else if (target === 'notifications' || target === '/notifications' || target === 'inbox') {
+    targetPath = '/notifications';
+    targetRoute = 'notifications';
+  } else if (target === 'install' || target === '/install' || target === 'download' || target === 'app') {
+    targetPath = '/install';
+    targetRoute = 'install';
   } else {
     // Portal route
     const cleanId = target.replace(/^\/+/, '').replace(/^portal\//, '');

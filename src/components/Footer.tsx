@@ -95,6 +95,14 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenLegal }) => {
               </li>
               <li>
                 <button
+                  onClick={() => onNavigate('install')}
+                  className="text-emerald-400 hover:text-emerald-300 font-bold transition-colors cursor-pointer text-start flex items-center gap-1.5"
+                >
+                  <span>{language === 'ar' ? 'تثبيت التطبيق (أندرويد وآيفون)' : 'Install App (Android & iPhone)'}</span>
+                </button>
+              </li>
+              <li>
+                <button
                   onClick={() => onOpenLegal('terms')}
                   className="hover:text-white transition-colors cursor-pointer text-start text-slate-400 hover:text-slate-200"
                 >

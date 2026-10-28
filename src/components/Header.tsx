@@ -67,6 +67,7 @@ interface HeaderProps {
   onToggleSidebar?: () => void;
   onSelectPortal?: (portalId: PortalId) => void;
   onOpenNotificationSettings?: () => void;
+  onOpenNotificationInbox?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -77,6 +78,7 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleSidebar,
   onSelectPortal,
   onOpenNotificationSettings,
+  onOpenNotificationInbox,
 }) => {
   const { language, setLanguage, isRTL } = useLanguage();
   const { 
@@ -260,6 +262,20 @@ export const Header: React.FC<HeaderProps> = ({
                 <span>{language === 'ar' ? 'العربية' : 'English'}</span>
               </button>
 
+              {/* Install App Button */}
+              <button
+                onClick={() => onNavigate('install')}
+                className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer border ${
+                  activeSection === 'install'
+                    ? 'bg-[#003366] text-white border-[#003366] shadow-xs'
+                    : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200'
+                }`}
+                title={language === 'ar' ? 'تثبيت تطبيق M737IQ على الأندرويد والآيفون' : 'Install M737IQ on Android & iPhone'}
+              >
+                <Smartphone size={14} className={activeSection === 'install' ? 'text-emerald-300' : 'text-emerald-600'} />
+                <span>{language === 'ar' ? 'تثبيت التطبيق' : 'Install App'}</span>
+              </button>
+
               {/* Direct Messages / Contact Mail Icon */}
               <button
                 onClick={() => onNavigate('support')}
@@ -422,8 +438,23 @@ export const Header: React.FC<HeaderProps> = ({
                       </div>
                     )}
 
-                    {/* Notification Preferences & Push Settings Footer */}
-                    <div className="pt-2 mt-2 border-t border-slate-100 flex items-center justify-between">
+                    {/* Notification Inbox & Push Settings Footer */}
+                    <div className="pt-2 mt-2 border-t border-slate-100 flex flex-col gap-1.5">
+                      <button
+                        onClick={() => {
+                          setShowNotificationsDropdown(false);
+                          if (onOpenNotificationInbox) {
+                            onOpenNotificationInbox();
+                          } else {
+                            onNavigate('notifications');
+                          }
+                        }}
+                        className="w-full text-xs font-bold text-[#003366] hover:text-[#002244] flex items-center justify-center gap-1.5 transition-colors cursor-pointer py-1.5 px-2 rounded-xl bg-slate-100 hover:bg-slate-200/80 border border-slate-200"
+                      >
+                        <Inbox size={13} />
+                        <span>{language === 'ar' ? 'عرض كل الإشعارات وسجل الوصول' : 'Open Full Notification Inbox'}</span>
+                      </button>
+
                       <button
                         onClick={() => {
                           setShowNotificationsDropdown(false);
