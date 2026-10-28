@@ -181,7 +181,7 @@ export async function markAllNotificationsAsRead(notifications: AppNotification[
 }
 
 /**
- * Sends a real in-app notification to a user.
+ * Sends a real notification and triggers mobile push delivery to the user's devices.
  */
 export async function sendRealInAppNotification({
   recipientUid,
@@ -216,6 +216,29 @@ export async function sendRealInAppNotification({
 
   try {
     await setDoc(doc(db, 'notifications', notifId), newNotif);
+
+    // Trigger real mobile push delivery through Push Dispatcher
+    import('./pushEventDispatcher').then(({ dispatchM737Notification }) => {
+      const category = 
+        type === 'booking_update' ? 'appointment' :
+        type === 'prescription' ? 'prescription' :
+        type === 'report_ready' ? 'lab_radiology' :
+        type === 'order' ? 'order' : 'general';
+
+      dispatchM737Notification({
+        recipientUid,
+        category,
+        titleAr: title,
+        titleEn: title,
+        messageAr: message,
+        messageEn: message,
+        targetPortal: 'patient',
+        targetUrl: link || '/patient',
+        sourceEventId: notifId,
+        priority,
+      }).catch((e) => console.warn('[NotificationService] Push dispatch notice:', e));
+    }).catch(() => {});
+
     return notifId;
   } catch (err) {
     console.warn('Failed to send notification to Firestore:', err);

@@ -41,8 +41,7 @@ import {
   deleteDoc 
 } from 'firebase/firestore';
 import { 
-  Stethoscope,
-  MessageSquare, 
+  Stethoscope, 
   Calendar, 
   Clock, 
   FileText, 
@@ -88,8 +87,6 @@ import {
   AlertTriangle
 } from 'lucide-react';
 
-import { UnifiedChatWorkspace } from './UnifiedChatWorkspace';
-
 interface DoctorPortalWorkspaceProps {
   onBackToHome: () => void;
 }
@@ -98,7 +95,7 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
   const { user, userProfile, isAdmin, isDemoMode, refreshProfile } = useAuth();
   const { language, isRTL } = useLanguage();
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'appointments' | 'prescriptions' | 'referrals' | 'records' | 'schedule' | 'secretary' | 'messages'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'appointments' | 'prescriptions' | 'referrals' | 'records' | 'schedule' | 'secretary'>('dashboard');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
@@ -341,7 +338,62 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
       // Sort newest first
       apptList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       
-      setAppointments(apptList);
+      if (isDemoMode && apptList.length === 0) {
+        const today = new Date().toISOString().split('T')[0];
+        const sampleAppts: Appointment[] = [
+          {
+            id: 'demo_appt_1',
+            doctorId: user.uid,
+            doctorName: userProfile?.displayName || 'د. أحمد الرافدين',
+            specialty: doctorProfile?.specialty || 'أمراض باطنية وقلبية',
+            patientId: 'demo_patient_sara',
+            patientName: 'سارة حيدر العراقي',
+            patientPhone: '07705566778',
+            date: today,
+            timeSlot: '17:30',
+            consultationType: 'in_person',
+            status: 'confirmed',
+            notes: 'مراجعة قياس ضغط الدم وتخطيط القلب',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          {
+            id: 'demo_appt_2',
+            doctorId: user.uid,
+            doctorName: userProfile?.displayName || 'د. أحمد الرافدين',
+            specialty: doctorProfile?.specialty || 'أمراض باطنية وقلبية',
+            patientId: 'demo_patient_karrar',
+            patientName: 'كرار جاسم الشمري',
+            patientPhone: '07802233445',
+            date: today,
+            timeSlot: '18:15',
+            consultationType: 'in_person',
+            status: 'pending',
+            notes: 'ألم في الصدر وصعوبة تنفس عند الإجهاد',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          {
+            id: 'demo_appt_3',
+            doctorId: user.uid,
+            doctorName: userProfile?.displayName || 'د. أحمد الرافدين',
+            specialty: doctorProfile?.specialty || 'أمراض باطنية وقلبية',
+            patientId: 'demo_patient_zeinab',
+            patientName: 'زينب محمد الكاظمي',
+            patientPhone: '07718899001',
+            date: today,
+            timeSlot: '19:00',
+            consultationType: 'followup',
+            status: 'completed',
+            notes: 'متابعة نتائج فحص الدهون وتحليل السكر التراكمي',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        ];
+        setAppointments(sampleAppts);
+      } else {
+        setAppointments(apptList);
+      }
 
       // 3. Fetch Medical Records for this Doctor
       const recordsQuery = query(
@@ -351,7 +403,39 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
       const recordsSnap = await getDocs(recordsQuery);
       const recList = recordsSnap.docs.map(d => ({ id: d.id, ...d.data() } as MedicalRecord));
       recList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      setMedicalRecords(recList);
+
+      if (isDemoMode && recList.length === 0) {
+        const sampleRecords: MedicalRecord[] = [
+          {
+            id: 'demo_rec_1',
+            patientId: 'demo_patient_sara',
+            patientName: 'سارة حيدر العراقي',
+            doctorId: user.uid,
+            recordType: 'prescription',
+            title: 'وصفة علاج ارتفاع ضغط الدم والدهون',
+            details: 'Amlodipine 5mg حبة يومياً صباحاً + Atorvastatin 20mg حبة مساءً مع الحمية الغذائية وتقليل الملح',
+            sourceFacility: 'عيادة الرافدين الاستشارية',
+            doctorNotes: 'مراجعة بعد شهر مع إعادة فحص وظائف الكلى',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          {
+            id: 'demo_rec_2',
+            patientId: 'demo_patient_karrar',
+            patientName: 'كرار جاسم الشمري',
+            doctorId: user.uid,
+            recordType: 'clinical_note',
+            title: 'تقرير الفحص السريري وتخطيط القلب (ECG)',
+            details: 'تخطيط قلب طبيعي (Sinus Rhythm). تم توجيه المريض لإجراء فحص إيكو القلب (Echocardiography) وصورة دم كاملة',
+            sourceFacility: 'عيادة الرافدين الاستشارية',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        ];
+        setMedicalRecords(sampleRecords);
+      } else {
+        setMedicalRecords(recList);
+      }
 
       // 3b. Fetch Confidential Doctor-Patient Charts for this Doctor
       try {
@@ -402,7 +486,94 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
         const rxList = rxSnap.docs.map(d => ({ id: d.id, ...d.data() } as ElectronicPrescription));
         rxList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-        setPrescriptions(rxList);
+        if (isDemoMode && rxList.length === 0) {
+          const sampleRx: ElectronicPrescription[] = [
+            {
+              id: 'demo_rx_1',
+              prescriptionNumber: 'RX-2026-4891',
+              doctorId: user.uid,
+              doctorName: userProfile?.displayName || 'د. أحمد الرافدين',
+              doctorSpecialty: 'استشاري أمراض باطنية وقلبية',
+              doctorLicense: 'IQ-MED-94812',
+              doctorPhone: '07801122334',
+              clinicName: 'عيادة الرافدين الاستشارية',
+              patientId: 'demo_patient_sara',
+              patientName: 'سارة حيدر العراقي',
+              patientPhone: '07705566778',
+              diagnosis: 'ارتفاع ضغط الدم الشرياني الخفيف إلى المتوسط (Stage 1 Hypertension)',
+              targetPharmacyId: 'demo_pharmacy_amal',
+              targetPharmacyName: 'صيدلية الأمل المركزية',
+              patientAllergies: ['البنسلين (Penicillin Allergy)'],
+              generalInstructions: 'الالتزام بحمية قليلة الملح، قياس ضغط الدم يومياً في الصباح، وتجنب الإجهاد النفسي.',
+              status: 'dispensed',
+              items: [
+                {
+                  name: 'Concor (كونكور)',
+                  activeIngredient: 'Bisoprolol Fumarate',
+                  strength: '5 mg',
+                  dosageForm: 'Tablets (أقراص)',
+                  dosage: 'حبة واحدة',
+                  frequency: 'مرة واحدة يومياً صباحاً قبل الإفطار',
+                  duration: '30 يوماً',
+                  instructions: 'مع نصف كوب ماء',
+                },
+                {
+                  name: 'Panadol Extra (بنادول إكسترا)',
+                  activeIngredient: 'Paracetamol + Caffeine',
+                  strength: '500mg / 65mg',
+                  dosageForm: 'Tablets (أقراص)',
+                  dosage: 'قرص واحد',
+                  frequency: 'عند الصداع الشديد فقط (بحد أقصى مرتين باليوم)',
+                  duration: 'عند اللزوم',
+                  warnings: 'تجنب تناوله مع المشروبات الغنية بالكافيين',
+                }
+              ],
+              dispensedAt: new Date(Date.now() - 3600000 * 24).toISOString(),
+              dispensedByUid: 'demo_pharmacy_amal',
+              dispensedByName: 'ص. علاء الكرخي (صيدلية الأمل)',
+              dispensedPharmacyId: 'demo_pharmacy_amal',
+              dispensedPharmacyName: 'صيدلية الأمل المركزية',
+              createdAt: new Date(Date.now() - 3600000 * 48).toISOString(),
+              updatedAt: new Date(Date.now() - 3600000 * 24).toISOString(),
+            },
+            {
+              id: 'demo_rx_2',
+              prescriptionNumber: 'RX-2026-7712',
+              doctorId: user.uid,
+              doctorName: userProfile?.displayName || 'د. أحمد الرافدين',
+              doctorSpecialty: 'استشاري أمراض باطنية وقلبية',
+              doctorLicense: 'IQ-MED-94812',
+              doctorPhone: '07801122334',
+              clinicName: 'عيادة الرافدين الاستشارية',
+              patientId: 'demo_patient_karrar',
+              patientName: 'كرار جاسم الشمري',
+              patientPhone: '07802233445',
+              diagnosis: 'حموضة وارتجاع مريئي مع تهيج بالمعدة (GERD)',
+              targetPharmacyId: 'demo_pharmacy_amal',
+              targetPharmacyName: 'صيدلية الأمل المركزية',
+              patientAllergies: [],
+              generalInstructions: 'تجنب الأطعمة الدسمة والمسبكة والقهوة قبل النوم بساعتين.',
+              status: 'sent',
+              items: [
+                {
+                  name: 'Nexium (نيكسيوم)',
+                  activeIngredient: 'Esomeprazole Magnesium',
+                  strength: '40 mg',
+                  dosageForm: 'Tablets (أقراص معوية)',
+                  dosage: 'حبة واحدة',
+                  frequency: 'مرة واحدة يومياً قبل وجبة الإفطار بنصف ساعة',
+                  duration: '14 يوماً',
+                  instructions: 'تبلع الحبة كاملة دون مضغ أو سحق',
+                }
+              ],
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            }
+          ];
+          setPrescriptions(sampleRx);
+        } else {
+          setPrescriptions(rxList);
+        }
       } catch {
         // Fallback for offline/rules
       }
@@ -416,7 +587,66 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
         const labSnap = await getDocs(labQ);
         const labList = labSnap.docs.map(d => ({ id: d.id, ...d.data() } as LabOrder));
         labList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        setLabOrders(labList);
+
+        if (isDemoMode && labList.length === 0) {
+          const sampleLabOrders: LabOrder[] = [
+            {
+              id: 'demo_lab_ord_1',
+              orderNumber: 'LAB-ORD-9021',
+              doctorId: user.uid,
+              doctorName: userProfile?.displayName || 'د. أحمد الرافدين',
+              doctorSpecialty: 'استشاري أمراض باطنية وقلبية',
+              doctorPhone: '07801122334',
+              clinicName: 'عيادة الرافدين الاستشارية',
+              patientId: 'demo_patient_sara',
+              patientName: 'سارة حيدر العراقي',
+              patientPhone: '07705566778',
+              targetLabId: 'demo_lab_baghdad',
+              targetLabName: 'مختبر بغداد المركزي التخصصي',
+              priority: 'normal',
+              clinicalIndication: 'فحص روتيني لمتابعة دهون الدم ووظائف الكلى',
+              preparationInstructions: 'صيام 12 ساعة قبل سحب العينة صباحاً',
+              status: 'completed',
+              resultId: 'demo_res_1',
+              resultSummary: 'نتائج طبيعية، نسبة الكولسترول 185 mg/dL وسكر الصائم 92 mg/dL',
+              completedAt: new Date(Date.now() - 3600000 * 20).toISOString(),
+              tests: [
+                { testName: 'Lipid Profile (تحليل الدهون الشامل)' },
+                { testName: 'Fasting Blood Sugar (سكر الصيام FBS)' },
+                { testName: 'Serum Creatinine (وظائف الكلى - كرياتينين)' },
+              ],
+              createdAt: new Date(Date.now() - 3600000 * 48).toISOString(),
+              updatedAt: new Date(Date.now() - 3600000 * 20).toISOString(),
+            },
+            {
+              id: 'demo_lab_ord_2',
+              orderNumber: 'LAB-ORD-9045',
+              doctorId: user.uid,
+              doctorName: userProfile?.displayName || 'د. أحمد الرافدين',
+              doctorSpecialty: 'استشاري أمراض باطنية وقلبية',
+              doctorPhone: '07801122334',
+              clinicName: 'عيادة الرافدين الاستشارية',
+              patientId: 'demo_patient_karrar',
+              patientName: 'كرار جاسم الشمري',
+              patientPhone: '07802233445',
+              targetLabId: 'demo_lab_baghdad',
+              targetLabName: 'مختبر بغداد المركزي التخصصي',
+              priority: 'urgent',
+              clinicalIndication: 'اشتباه بفقر دم أو نقص حديد حاد مع إجهاد مستمر',
+              preparationInstructions: 'لا يشترط الصيام المسبق',
+              status: 'in_progress',
+              tests: [
+                { testName: 'Complete Blood Count (CBC - صورة دم كاملة)' },
+                { testName: 'Serum Ferritin (مخزون الحديد)' },
+              ],
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            }
+          ];
+          setLabOrders(sampleLabOrders);
+        } else {
+          setLabOrders(labList);
+        }
       } catch {
         // Fallback
       }
@@ -430,7 +660,39 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
         const radSnap = await getDocs(radQ);
         const radList = radSnap.docs.map(d => ({ id: d.id, ...d.data() } as RadiologyOrder));
         radList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        setRadiologyOrders(radList);
+
+        if (isDemoMode && radList.length === 0) {
+          const sampleRadOrders: RadiologyOrder[] = [
+            {
+              id: 'demo_rad_ord_1',
+              orderNumber: 'RAD-ORD-6621',
+              doctorId: user.uid,
+              doctorName: userProfile?.displayName || 'د. أحمد الرافدين',
+              doctorSpecialty: 'استشاري أمراض باطنية وقلبية',
+              doctorPhone: '07801122334',
+              clinicName: 'عيادة الرافدين الاستشارية',
+              patientId: 'demo_patient_sara',
+              patientName: 'سارة حيدر العراقي',
+              patientPhone: '07705566778',
+              targetCenterId: 'demo_radiology_dijla',
+              targetCenterName: 'مركز دجلة للأشعة والمفراس والرنين',
+              modality: 'ultrasound',
+              bodyRegion: 'البطن والحوض (Abdomen & Pelvis)',
+              priority: 'normal',
+              clinicalIndication: 'فحص بالموجات فوق الصوتية للكبد والمرارة والكليتين',
+              preparationInstructions: 'شرب 4 أكواب ماء والامتناع عن التبول قبل الفحص بساعة',
+              status: 'completed',
+              reportId: 'demo_rad_rep_1',
+              reportSummary: 'الكبد والكليتان والمرارة ضمن المظهر الطبيعي، لا توجد حصوات أو تضخم',
+              completedAt: new Date(Date.now() - 3600000 * 18).toISOString(),
+              createdAt: new Date(Date.now() - 3600000 * 36).toISOString(),
+              updatedAt: new Date(Date.now() - 3600000 * 18).toISOString(),
+            }
+          ];
+          setRadiologyOrders(sampleRadOrders);
+        } else {
+          setRadiologyOrders(radList);
+        }
       } catch {
         // Fallback
       }
@@ -649,16 +911,9 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
     try {
       const recordId = `rec_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
       const now = new Date().toISOString();
-
-      const targetPatientId = (activePatientProfile && activePatientProfile.fullName.trim() === newRecordData.patientName.trim())
-        ? activePatientProfile.patientId
-        : (activeDoctorChart && activeDoctorChart.patientName.trim() === newRecordData.patientName.trim())
-          ? activeDoctorChart.patientId
-          : (activePatientProfile?.patientId || activeDoctorChart?.patientId || `pat_rec_${Date.now()}`);
-
       const record: MedicalRecord = {
         id: recordId,
-        patientId: targetPatientId,
+        patientId: `pat_rec_${Date.now()}`,
         patientName: newRecordData.patientName,
         doctorId: user.uid,
         recordType: newRecordData.recordType,
@@ -1855,7 +2110,6 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
           { id: 'referrals', labelAr: `التحويلات والفحوصات (${labOrders.length + radiologyOrders.length})`, labelEn: `Referrals (${labOrders.length + radiologyOrders.length})`, icon: FlaskConical },
           { id: 'records', labelAr: `الهوية والملف الطبي (${doctorChartsList.length})`, labelEn: `Patient ID & Charts (${doctorChartsList.length})`, icon: FolderLock },
           { id: 'schedule', labelAr: 'الدوام ومعلومات العيادة', labelEn: 'Schedule & Clinic', icon: Clock },
-          { id: 'messages', labelAr: 'الاستشارات والرسائل الطبية', labelEn: 'Patient Consultations', icon: MessageSquare },
           { id: 'secretary', labelAr: `السكرتارية (${delegations.length})`, labelEn: `Secretary (${delegations.length})`, icon: Users },
         ].map((tab) => {
           const Icon = tab.icon;
@@ -1882,21 +2136,50 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
         })}
       </div>
 
-      {/* TAB: UNIFIED CLINICAL MESSAGING */}
-      {activeTab === 'messages' && (
-        <div className="space-y-4">
-          <UnifiedChatWorkspace
-            currentRole="doctor"
-            currentUserId={user?.uid || doctorProfile?.doctorId || 'doctor_user'}
-            currentUserName={doctorProfile?.fullName || userProfile?.displayName || (language === 'ar' ? 'د. استشاري' : 'Consultant Doctor')}
-            facilityName={doctorProfile?.clinicAddress || userProfile?.facilityName || 'عيادة الطبيب'}
-          />
-        </div>
-      )}
-
       {/* TAB 1: DASHBOARD OVERVIEW */}
       {activeTab === 'dashboard' && (
         <div className="space-y-6">
+          {/* Quick Patient Medical ID Search Widget */}
+          <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-[#002244] via-[#003366] to-[#004080] text-white flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md">
+            <div className="flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center font-bold text-red-300 shrink-0">
+                <FolderLock size={22} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-sm sm:text-base">
+                    {language === 'ar' ? 'البحث عن المريض بالمعرف الطبي (Medical ID) والملف السريري' : 'Patient Search by Medical ID & Charts'}
+                  </h3>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-bold">
+                    {language === 'ar' ? 'ملفات مستقلة محمية' : 'Independent Charts'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-200 mt-0.5">
+                  {language === 'ar' 
+                    ? 'ادخل الـ ID الموحد للمريض لعرض هويته وفتح ملف المتابعة السريرية الخاص بعيادتك وتوثيق الزيارات.' 
+                    : 'Search patient by unified Medical ID to open confidential chart and document visits.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('records');
+                  setRecordViewMode('chart');
+                  if (!activePatientProfile) {
+                    handleSearchPatientByMedicalId('M737-PAT-SARA96');
+                  }
+                }}
+                className="px-5 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-[#003366] font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer w-full sm:w-auto shrink-0"
+              >
+                <Search size={15} />
+                <span>{language === 'ar' ? 'بحث بالمعرف الطبي' : 'Search Medical ID'}</span>
+              </button>
+            </div>
+          </div>
+
           {/* Metrics Strip */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs">

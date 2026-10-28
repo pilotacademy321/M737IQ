@@ -18,6 +18,9 @@ import { LegalModal } from './components/LegalModals';
 import { OnboardingModal } from './components/OnboardingModal';
 import { AuthDomainGuideModal } from './components/AuthDomainGuideModal';
 import { FeaturesGuideModal } from './components/FeaturesGuideModal';
+import { NotificationPermissionBanner } from './components/NotificationPermissionBanner';
+import { NotificationSettingsModal } from './components/NotificationSettingsModal';
+import { registerPushServiceWorker } from './lib/pushNotificationService';
 import { PortalId } from './types';
 import { parseCurrentRoute, navigateTo, RouteState } from './utils/navigation';
 
@@ -27,6 +30,14 @@ const MainAppContent: React.FC = () => {
   const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
   const [featuresGuideOpen, setFeaturesGuideOpen] = useState(false);
   const [domainHelpOpen, setDomainHelpOpen] = useState(false);
+  const [notificationSettingsOpen, setNotificationSettingsOpen] = useState(false);
+
+  // Initialize and register background push Service Worker on boot
+  useEffect(() => {
+    registerPushServiceWorker().catch((err) => {
+      console.warn('[App] Push service worker registration notice:', err);
+    });
+  }, []);
 
   const [legalModal, setLegalModal] = useState<{
     isOpen: boolean;
@@ -158,6 +169,7 @@ const MainAppContent: React.FC = () => {
           onResetToHome={handleResetToHome}
           onToggleSidebar={() => setSidebarMobileOpen((prev) => !prev)}
           onSelectPortal={handleSelectPortal}
+          onOpenNotificationSettings={() => setNotificationSettingsOpen(true)}
         />
 
         {/* Routed View Container */}
@@ -168,6 +180,16 @@ const MainAppContent: React.FC = () => {
         {/* Global Footer */}
         <Footer onNavigate={handleNavigate} onOpenLegal={handleOpenLegal} />
       </div>
+
+      {/* Push Notification Permission Banner & Settings Modal */}
+      <NotificationPermissionBanner 
+        onOpenSettings={() => setNotificationSettingsOpen(true)} 
+      />
+
+      <NotificationSettingsModal 
+        isOpen={notificationSettingsOpen}
+        onClose={() => setNotificationSettingsOpen(false)}
+      />
 
       {/* Legal Terms & Privacy Modal */}
       <LegalModal

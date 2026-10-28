@@ -609,105 +609,6 @@ export interface PharmacyProfile {
   updatedAt: string;
 }
 
-export type MedicalSpecialtyCategory = 
-  | 'internal_medicine'
-  | 'gynecology_obstetrics'
-  | 'gynecology'
-  | 'pediatrics'
-  | 'cardiology'
-  | 'hematology'
-  | 'dermatology'
-  | 'ophthalmology'
-  | 'ent'
-  | 'neurology'
-  | 'orthopedics'
-  | 'urology'
-  | 'respiratory'
-  | 'gastroenterology'
-  | 'endocrinology'
-  | 'psychiatry'
-  | 'dentistry'
-  | 'general_medicine'
-  | 'general_emergency';
-
-export type CatalogVerificationStatus = 
-  | 'verified' 
-  | 'corrected' 
-  | 'conflicting' 
-  | 'needs_review' 
-  | 'unverified';
-
-export type RouteOfAdministration = 
-  | 'Oral'
-  | 'Intravenous'
-  | 'Intramuscular'
-  | 'Subcutaneous'
-  | 'Inhalation'
-  | 'Topical'
-  | 'Ophthalmic'
-  | 'Otic'
-  | 'Nasal'
-  | 'Sublingual'
-  | 'Rectal'
-  | 'Transdermal';
-
-export interface CatalogEvidenceRecord {
-  field: string;
-  sourceName: 'WHO' | 'US FDA' | 'DailyMed' | 'EMA' | 'UK MHRA' | 'NCBI / PubMed' | 'MedlinePlus / NHS' | 'Kimadia / Iraqi MoH' | string;
-  sourceUrl: string;
-  checkedDate: string;
-  publicationDate?: string;
-  referenceId?: string;
-  citationSummary?: string;
-}
-
-export interface CatalogChangeHistoryItem {
-  field: string;
-  previousValue: any;
-  correctedValue: any;
-  reason: string;
-  correctedBy: string;
-  correctedAt: string;
-  sourceUrl: string;
-  sourceAuthority?: string;
-}
-
-export interface CatalogMedicineItem {
-  id: string; // CAT-MED-XXXX
-  nameEn: string;
-  nameAr: string;
-  activeIngredient: string;
-  inn?: string;
-  atcCode?: string;
-  routeOfAdministration?: RouteOfAdministration | string;
-  releaseMechanism?: 'immediate_release' | 'extended_release' | 'delayed_release' | 'modified_release' | 'standard';
-  brand: string;
-  strength: string;
-  dosageForm: string;
-  packageSize: string;
-  manufacturer: string;
-  originCountry?: string;
-  categories: MedicalSpecialtyCategory[];
-  requiresPrescription: boolean;
-  registrationNumber?: string;
-  barcode?: string;
-  imageUrl?: string;
-  imageSource?: string;
-  sourceAuthority: string;
-  isVerified: boolean;
-  // Rigorous verification & audit metadata
-  verificationStatus?: CatalogVerificationStatus;
-  verifiedFields?: string[];
-  evidenceMetadata?: CatalogEvidenceRecord[];
-  changeHistory?: CatalogChangeHistoryItem[];
-  needsManualReview?: boolean;
-  reviewReason?: string;
-  isBlockedFromSearch?: boolean;
-  notes?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export interface MedicineItem {
   id: string;
   pharmacyId: string;
@@ -715,12 +616,7 @@ export interface MedicineItem {
   pharmacyPhone?: string;
   pharmacyGovernorate?: string;
   pharmacyAddress?: string;
-  catalogMedicineId?: string;
-  barcode?: string;
-  qrCode?: string;
-  batchNumber?: string;
   name: string;
-  nameAr?: string;
   activeIngredient: string;
   brand: string;
   manufacturer: string;
@@ -913,14 +809,12 @@ export interface WholesaleMedicineItem {
   wholesalerPhone?: string;
   name: string;
   nameAr?: string;
-  brand?: string;
   activeIngredient: string;
   manufacturer: string;
   originCountry: string;
   strength: string;
   dosageForm: string;
   packSize: string;
-  packageSize?: string;
   cartonCapacity: number;
   batchNumber: string;
   productionDate: string;
@@ -929,10 +823,7 @@ export interface WholesaleMedicineItem {
   wholesalePriceUsd?: number;
   cartonPriceIqd?: number;
   stockPacks: number;
-  quantity?: number;
   minOrderQuantity: number;
-  barcode?: string;
-  qrCode?: string;
   isAvailable: boolean;
   category: string;
   notes?: string;
@@ -981,78 +872,3 @@ export interface WholesaleOrder {
   createdAt: string;
   updatedAt: string;
 }
-
-export interface SpecialtyCategoryMeta {
-  id: MedicalSpecialtyCategory;
-  nameAr: string;
-  nameEn: string;
-  iconName: string;
-  descriptionAr: string;
-  descriptionEn: string;
-}
-
-export interface MedicineCatalogItem {
-  id: string;
-  name: string;
-  nameAr: string;
-  activeIngredient: string;
-  specialtyCategory: MedicalSpecialtyCategory;
-  brand: string;
-  manufacturer: string;
-  strength: string;
-  dosageForm: string;
-  packageSize: string;
-  barcode?: string;
-  standardPriceIqd: number;
-  suggestedWholesaleIqd?: number;
-  requiresPrescription: boolean;
-  indications: string;
-  contraindications?: string;
-  storageCondition?: string;
-  isIraqiManufactured?: boolean;
-  atcCode?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export type MessagingProviderRole = 'doctor' | 'pharmacy' | 'laboratory' | 'radiology_center' | 'secretary';
-
-export interface ChatConversation {
-  id: string;
-  patientId: string;
-  patientName: string;
-  patientPhone?: string;
-  providerId: string;
-  providerName: string;
-  providerRole: MessagingProviderRole;
-  facilityName?: string;
-  lastMessage: string;
-  lastMessageTimestamp: string;
-  lastSenderId: string;
-  unreadCountPatient: number;
-  unreadCountProvider: number;
-  status: 'active' | 'archived' | 'flagged';
-  safetyAuditStatus?: 'normal' | 'flagged_review' | 'verified_safe';
-  safetyAuditNotes?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface ChatMessage {
-  id: string;
-  conversationId: string;
-  senderId: string;
-  senderName: string;
-  senderRole: 'patient' | MessagingProviderRole | 'super_admin';
-  recipientId: string;
-  recipientName: string;
-  recipientRole: 'patient' | MessagingProviderRole | 'super_admin';
-  text: string;
-  attachmentUrl?: string;
-  attachmentName?: string;
-  isFlaggedForSafety?: boolean;
-  read: boolean;
-  createdAt: string;
-}
-
-

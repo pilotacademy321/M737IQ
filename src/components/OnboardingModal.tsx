@@ -14,12 +14,8 @@ import {
   Building2,
   CheckCircle2,
   FileCheck2,
-  Lock,
-  BadgeCheck,
-  RefreshCw,
-  Edit3
+  Lock
 } from 'lucide-react';
-import { generateFacilityOrUserId } from '../utils/medicalId';
 
 export const OnboardingModal: React.FC = () => {
   const { user, needsOnboarding, registerAsPatient, applyForProfessionalRole, signOut, loading, authError } = useAuth();
@@ -243,83 +239,6 @@ export const OnboardingModal: React.FC = () => {
                 placeholder={language === 'ar' ? 'د. أحمد علي / م. النور' : 'Dr. Ahmed Ali / Al-Noor Center'}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#003366]"
               />
-            </div>
-
-            {/* Dynamic Medical / Health ID Preview & Customization */}
-            <div className="p-3.5 rounded-2xl bg-sky-50/70 border border-sky-200">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <BadgeCheck size={18} className="text-sky-700 shrink-0" />
-                  <div>
-                    <span className="text-xs font-bold text-slate-800 block">
-                      {selectedType === 'patient' 
-                        ? (language === 'ar' ? 'الرقم الصحي الموحد المخصص لحسابك:' : 'Designated Health ID:')
-                        : (language === 'ar' ? 'معرف الاعتماد المهني للمنشأة:' : 'Designated Facility Account ID:')}
-                    </span>
-                    <span className="text-[11px] text-slate-500">
-                      {language === 'ar' 
-                        ? 'معرّف حقيقي مرتبط بحسابك ومسجل رسمياً، قابل للتعديل' 
-                        : 'Real account-linked ID, customizable'}
-                    </span>
-                  </div>
-                </div>
-
-                {!isEditingId ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!customMedicalId) {
-                        const defaultId = user ? generateFacilityOrUserId(selectedType === 'patient' ? 'patient' : selectedRole, user.uid) : '';
-                        setCustomMedicalId(defaultId);
-                      }
-                      setIsEditingId(true);
-                    }}
-                    className="px-2.5 py-1 text-xs font-bold rounded-lg bg-white border border-sky-200 text-sky-800 hover:bg-sky-50 flex items-center gap-1 cursor-pointer"
-                  >
-                    <Edit3 size={12} />
-                    <span>{language === 'ar' ? 'تعديل' : 'Edit'}</span>
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const defaultId = user ? generateFacilityOrUserId(selectedType === 'patient' ? 'patient' : selectedRole, user.uid) : '';
-                      setCustomMedicalId(defaultId);
-                    }}
-                    className="px-2.5 py-1 text-xs font-bold rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center gap-1 cursor-pointer"
-                    title={language === 'ar' ? 'استعادة الرقم التلقائي للحساب' : 'Reset to default'}
-                  >
-                    <RefreshCw size={12} />
-                    <span>{language === 'ar' ? 'توليد تلقائي' : 'Auto'}</span>
-                  </button>
-                )}
-              </div>
-
-              <div className="mt-2.5">
-                {!isEditingId ? (
-                  <div className="flex items-center justify-between bg-white px-3 py-2 rounded-xl border border-sky-100 font-mono text-xs font-bold text-[#003366]">
-                    <span>{customMedicalId.trim() || (user ? generateFacilityOrUserId(selectedType === 'patient' ? 'patient' : selectedRole, user.uid) : 'M737-ID')}</span>
-                    <span className="text-[10px] font-sans px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                      {language === 'ar' ? 'موثق' : 'Verified'}
-                    </span>
-                  </div>
-                ) : (
-                  <div className="space-y-1">
-                    <input
-                      type="text"
-                      value={customMedicalId}
-                      onChange={(e) => setCustomMedicalId(e.target.value.toUpperCase())}
-                      placeholder={user ? generateFacilityOrUserId(selectedType === 'patient' ? 'patient' : selectedRole, user.uid) : 'M737-PAT-XXXXXX'}
-                      className="w-full px-3 py-2 rounded-xl border border-sky-300 font-mono text-xs text-[#003366] font-bold uppercase bg-white focus:outline-none focus:ring-2 focus:ring-[#003366]"
-                    />
-                    <span className="text-[10px] text-slate-500 block">
-                      {language === 'ar'
-                        ? 'يمكنك كتابة رقمك الصحي الوطني أو اختيار المعرف المفضل بالبادئة المعتمدة.'
-                        : 'You may enter your official health card number or custom suffix.'}
-                    </span>
-                  </div>
-                )}
-              </div>
             </div>
 
             <div>

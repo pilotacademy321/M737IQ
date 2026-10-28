@@ -262,61 +262,63 @@ export const HomePageView: React.FC<HomePageViewProps> = ({
 
   return (
     <div className="space-y-6 pb-12">
-      {/* 1. HERO BANNER: Doctor + Baghdad Tigris Sunset + Boeing 737 Airplane */}
-      <div className="relative rounded-3xl overflow-hidden shadow-md border border-slate-200/80 bg-slate-900 min-h-[340px] sm:min-h-[380px] flex items-center">
-        {/* Background visual image */}
-        <img
-          src="/assets/images/m737_hero_banner_1792964538991.jpg"
-          alt="M737IQ Iraqi Medical Platform Hero"
-          className="absolute inset-0 w-full h-full object-cover object-center"
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = '/assets/aistudio/file_0000000086f48243bf99953935694b4b_13f19682.png';
-          }}
-        />
+      {/* 1. HERO BANNER: Iraqi National & Aviation VIP Medical Banner (M737IQ — منصة M737IQ الطبية) */}
+      <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-slate-700/60 bg-[#001738] group">
+        {/* Responsive Banner Artwork Frame */}
+        <div className="relative w-full aspect-[16/11] sm:aspect-[16/9] lg:aspect-[21/9] min-h-[280px] sm:min-h-[380px] lg:min-h-[460px] overflow-hidden flex items-end">
+          <img
+            src="/assets/aistudio/file_0000000028548210b7a1ceb04b95422a_ba7a6257.png"
+            alt="M737IQ — منصة M737IQ الطبية"
+            className="absolute inset-0 w-full h-full object-cover object-center transform transition-transform duration-700 group-hover:scale-[1.01]"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = '/assets/images/m737_vip_hero_banner.png';
+            }}
+          />
 
-        {/* Soft atmospheric gradient scrim for high-contrast legible text */}
-        <div className="absolute inset-0 bg-gradient-to-r from-white/95 via-white/80 to-transparent rtl:bg-gradient-to-l rtl:from-white/95 rtl:via-white/80 rtl:to-transparent" />
-        <div className="absolute inset-0 bg-radial-at-c from-transparent via-slate-900/10 to-slate-900/30 pointer-events-none" />
+          {/* Top VIP Title Badge displaying exact platform name */}
+          <div className="absolute top-3 sm:top-5 start-3 sm:start-5 z-20 flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-slate-950/80 backdrop-blur-md border border-amber-400/40 text-white shadow-xl">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+            <h1 className="text-xs sm:text-sm md:text-base font-extrabold tracking-wide flex items-center gap-2">
+              <span className="text-amber-300 font-black">M737IQ</span>
+              <span className="text-white/60">—</span>
+              <span className="text-white">منصة M737IQ الطبية</span>
+            </h1>
+          </div>
 
-        {/* Hero Overlay Content */}
-        <div className="relative z-10 p-6 sm:p-10 lg:p-12 max-w-2xl text-start">
-          <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black text-[#002244] tracking-tight leading-tight">
-            {language === 'ar' ? 'أهلاً بك في منصة M737IQ' : 'Welcome to M737IQ Platform'}
-          </h1>
+          {/* Bottom Floating Action Bar for Buttons (احجز عيادتك & تواصل معنا) */}
+          <div className="relative z-20 w-full p-3 sm:p-4 m-2.5 sm:m-4 rounded-2xl bg-slate-950/80 backdrop-blur-md border border-white/15 shadow-2xl flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-white">
+              <span className="text-xs sm:text-sm font-bold text-amber-300">
+                {language === 'ar' ? 'صحتك .. أولويتنا' : 'Your Health .. Our Priority'}
+              </span>
+              <span className="text-white/40 hidden sm:inline">•</span>
+              <span className="text-xs sm:text-sm text-slate-200 hidden sm:inline font-medium">
+                {language === 'ar' ? 'معاً .. نبني عراقاً أكثر صحة' : 'Together .. Building a Healthier Iraq'}
+              </span>
+            </div>
 
-          <p className="mt-2.5 sm:mt-3 text-sm sm:text-lg font-bold text-slate-800">
-            {language === 'ar'
-              ? 'منصة الرعاية الصحية المتكاملة في العراق'
-              : 'Integrated Healthcare Platform in Iraq'}
-          </p>
+            {/* Action Buttons: احجز عيادتك & تواصل معنا */}
+            <div className="flex items-center gap-2.5 ms-auto">
+              {/* Primary Button: احجز عيادتك */}
+              <button
+                onClick={() => onSelectPortal('patient')}
+                className="px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-sky-600 to-[#002b5c] hover:from-sky-500 hover:to-[#001f42] text-white font-bold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer group/btn"
+              >
+                <Calendar size={16} className="text-sky-300 group-hover/btn:scale-110 transition-transform" />
+                <span>{language === 'ar' ? 'احجز عيادتك' : 'Book Your Clinic'}</span>
+              </button>
 
-          <p className="mt-2 text-xs sm:text-sm text-slate-700 max-w-lg leading-relaxed font-medium">
-            {language === 'ar'
-              ? 'نربطك بالأطباء والصيدليات والمختبرات ومراكز الأشعة لتجربة صحية أسهل وأسرع'
-              : 'Connecting doctors, pharmacies, diagnostic labs and radiology centers for a faster, superior healthcare experience.'}
-          </p>
-
-          {/* Action Buttons: احجز عيادتك & تواصل معنا */}
-          <div className="mt-6 flex flex-wrap items-center gap-3">
-            {/* Dark Navy Button: احجز عيادتك */}
-            <button
-              onClick={() => onSelectPortal('patient')}
-              className="px-6 py-2.5 sm:py-3 rounded-xl bg-[#002b5c] hover:bg-[#001f42] text-white font-bold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer group"
-            >
-              <Calendar size={17} className="text-sky-300 group-hover:scale-110 transition-transform" />
-              <span>{language === 'ar' ? 'احجز عيادتك' : 'Book Your Clinic'}</span>
-            </button>
-
-            {/* White Pill Button: تواصل معنا (WhatsApp) */}
-            <a
-              href="https://wa.me/9647885663748"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-6 py-2.5 sm:py-3 rounded-xl bg-white hover:bg-slate-50 text-slate-900 font-bold text-xs sm:text-sm shadow-md hover:shadow-lg border border-slate-200 transition-all flex items-center gap-2 cursor-pointer group"
-            >
-              <MessageCircle size={18} className="text-emerald-500 fill-emerald-500/20 group-hover:scale-110 transition-transform" />
-              <span>{language === 'ar' ? 'تواصل معنا' : 'Contact Us'}</span>
-            </a>
+              {/* WhatsApp Button: تواصل معنا */}
+              <a
+                href="https://wa.me/9647885663748"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer group/btn"
+              >
+                <MessageCircle size={16} className="text-white fill-white/20 group-hover/btn:scale-110 transition-transform" />
+                <span>{language === 'ar' ? 'تواصل معنا' : 'Contact Us'}</span>
+              </a>
+            </div>
           </div>
         </div>
       </div>

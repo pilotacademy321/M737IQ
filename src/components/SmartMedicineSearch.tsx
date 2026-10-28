@@ -23,7 +23,6 @@ import {
   CornerDownRight
 } from 'lucide-react';
 import { DrugInteractionPanel } from './DrugInteractionPanel';
-import { DosageFormVisual } from './DosageFormVisual';
 
 export interface SearchMedicineResult {
   id: string;
@@ -263,6 +262,7 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
   const [results, setResults] = useState<SearchMedicineResult[]>([]);
   const [approximateSuggestions, setApproximateSuggestions] = useState<ApproximateMatch[]>([]);
   const [suggestedQuery, setSuggestedQuery] = useState<string | null>(null);
+  const [similarAlternatives, setSimilarAlternatives] = useState<SearchMedicineResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
@@ -289,6 +289,7 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
       setResults([]);
       setApproximateSuggestions([]);
       setSuggestedQuery(null);
+      setSimilarAlternatives([]);
       setIsOpen(false);
       setIsSearching(false);
       setSearchError(null);
@@ -408,6 +409,25 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
         } else {
           setSuggestedQuery(null);
         }
+
+        // Find similar active-ingredient alternatives among live items if direct match exists
+        if (directMatches.length > 0) {
+          const primaryActive = directMatches[0].activeIngredient.trim().toLowerCase();
+          const primaryStrength = directMatches[0].strength.trim().toLowerCase();
+          if (primaryActive) {
+            const alternatives = liveResults.filter((alt) =>
+              alt.id !== directMatches[0].id &&
+              alt.activeIngredient.trim().toLowerCase() === primaryActive &&
+              alt.strength.trim().toLowerCase() === primaryStrength
+            );
+            setSimilarAlternatives(alternatives.slice(0, 3));
+          } else {
+            setSimilarAlternatives([]);
+          }
+        } else {
+          setSimilarAlternatives([]);
+        }
+
         setIsOpen(true);
         setSelectedIndex(-1);
       } catch (err: unknown) {
@@ -488,6 +508,7 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
               setResults([]);
               setApproximateSuggestions([]);
               setSuggestedQuery(null);
+              setSimilarAlternatives([]);
               setIsOpen(false);
               inputRef.current?.focus();
             }}
@@ -556,17 +577,19 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
             </div>
           )}
 
-          {/* Clean Empty State */}
+          {/* Clean Empty State (Only when both exact and approximate are 0) */}
           {!isSearching && results.length === 0 && approximateSuggestions.length === 0 && !searchError && (
-            <div className="p-6 text-center text-slate-500 text-xs space-y-2">
-              <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-1">
+            <div className="p-8 text-center text-slate-500 text-xs space-y-1.5">
+              <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-2">
                 <Search size={18} />
               </div>
               <p className="font-bold text-slate-800 text-sm">
-                {language === 'ar' ? 'لم يتم العثور على أدوية مطابقة' : 'No matching medications found'}
+                {language === 'ar' ? 'لم يتم العثور على أدوية مسجلة' : 'No registered medications found'}
               </p>
-              <p className="text-slate-400 text-xs">
-                {language === 'ar' ? 'تأكد من كتابة الاسم التجاري أو المادة الفعالة بشكل صحيح.' : 'Check the spelling of the brand or generic name.'}
+              <p className="text-slate-500 max-w-xs mx-auto text-[11px]">
+                {language === 'ar'
+                  ? 'لا توجد أدوية أو مستحضرات حقيقية مسجلة في المنصة تطابق كلمة البحث حالياً.'
+                  : 'No verified medicines matching your query are currently in the database.'}
               </p>
             </div>
           )}
@@ -583,7 +606,7 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
           {!isSearching && results.length > 0 && (
             <div className="max-h-72 overflow-y-auto divide-y divide-slate-100">
               <div className="px-3.5 py-1.5 bg-slate-50 text-[10px] font-bold text-slate-600 uppercase tracking-wider">
-                {language === 'ar' ? 'الأدوية المطابقة:' : 'Matching Medications:'}
+                {language === 'ar' ? 'نتائج مطابقة مباشرة:' : 'Exact Matches:'}
               </div>
               {results.map((item, idx) => {
                 const isSelected = idx === selectedIndex;
@@ -597,12 +620,24 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
                     }`}
                   >
                     <div className="flex items-start gap-3 min-w-0">
-                      <DosageFormVisual
-                        dosageForm={item.dosageForm}
-                        photoUrl={item.photoUrl}
-                        name={item.name}
-                        size="md"
-                      />
+                      {item.photoUrl ? (
+                        <img 
+                          src={item.photoUrl} 
+                          alt={item.name}
+                          className="w-10 h-10 rounded-xl object-cover border border-slate-200 shrink-0"
+                          onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                        />
+                      ) : (
+                        <div
+                          className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                            item.sourceType === 'wholesale'
+                              ? 'bg-teal-50 text-teal-700 border border-teal-200'
+                              : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          }`}
+                        >
+                          {item.sourceType === 'wholesale' ? <Building2 size={18} /> : <Pill size={18} />}
+                        </div>
+                      )}
 
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -749,6 +784,37 @@ export const SmartMedicineSearch: React.FC<SmartMedicineSearchProps> = ({
                     </div>
                   );
                 })}
+              </div>
+            </div>
+          )}
+
+          {/* Similar Alternatives Section (Distinct to avoid confusion) */}
+          {!isSearching && similarAlternatives.length > 0 && (
+            <div className="p-3 bg-slate-50/80 border-t border-slate-200">
+              <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#003366] mb-2">
+                <Layers size={13} />
+                <span>
+                  {language === 'ar'
+                    ? 'بدائل متطابقة بالمادة الفعالة ونفس التركيز (Generic Equivalents):'
+                    : 'Generic Equivalents with Identical Strength:'}
+                </span>
+              </div>
+              <div className="space-y-1.5">
+                {similarAlternatives.map((alt, aIdx) => (
+                  <div
+                    key={aIdx}
+                    onClick={() => handleSelectItem(alt)}
+                    className="p-2 rounded-xl bg-white border border-slate-200 hover:border-[#003366] flex items-center justify-between text-xs cursor-pointer transition-colors"
+                  >
+                    <div>
+                      <span className="font-bold text-slate-800 me-2">{alt.name}</span>
+                      <span className="text-[11px] text-slate-500">({alt.manufacturer})</span>
+                    </div>
+                    <span className="text-[11px] font-mono font-bold text-slate-700">
+                      {alt.priceIqd ? `${alt.priceIqd.toLocaleString()} د.ع` : ''}
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
           )}

@@ -23,8 +23,7 @@ import {
   onSnapshot
 } from 'firebase/firestore';
 import { 
-  Users,
-  MessageSquare, 
+  Users, 
   Calendar, 
   Clock, 
   CheckCircle2, 
@@ -57,8 +56,6 @@ import {
 } from 'lucide-react';
 import { generateFacilityOrUserId, searchPatientProfileAcrossSystem } from '../utils/medicalId';
 
-import { UnifiedChatWorkspace } from './UnifiedChatWorkspace';
-
 interface SecretaryPortalWorkspaceProps {
   onBackToHome: () => void;
 }
@@ -70,13 +67,14 @@ export const SecretaryPortalWorkspace: React.FC<SecretaryPortalWorkspaceProps> =
     signInWithGoogle, 
     setShowDomainHelp,
     unauthorizedDomainDetected,
+    isDemoMode,
     signOut, 
     refreshProfile  
   } = useAuth();
   const { language, isRTL } = useLanguage();
 
   // Navigation State
-  const [activeTab, setActiveTab] = useState<'queue' | 'appointments' | 'walkin' | 'schedule' | 'audit' | 'profile' | 'messages'>('queue');
+  const [activeTab, setActiveTab] = useState<'queue' | 'appointments' | 'walkin' | 'schedule' | 'audit' | 'profile'>('queue');
 
   // Loading & Feedback
   const [loading, setLoading] = useState(true);
@@ -160,17 +158,51 @@ export const SecretaryPortalWorkspace: React.FC<SecretaryPortalWorkspaceProps> =
           setDoctorProfile(docSnap.data() as DoctorProfile);
         }
       } else {
-        setAssignment(null);
-        // Look for pending delegations by email in /secretary_delegations
-        if (user.email) {
-          const delegQuery = query(
-            collection(db, 'secretary_delegations'),
-            where('secretaryEmail', '==', user.email.toLowerCase()),
-            where('status', '==', 'active')
-          );
-          const delegSnap = await getDocs(delegQuery);
-          const invList = delegSnap.docs.map(d => ({ id: d.id, ...d.data() } as SecretaryDelegation));
-          setPendingInvitations(invList);
+        if (isDemoMode) {
+          const demoAssignment: SecretaryAssignment = {
+            id: 'demo_secretary_assignment',
+            secretaryUid: user.uid,
+            secretaryEmail: user.email || 'sec.rafidain@m737.iq',
+            secretaryName: userProfile?.displayName || 'أنسام علي',
+            doctorId: 'demo_doctor_ahmed',
+            doctorName: 'د. أحمد الرافدين (استشاري باطنية وقلبية)',
+            doctorSpecialty: 'أمراض باطنية وقلبية',
+            clinicAddress: 'شارع الكندي، الحارثية، بغداد',
+            clinicPhone: '07801122334',
+            permissions: ['manage_queue', 'confirm_bookings', 'create_walkin', 'view_schedule'],
+            status: 'active',
+            assignedAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          setAssignment(demoAssignment);
+          setDoctorProfile({
+            doctorId: 'demo_doctor_ahmed',
+            fullName: 'د. أحمد الرافدين (استشاري باطنية وقلبية)',
+            specialty: 'أمراض باطنية وقلبية',
+            qualifications: 'بورد عراقي / عربي في الطب الباطني',
+            experienceYears: 12,
+            clinicAddress: 'شارع الكندي، الحارثية، بغداد',
+            governorate: 'بغداد (Baghdad)',
+            phone: '07801122334',
+            consultationFee: 25000,
+            workingDays: ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء'],
+            workingHours: '4:00 PM - 9:00 PM',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          });
+        } else {
+          setAssignment(null);
+          // Look for pending delegations by email in /secretary_delegations
+          if (user.email) {
+            const delegQuery = query(
+              collection(db, 'secretary_delegations'),
+              where('secretaryEmail', '==', user.email.toLowerCase()),
+              where('status', '==', 'active')
+            );
+            const delegSnap = await getDocs(delegQuery);
+            const invList = delegSnap.docs.map(d => ({ id: d.id, ...d.data() } as SecretaryDelegation));
+            setPendingInvitations(invList);
+          }
         }
       }
 
@@ -218,7 +250,11 @@ export const SecretaryPortalWorkspace: React.FC<SecretaryPortalWorkspaceProps> =
       });
       setAppointments(list);
     }, (error) => {
-      handleFirestoreError(error, OperationType.GET, 'appointments');
+      if (!isDemoMode) {
+        handleFirestoreError(error, OperationType.GET, 'appointments');
+      } else {
+        console.warn('Firestore subscription in demo mode (appointments):', error);
+      }
     });
 
     // Real-time Audit Logs
@@ -232,7 +268,11 @@ export const SecretaryPortalWorkspace: React.FC<SecretaryPortalWorkspaceProps> =
       logsList.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       setAuditLogs(logsList.slice(0, 50));
     }, (error) => {
-      handleFirestoreError(error, OperationType.GET, 'clinic_audit_logs');
+      if (!isDemoMode) {
+        handleFirestoreError(error, OperationType.GET, 'clinic_audit_logs');
+      } else {
+        console.warn('Firestore subscription in demo mode (clinic_audit_logs):', error);
+      }
     });
 
     // Notifications for Secretary
@@ -245,7 +285,11 @@ export const SecretaryPortalWorkspace: React.FC<SecretaryPortalWorkspaceProps> =
       nList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setNotifications(nList);
     }, (error) => {
-      handleFirestoreError(error, OperationType.GET, 'notifications');
+      if (!isDemoMode) {
+        handleFirestoreError(error, OperationType.GET, 'notifications');
+      } else {
+        console.warn('Firestore subscription in demo mode (notifications):', error);
+      }
     });
 
     return () => {
@@ -590,14 +634,10 @@ export const SecretaryPortalWorkspace: React.FC<SecretaryPortalWorkspaceProps> =
       const apptId = `appt_walkin_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
       const now = new Date().toISOString();
 
-      const targetPatientId = walkinForm.patientId && walkinForm.patientId.trim()
-        ? walkinForm.patientId.trim()
-        : `pat_walkin_${walkinForm.patientPhone.replace(/\D/g, '') || Date.now()}`;
-
       const newAppt: Appointment = {
         id: apptId,
         doctorId: assignment.doctorId,
-        patientId: targetPatientId,
+        patientId: `pat_reception_${Date.now()}`,
         patientName: walkinForm.patientName.trim(),
         patientPhone: walkinForm.patientPhone.trim(),
         doctorName: assignment.doctorName,
@@ -1112,18 +1152,6 @@ export const SecretaryPortalWorkspace: React.FC<SecretaryPortalWorkspaceProps> =
         </button>
 
         <button
-          onClick={() => setActiveTab('messages')}
-          className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-xs sm:text-sm transition-all whitespace-nowrap ${
-            activeTab === 'messages'
-              ? 'bg-blue-600 text-white shadow-md'
-              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-          }`}
-        >
-          <MessageSquare className="w-4 h-4" />
-          <span>{language === 'ar' ? 'رسائل واستفسارات المرضى' : 'Patient Inquiries'}</span>
-        </button>
-
-        <button
           onClick={() => setActiveTab('audit')}
           className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-xs sm:text-sm transition-all whitespace-nowrap ${
             activeTab === 'audit'
@@ -1149,18 +1177,6 @@ export const SecretaryPortalWorkspace: React.FC<SecretaryPortalWorkspaceProps> =
       </div>
 
       {/* ==================================================== */}
-      {/* TAB: UNIFIED CLINICAL MESSAGING */}
-      {activeTab === 'messages' && (
-        <div className="space-y-4">
-          <UnifiedChatWorkspace
-            currentRole="secretary"
-            currentUserId={user?.uid || 'secretary_user'}
-            currentUserName={userProfile?.displayName || (language === 'ar' ? 'سكرتارية واستقبال العيادة' : 'Clinic Reception')}
-            facilityName={assignment?.doctorName || doctorProfile?.clinicAddress || userProfile?.facilityName || (language === 'ar' ? 'عيادة الطبيب' : 'Doctor Clinic')}
-          />
-        </div>
-      )}
-
       {/* TAB 1: TODAY'S RECEPTION & QUEUE                     */}
       {/* ==================================================== */}
       {activeTab === 'queue' && (

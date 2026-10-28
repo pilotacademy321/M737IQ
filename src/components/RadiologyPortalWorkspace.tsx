@@ -74,7 +74,6 @@ import {
   Copy
 } from 'lucide-react';
 import { generateFacilityOrUserId, searchPatientProfileAcrossSystem, isValidMedicalIdQuery, normalizeMedicalIdInput } from '../utils/medicalId';
-import { UnifiedChatWorkspace } from './UnifiedChatWorkspace';
 
 interface RadiologyPortalWorkspaceProps {
   onBackToHome: () => void;
@@ -84,7 +83,7 @@ export const RadiologyPortalWorkspace: React.FC<RadiologyPortalWorkspaceProps> =
   const { user, userProfile, isAdmin, refreshProfile } = useAuth();
   const { language, isRTL } = useLanguage();
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'referral_orders' | 'bookings' | 'patients' | 'services' | 'reports' | 'settings' | 'messages'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'referral_orders' | 'bookings' | 'patients' | 'services' | 'reports' | 'settings'>('dashboard');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -1366,7 +1365,6 @@ export const RadiologyPortalWorkspace: React.FC<RadiologyPortalWorkspaceProps> =
           { id: 'patients', labelAr: `سجل المراجعين (${patientsRoster.length})`, labelEn: `Patients (${patientsRoster.length})`, icon: Users },
           { id: 'services', labelAr: `قائمة الخدمات والأسعار (${services.length})`, labelEn: `Scan Services (${services.length})`, icon: DollarSign },
           { id: 'reports', labelAr: `التقارير وصور الأشعة (${reports.length})`, labelEn: `Reports & PACS (${reports.length})`, icon: FileText },
-          { id: 'messages', labelAr: 'استفسارات ورسائل المرضى', labelEn: 'Patient Inquiries', icon: MessageSquare },
           { id: 'settings', labelAr: 'إعدادات المركز والأجهزة', labelEn: 'Center & Equipment', icon: Settings },
         ].map((tab) => {
           const Icon = tab.icon;
@@ -1393,18 +1391,6 @@ export const RadiologyPortalWorkspace: React.FC<RadiologyPortalWorkspaceProps> =
           );
         })}
       </div>
-
-      {/* TAB: UNIFIED CLINICAL MESSAGING */}
-      {activeTab === 'messages' && (
-        <div className="space-y-4">
-          <UnifiedChatWorkspace
-            currentRole="radiology_center"
-            currentUserId={user?.uid || centerProfile?.centerId || 'radiology_user'}
-            currentUserName={centerProfile?.centerName || userProfile?.displayName || (language === 'ar' ? 'مركز الأشعة والسونار' : 'Radiology Center')}
-            facilityName={centerProfile?.centerName}
-          />
-        </div>
-      )}
 
       {/* TAB 1: DASHBOARD OVERVIEW */}
       {activeTab === 'dashboard' && (

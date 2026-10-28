@@ -22,13 +22,12 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
       {/* Background Layer: High-resolution visual from reference image + rich gradient scrim */}
       <div className="absolute inset-0 z-0">
         <img
-          src="/assets/aistudio/file_00000000e02881f491ce61d40dce3857_6ade987b.png"
-          alt="M737 Iraqi Medical Platform Background"
+          src="/assets/aistudio/file_0000000028548210b7a1ceb04b95422a_ba7a6257.png"
+          alt="M737IQ — منصة M737IQ الطبية"
           className="w-full h-full object-cover object-center opacity-65 scale-100 transition-transform duration-1000"
           referrerPolicy="no-referrer"
           onError={(e) => {
-            // Elegant gradient fallback if image path is unavailable
-            (e.target as HTMLElement).style.display = 'none';
+            (e.target as HTMLImageElement).src = '/assets/images/m737_vip_hero_banner.png';
           }}
         />
         {/* Soft daylight and sunset atmospheric scrims to preserve 4.5:1 text contrast */}

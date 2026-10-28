@@ -205,3 +205,18 @@ export function runIdSystemVerificationTests(): { total: number; passed: number;
     results
   };
 }
+
+// Auto-run if executed directly
+const summary = runIdSystemVerificationTests();
+console.log(`\n================ ID SYSTEM TEST SUMMARY ================`);
+console.log(`Total: ${summary.total} | Passed: ${summary.passed} | Failed: ${summary.failed}`);
+summary.results.forEach((r, idx) => {
+  console.log(`  [${r.passed ? 'PASS' : 'FAIL'}] #${idx + 1} (${r.suite}) ${r.name}`);
+  if (!r.passed && r.message) {
+    console.error(`         Error: ${r.message}`);
+  }
+});
+console.log(`========================================================\n`);
+if (summary.failed > 0) {
+  process.exit(1);
+}

@@ -76,8 +76,6 @@ import {
 import { generateFacilityOrUserId, searchPatientProfileAcrossSystem, normalizeMedicalIdInput, isValidMedicalIdQuery } from '../utils/medicalId';
 import { PatientProfile } from '../types';
 
-import { UnifiedChatWorkspace } from './UnifiedChatWorkspace';
-
 interface LaboratoryPortalWorkspaceProps {
   onBackToHome: () => void;
 }
@@ -86,7 +84,7 @@ export const LaboratoryPortalWorkspace: React.FC<LaboratoryPortalWorkspaceProps>
   const { user, userProfile, isAdmin, refreshProfile } = useAuth();
   const { language, isRTL } = useLanguage();
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'referral_orders' | 'bookings' | 'samples' | 'tests' | 'results' | 'patients' | 'settings' | 'messages'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'referral_orders' | 'bookings' | 'samples' | 'tests' | 'results' | 'patients' | 'settings'>('dashboard');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -1509,7 +1507,6 @@ export const LaboratoryPortalWorkspace: React.FC<LaboratoryPortalWorkspaceProps>
           { id: 'tests', labelAr: `دليل الفحوصات والأسعار (${tests.length})`, labelEn: `Test Directory (${tests.length})`, icon: DollarSign },
           { id: 'results', labelAr: `النتائج والتقارير المعتمدة (${results.length})`, labelEn: `Results Archive (${results.length})`, icon: FileText },
           { id: 'patients', labelAr: `سجل المراجعين (${patientsRoster.length})`, labelEn: `Patients (${patientsRoster.length})`, icon: Users },
-          { id: 'messages', labelAr: 'استفسارات ورسائل المرضى', labelEn: 'Patient Inquiries', icon: MessageSquare },
           { id: 'settings', labelAr: 'إعدادات المختبر والأجهزة', labelEn: 'Lab Profile & Gear', icon: Settings },
         ].map((tab) => {
           const Icon = tab.icon;
@@ -1535,18 +1532,6 @@ export const LaboratoryPortalWorkspace: React.FC<LaboratoryPortalWorkspaceProps>
           );
         })}
       </div>
-
-      {/* TAB: UNIFIED CLINICAL MESSAGING */}
-      {activeTab === 'messages' && (
-        <div className="space-y-4">
-          <UnifiedChatWorkspace
-            currentRole="laboratory"
-            currentUserId={user?.uid || labProfile?.labId || 'lab_user'}
-            currentUserName={labProfile?.labName || userProfile?.displayName || (language === 'ar' ? 'مختبر التحليلات المعتمد' : 'Medical Laboratory')}
-            facilityName={labProfile?.labName}
-          />
-        </div>
-      )}
 
       {/* TAB 1: DASHBOARD OVERVIEW */}
       {activeTab === 'dashboard' && (

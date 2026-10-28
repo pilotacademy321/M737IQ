@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import { isVerifiedSuperAdmin } from '../utils/adminSecurity';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { 
   UserProfile, 
@@ -65,8 +66,7 @@ import {
   DollarSign,
   Server,
   Check,
-  Copy,
-  MessageSquare
+  Copy
 } from 'lucide-react';
 import { 
   auditAndMigrateAccountIds, 
@@ -75,7 +75,6 @@ import {
   AuthorizedSearchResult, 
   PORTAL_ID_PREFIXES 
 } from '../utils/medicalId';
-import { UnifiedChatWorkspace } from './UnifiedChatWorkspace';
 
 interface SuperAdminPortalWorkspaceProps {
   onBackToHome: () => void;
@@ -94,7 +93,7 @@ export const SuperAdminPortalWorkspace: React.FC<SuperAdminPortalWorkspaceProps>
   } = useAuth();
   const { language, isRTL } = useLanguage();
 
-  const [activeTab, setActiveTab] = useState<'accreditation' | 'analytics' | 'audit_logs' | 'subscriptions' | 'id_audit' | 'clinical_messages'>('accreditation');
+  const [activeTab, setActiveTab] = useState<'accreditation' | 'analytics' | 'audit_logs' | 'subscriptions' | 'id_audit'>('accreditation');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
@@ -330,7 +329,7 @@ export const SuperAdminPortalWorkspace: React.FC<SuperAdminPortalWorkspaceProps>
 
   // Load All Users and System Metrics
   const loadAdminData = async () => {
-    if (!isAdmin) return;
+    if (!isAdmin || !isVerifiedSuperAdmin(user)) return;
     setLoading(true);
     try {
       // 1. Fetch Users
@@ -437,10 +436,10 @@ export const SuperAdminPortalWorkspace: React.FC<SuperAdminPortalWorkspaceProps>
   };
 
   useEffect(() => {
-    if (isAdmin) {
+    if (isAdmin && isVerifiedSuperAdmin(user)) {
       loadAdminData();
     }
-  }, [isAdmin]);
+  }, [isAdmin, user]);
 
   // Open Edit Plan Modal
   const handleOpenEditPlan = (plan: SubscriptionPlan) => {
@@ -865,7 +864,7 @@ export const SuperAdminPortalWorkspace: React.FC<SuperAdminPortalWorkspaceProps>
     }
   };
 
-  if (!isAdmin) {
+  if (!isAdmin || !isVerifiedSuperAdmin(user)) {
     return (
       <div className="bg-white rounded-3xl p-8 sm:p-12 text-center border border-red-200 shadow-sm">
         <ShieldAlert size={48} className="text-red-500 mx-auto mb-4" />
@@ -874,8 +873,8 @@ export const SuperAdminPortalWorkspace: React.FC<SuperAdminPortalWorkspaceProps>
         </h3>
         <p className="text-sm text-slate-600 mt-2 max-w-md mx-auto">
           {language === 'ar'
-            ? 'هذه البوابة مخصصة حصراً للمشرف العام على منصة M737 الطبية لتدقيق تراخيص الكوادر الصحية العراقية.'
-            : 'This portal is restricted to the M737 Super Administrator for validating healthcare credentials.'}
+            ? 'هذه البوابة مخصصة حصراً للمشرف العام المعتمد (bcgmoc@gmail.com). تم حظر وتقييد الوصول لجميع الحسابات الأخرى.'
+            : 'This portal is restricted exclusively to the verified Super Administrator (bcgmoc@gmail.com). Unauthorized accounts are denied access.'}
         </p>
       </div>
     );
@@ -1022,18 +1021,6 @@ export const SuperAdminPortalWorkspace: React.FC<SuperAdminPortalWorkspaceProps>
         >
           <Database size={16} />
           <span>{language === 'ar' ? 'تدقيق معرّفات الحسابات (M737 IDs)' : 'Account IDs & Audit'}</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('clinical_messages')}
-          className={`flex-1 min-w-[140px] py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-            activeTab === 'clinical_messages'
-              ? 'bg-[#003366] text-white shadow-sm'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-          }`}
-        >
-          <MessageSquare size={16} />
-          <span>{language === 'ar' ? 'مرصد تدقيق المحادثات والسلامة الطبية' : 'Clinical Safety Oversight'}</span>
         </button>
       </div>
 
@@ -2283,18 +2270,6 @@ export const SuperAdminPortalWorkspace: React.FC<SuperAdminPortalWorkspaceProps>
               </div>
             )}
           </div>
-        </div>
-      )}
-
-      {/* TAB 6: CENTRAL CLINICAL SAFETY & MESSAGE OVERSIGHT AUDIT */}
-      {activeTab === 'clinical_messages' && (
-        <div className="space-y-4">
-          <UnifiedChatWorkspace
-            currentRole="super_admin"
-            currentUserId={user?.uid || 'super_admin_id'}
-            currentUserName={userProfile?.displayName || (language === 'ar' ? 'مشرف الرقابة الطبية' : 'Super Admin Safety Inspector')}
-            isSuperAdminView={true}
-          />
         </div>
       )}
 

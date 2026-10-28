@@ -20,7 +20,7 @@ import {
 } from 'firebase/firestore';
 import { auth, db, googleProvider, validateFirestoreConnection, handleFirestoreError, OperationType } from '../lib/firebase';
 import { UserProfile, UserRole, AccountStatus, PatientProfile } from '../types';
-import { generateUniqueMedicalId, ensureUserAccountId, updateUserAccountId } from '../utils/medicalId';
+import { generateUniqueMedicalId, ensureUserAccountId } from '../utils/medicalId';
 import firebaseConfig from '@/firebase-applet-config.json';
 import { recordRealMetricEvent } from '../lib/platformMetrics';
 
@@ -39,14 +39,13 @@ interface AuthContextType {
   firebaseProjectId: string;
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, pass: string) => Promise<void>;
-  signUpWithEmail: (email: string, pass: string, displayName: string, role: UserRole, phone?: string, preferredMedicalId?: string) => Promise<void>;
+  signUpWithEmail: (email: string, pass: string, displayName: string, role: UserRole, phone?: string) => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
   signInAsDemoUser?: (role: UserRole, customName?: string) => Promise<void>;
   exitDemoMode?: () => void;
   signOut: () => Promise<void>;
   clearAuthError: () => void;
-  registerAsPatient: (displayName?: string, phone?: string, preferredMedicalId?: string) => Promise<void>;
-  updateAccountMedicalId: (newMedicalId: string) => Promise<{ success: boolean; error?: string; finalId?: string }>;
+  registerAsPatient: (displayName?: string, phone?: string) => Promise<void>;
   applyForProfessionalRole: (payload: {
     role: UserRole;
     displayName: string;
@@ -54,7 +53,6 @@ interface AuthContextType {
     facilityName: string;
     governorate: string;
     phone: string;
-    preferredAccountId?: string;
   }) => Promise<void>;
   refreshProfile: () => Promise<void>;
   updateUserStatusByAdmin: (targetUid: string, newStatus: AccountStatus) => Promise<void>;
@@ -64,8 +62,15 @@ interface AuthContextType {
   deleteOwnAccountPermanently: () => Promise<void>;
 }
 
-const SUPER_ADMIN_EMAIL = 'bcgmoc@gmail.com';
-const SUPER_ADMIN_EMAILS = ['bcgmoc@gmail.com', 'mustfa200633@gmail.com', 'mmrym2186@gmail.com'];
+import { 
+  SOLE_SUPER_ADMIN_EMAIL, 
+  isVerifiedSuperAdmin, 
+  isRevokedAdminEmail, 
+  assertSuperAdminAccess, 
+  auditAndRevokeUnauthorizedAdmins 
+} from '../utils/adminSecurity';
+
+const SUPER_ADMIN_EMAIL = SOLE_SUPER_ADMIN_EMAIL;
 const DEMO_STORAGE_KEY = 'm737_demo_role_v1';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -91,22 +96,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loadUserProfile = async (firebaseUser: User) => {
     try {
-      const isVerifiedSuperAdminEmail = 
-        Boolean(firebaseUser.emailVerified) &&
-        Boolean(firebaseUser.email) &&
-        SUPER_ADMIN_EMAILS.includes(firebaseUser.email!.trim().toLowerCase());
+      const isVerifiedSuperAdminEmail = isVerifiedSuperAdmin(firebaseUser);
 
-      let hasAdminDoc = false;
-      try {
-        const adminDocRef = doc(db, 'admins', firebaseUser.uid);
-        const adminSnap = await getDoc(adminDocRef);
-        hasAdminDoc = adminSnap.exists();
-      } catch {
-        hasAdminDoc = false;
-      }
-
-      const isUserAdmin = hasAdminDoc || isVerifiedSuperAdminEmail;
-      setIsAdmin(isUserAdmin);
+      // Super Admin access is strictly gated: ONLY verified bcgmoc@gmail.com can be an admin
+      setIsAdmin(isVerifiedSuperAdminEmail);
 
       const userDocRef = doc(db, 'users', firebaseUser.uid);
       const userSnap = await getDoc(userDocRef);
@@ -135,7 +128,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         }
 
-        if (isVerifiedSuperAdminEmail && (profile.role !== 'super_admin' || profile.status !== 'approved')) {
+        if (isVerifiedSuperAdminEmail) {
+          // Authorized Super Admin: elevate/confirm in Firestore
           const now = new Date().toISOString();
           const elevatedProfile: UserProfile = {
             ...profile,
@@ -143,7 +137,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             status: 'approved',
             updatedAt: now,
           };
-          await setDoc(userDocRef, elevatedProfile, { merge: true });
+          if (profile.role !== 'super_admin' || profile.status !== 'approved') {
+            await setDoc(userDocRef, elevatedProfile, { merge: true });
+          }
           await setDoc(doc(db, 'admins', firebaseUser.uid), {
             uid: firebaseUser.uid,
             email: firebaseUser.email,
@@ -152,20 +148,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }, { merge: true });
           setUserProfile(elevatedProfile);
           setIsAdmin(true);
+
+          // Proactively sanitize any unauthorized admin accounts in background
+          auditAndRevokeUnauthorizedAdmins(db, firebaseUser).catch((e) =>
+            console.warn('Background admin audit notice:', e)
+          );
         } else {
-          setUserProfile(profile);
-          if (profile.role === 'super_admin' || isVerifiedSuperAdminEmail) {
-            setIsAdmin(true);
+          // ANY other account: ensure they do NOT retain super_admin role
+          if (profile.role === 'super_admin' || isRevokedAdminEmail(firebaseUser.email)) {
+            console.warn(`[SECURITY] Revoking unauthorized admin role from: ${firebaseUser.email || firebaseUser.uid}`);
+            const now = new Date().toISOString();
+            profile = {
+              ...profile,
+              role: 'patient',
+              updatedAt: now,
+            };
+            try {
+              await updateDoc(userDocRef, {
+                role: 'patient',
+                updatedAt: now,
+              });
+            } catch (e) {
+              console.warn('Notice updating profile during role revocation:', e);
+            }
+
+            // Remove any dangling admin record
+            try {
+              await deleteDoc(doc(db, 'admins', firebaseUser.uid));
+            } catch {}
           }
+
+          setUserProfile(profile);
+          setIsAdmin(false);
         }
         setNeedsOnboarding(false);
       } else {
-        // If user is verified super admin bootstrap
+        // If user document does not exist yet:
         if (isVerifiedSuperAdminEmail) {
           const now = new Date().toISOString();
           const adminProfile: UserProfile = {
             uid: firebaseUser.uid,
-            email: firebaseUser.email || SUPER_ADMIN_EMAIL,
+            email: firebaseUser.email || SOLE_SUPER_ADMIN_EMAIL,
             displayName: firebaseUser.displayName || 'Super Administrator',
             role: 'super_admin',
             status: 'approved',
@@ -187,6 +210,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setNeedsOnboarding(false);
         } else {
           setUserProfile(null);
+          setIsAdmin(false);
           setNeedsOnboarding(true);
         }
       }
@@ -332,8 +356,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     pass: string, 
     displayName: string, 
     role: UserRole, 
-    phone?: string,
-    preferredMedicalId?: string
+    phone?: string
   ) => {
     setLoading(true);
     setAuthError(null);
@@ -344,14 +367,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await updateProfile(user, { displayName });
       }
 
-      const isVerifiedSuperAdminEmail = SUPER_ADMIN_EMAILS.includes(email.trim().toLowerCase());
-      const effectiveRole: UserRole = isVerifiedSuperAdminEmail ? 'super_admin' : role;
-      const effectiveStatus: AccountStatus = (effectiveRole === 'patient' || effectiveRole === 'super_admin') 
+      // Registration via public sign-up NEVER grants Super Admin privileges
+      if (role === 'super_admin') {
+        throw new Error('لا يمكن التسجيل كمسؤول أعلى عبر نموذج التسجيل العام (Unauthorized)');
+      }
+
+      const effectiveRole: UserRole = role;
+      const effectiveStatus: AccountStatus = effectiveRole === 'patient' 
         ? 'approved' 
         : 'pending';
 
       const now = new Date().toISOString();
-      let assignedId = await ensureUserAccountId(
+      const assignedId = await ensureUserAccountId(
         db,
         user.uid,
         effectiveRole,
@@ -360,14 +387,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user.email || email.trim(),
         phone || ''
       );
-
-      // If user specified custom Health ID / account ID, update and register it in account_ids registry
-      if (preferredMedicalId && preferredMedicalId.trim() && preferredMedicalId.trim().toUpperCase() !== assignedId) {
-        const updateRes = await updateUserAccountId(db, user.uid, preferredMedicalId.trim(), effectiveRole);
-        if (updateRes.success && updateRes.finalId) {
-          assignedId = updateRes.finalId;
-        }
-      }
 
       const profile: UserProfile = {
         uid: user.uid,
@@ -384,41 +403,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       await setDoc(doc(db, 'users', user.uid), profile);
 
-      // Create persistent patient_profiles document for patients
-      if (effectiveRole === 'patient') {
-        try {
-          const pRef = doc(db, 'patient_profiles', user.uid);
-          const pDoc: PatientProfile = {
-            patientId: user.uid,
-            fullName: profile.displayName,
-            medicalId: assignedId,
-            email: profile.email,
-            phone: profile.phone || '',
-            governorate: 'بغداد (Baghdad)',
-            address: 'العراق',
-            bloodType: 'Unknown',
-            chronicDiseases: [],
-            allergies: [],
-            currentMedications: [],
-            createdAt: now,
-            updatedAt: now,
-          };
-          await setDoc(pRef, pDoc, { merge: true });
-        } catch (e) {
-          console.warn('Patient profile document initialization notice:', e);
-        }
-      }
-
-      if (effectiveRole === 'super_admin' || isVerifiedSuperAdminEmail) {
-        await setDoc(doc(db, 'admins', user.uid), {
-          uid: user.uid,
-          email: user.email,
-          role: 'super_admin',
-          grantedAt: now,
-        }, { merge: true });
-        setIsAdmin(true);
-      }
-
+      setIsAdmin(false);
       setUserProfile(profile);
       setNeedsOnboarding(false);
       recordRealMetricEvent('user');
@@ -521,13 +506,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAuthError(null);
   };
 
-  const registerAsPatient = async (displayName?: string, phone?: string, preferredMedicalId?: string) => {
+  const registerAsPatient = async (displayName?: string, phone?: string) => {
     if (!user) throw new Error('User must be authenticated');
     setLoading(true);
     setAuthError(null);
     try {
       const now = new Date().toISOString();
-      let medicalId = await ensureUserAccountId(
+      const medicalId = await ensureUserAccountId(
         db,
         user.uid,
         'patient',
@@ -536,15 +521,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user.email || '',
         phone || ''
       );
-
-      // If user provided a custom preferred Medical ID, update to it safely
-      if (preferredMedicalId && preferredMedicalId.trim() && preferredMedicalId.trim().toUpperCase() !== medicalId) {
-        const updateRes = await updateUserAccountId(db, user.uid, preferredMedicalId.trim(), 'patient');
-        if (updateRes.success && updateRes.finalId) {
-          medicalId = updateRes.finalId;
-        }
-      }
-
       const profile: UserProfile = {
         uid: user.uid,
         email: user.email || '',
@@ -560,7 +536,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       await setDoc(doc(db, 'users', user.uid), profile);
 
-      // Ensure persistent patient_profiles document exists with real dynamic medicalId
+      // Ensure persistent patient_profiles document exists with medicalId
       try {
         const pRef = doc(db, 'patient_profiles', user.uid);
         const pSnap = await getDoc(pRef);
@@ -581,7 +557,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             updatedAt: now,
           };
           await setDoc(pRef, initialPatientDoc);
-        } else {
+        } else if (!pSnap.data().medicalId) {
           await updateDoc(pRef, { medicalId, updatedAt: now });
         }
       } catch (e) {
@@ -598,26 +574,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const updateAccountMedicalId = async (
-    newMedicalId: string
-  ): Promise<{ success: boolean; error?: string; finalId?: string }> => {
-    if (!user) throw new Error('User must be authenticated');
-    const role = userProfile?.role || 'patient';
-    const result = await updateUserAccountId(db, user.uid, newMedicalId, role);
-    if (result.success && result.finalId) {
-      setUserProfile((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          accountId: result.finalId!,
-          medicalId: role === 'patient' ? result.finalId! : prev.medicalId,
-          updatedAt: new Date().toISOString()
-        };
-      });
-    }
-    return result;
-  };
-
   const applyForProfessionalRole = async (payload: {
     role: UserRole;
     displayName: string;
@@ -625,14 +581,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     facilityName: string;
     governorate: string;
     phone: string;
-    preferredAccountId?: string;
   }) => {
     if (!user) throw new Error('User must be authenticated');
+    if (payload.role === 'super_admin') {
+      throw new Error('لا يمكن التقديم على صلاحية المشرف العام (Unauthorized)');
+    }
     setLoading(true);
     setAuthError(null);
     try {
       const now = new Date().toISOString();
-      let assignedId = await ensureUserAccountId(
+      const assignedId = await ensureUserAccountId(
         db,
         user.uid,
         payload.role,
@@ -641,14 +599,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user.email || '',
         payload.phone
       );
-
-      // If user specified custom facility / professional account ID, register and update it
-      if (payload.preferredAccountId && payload.preferredAccountId.trim() && payload.preferredAccountId.trim().toUpperCase() !== assignedId) {
-        const updateRes = await updateUserAccountId(db, user.uid, payload.preferredAccountId.trim(), payload.role);
-        if (updateRes.success && updateRes.finalId) {
-          assignedId = updateRes.finalId;
-        }
-      }
 
       const profile: UserProfile = {
         uid: user.uid,
@@ -683,6 +633,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateUserStatusByAdmin = async (targetUid: string, newStatus: AccountStatus) => {
+    assertSuperAdminAccess(user);
     if (!isAdmin) throw new Error('Unauthorized administrative action');
     try {
       const targetRef = doc(db, 'users', targetUid);
@@ -699,6 +650,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteUserByAdmin = async (targetUid: string) => {
+    assertSuperAdminAccess(user);
     if (!isAdmin) throw new Error('Unauthorized administrative action');
     try {
       await deleteDoc(doc(db, 'users', targetUid));
@@ -730,6 +682,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deletePendingUsersByAdmin = async (): Promise<number> => {
+    assertSuperAdminAccess(user);
     if (!isAdmin) throw new Error('Unauthorized administrative action');
     try {
       const usersCol = collection(db, 'users');
@@ -752,6 +705,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const fetchPendingUsersForAdmin = async (): Promise<UserProfile[]> => {
+    assertSuperAdminAccess(user);
     if (!isAdmin) throw new Error('Unauthorized');
     try {
       const usersCol = collection(db, 'users');
@@ -840,7 +794,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signOut,
         clearAuthError,
         registerAsPatient,
-        updateAccountMedicalId,
         applyForProfessionalRole,
         refreshProfile,
         updateUserStatusByAdmin,

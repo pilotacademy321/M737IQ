@@ -52,22 +52,18 @@ import {
   AlertTriangle,
   MessageCircle,
   Camera,
-  Copy,
-  FileSpreadsheet,
-  QrCode,
-  Barcode,
-  Upload
+  Copy
 } from 'lucide-react';
 import { generateFacilityOrUserId } from '../utils/medicalId';
 import { SmartMedicineSearch, SearchMedicineResult } from './SmartMedicineSearch';
 import { logAuditEvent } from '../lib/auditLogger';
 import { validateAndCompressImage, formatWhatsAppUrl } from '../utils/mediaUtils';
-import { MedicineScanModal } from './MedicineScanModal';
-import { MedicineBulkImportWizard } from './MedicineBulkImportWizard';
 
 interface WholesalerPortalWorkspaceProps {
   onBackToHome: () => void;
 }
+
+
 
 export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps> = ({ onBackToHome }) => {
   const { user, userProfile, isAdmin, refreshProfile } = useAuth();
@@ -87,15 +83,12 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [stockFilter, setStockFilter] = useState<'all' | 'in_stock' | 'low_stock' | 'expiring_soon'>('all');
   const [showNewMedicineModal, setShowNewMedicineModal] = useState(false);
-  const [showBulkImportModal, setShowBulkImportModal] = useState(false);
-  const [showScanModal, setShowScanModal] = useState(false);
   const [editingMedicine, setEditingMedicine] = useState<WholesaleMedicineItem | null>(null);
 
   // New / Edit Medicine Form State
   const [medicineForm, setMedicineForm] = useState({
     name: '',
     nameAr: '',
-    brand: '',
     activeIngredient: '',
     manufacturer: '',
     originCountry: 'Iraq (العراق)',
@@ -112,8 +105,6 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
     minOrderQuantity: 10,
     isAvailable: true,
     category: 'Antibiotics (مضادات حيوية)',
-    barcode: '',
-    qrCode: '',
     notes: '',
   });
 
@@ -304,16 +295,11 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
   // Filtered Catalog
   const filteredCatalog = useMemo(() => {
     return medicines.filter((item) => {
-      const q = searchQuery.toLowerCase();
       const matchSearch = 
-        item.name.toLowerCase().includes(q) ||
-        (item.nameAr && item.nameAr.toLowerCase().includes(q)) ||
-        (item.brand && item.brand.toLowerCase().includes(q)) ||
-        (item.barcode && item.barcode.toLowerCase().includes(q)) ||
-        (item.qrCode && item.qrCode.toLowerCase().includes(q)) ||
-        item.activeIngredient.toLowerCase().includes(q) ||
-        item.batchNumber.toLowerCase().includes(q) ||
-        item.manufacturer.toLowerCase().includes(q);
+        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.activeIngredient.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.batchNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.manufacturer.toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchCat = categoryFilter === 'all' || item.category === categoryFilter;
 
@@ -354,14 +340,12 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
         wholesalerPhone: wholesalerProfile?.phone || userProfile?.phone || '',
         name: medicineForm.name,
         nameAr: medicineForm.nameAr,
-        brand: medicineForm.brand,
         activeIngredient: medicineForm.activeIngredient,
         manufacturer: medicineForm.manufacturer,
         originCountry: medicineForm.originCountry,
         strength: medicineForm.strength,
         dosageForm: medicineForm.dosageForm,
         packSize: medicineForm.packSize,
-        packageSize: medicineForm.packSize,
         cartonCapacity: Number(medicineForm.cartonCapacity),
         batchNumber: medicineForm.batchNumber || `BAT-${Date.now().toString().slice(-6)}`,
         productionDate: medicineForm.productionDate,
@@ -369,10 +353,7 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
         wholesalePriceIqd: Number(medicineForm.wholesalePriceIqd),
         cartonPriceIqd: Number(medicineForm.cartonPriceIqd),
         stockPacks: Number(medicineForm.stockPacks),
-        quantity: Number(medicineForm.stockPacks),
         minOrderQuantity: Number(medicineForm.minOrderQuantity),
-        barcode: medicineForm.barcode,
-        qrCode: medicineForm.qrCode,
         isAvailable: medicineForm.isAvailable,
         category: medicineForm.category,
         notes: medicineForm.notes,
@@ -655,12 +636,11 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
 
     try {
       const now = new Date().toISOString();
-      const cleanLicense = profileForm.licenseNumber.trim();
       const updatedProfile: WholesalerProfile = {
         wholesalerId: user.uid,
         warehouseName: profileForm.warehouseName,
         ownerName: profileForm.ownerName,
-        licenseNumber: cleanLicense,
+        licenseNumber: profileForm.licenseNumber || wholesalerProfile?.licenseNumber || 'IQ-WHOLE-88301',
         commercialRegNumber: profileForm.commercialRegNumber,
         phone: profileForm.phone,
         whatsapp: profileForm.whatsapp,
@@ -678,15 +658,6 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
 
       try {
         await setDoc(doc(db, 'wholesaler_profiles', user.uid), sanitizeForFirestore(updatedProfile));
-        await updateDoc(doc(db, 'users', user.uid), {
-          displayName: profileForm.warehouseName,
-          facilityName: profileForm.warehouseName,
-          licenseNumber: cleanLicense,
-          governorate: profileForm.governorate,
-          phone: profileForm.phone,
-          updatedAt: now,
-        });
-        await refreshProfile();
       } catch (err: unknown) {
         handleFirestoreError(err, OperationType.WRITE, `wholesaler_profiles/${user.uid}`);
       }
@@ -698,15 +669,15 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
         actorName: profileForm.warehouseName,
         actorRole: 'wholesaler',
         resourceId: user.uid,
-        resourceNumber: cleanLicense || 'WHOLESALER-IQ',
+        resourceNumber: profileForm.licenseNumber || 'IQ-WHOLE-88301',
         status: 'updated',
-        details: `تحديث بيانات مذخر الأدوية ورقم الإجازة الصحية / نقابة الصيادلة (${cleanLicense}) في ${profileForm.governorate}`,
+        details: `تحديث بيانات مذخر الأدوية وتغطية التوصيل في ${profileForm.governorate}`,
       });
 
       setWholesalerProfile(updatedProfile);
       setFeedbackMsg({
         type: 'success',
-        text: language === 'ar' ? 'تم حفظ بيانات المذخر ورقم الإجازة الصحية بنجاح' : 'Warehouse settings & license updated successfully',
+        text: language === 'ar' ? 'تم حفظ بيانات المذخر وإعدادات التوريد بنجاح' : 'Warehouse settings saved',
       });
       setTimeout(() => setFeedbackMsg(null), 3000);
     } catch (err: unknown) {
@@ -719,55 +690,49 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
     setMedicineForm({
       name: item.name,
       nameAr: item.nameAr || '',
-      brand: item.brand || '',
       activeIngredient: item.activeIngredient,
       manufacturer: item.manufacturer,
       originCountry: item.originCountry,
       strength: item.strength,
       dosageForm: item.dosageForm,
-      packSize: item.packSize || item.packageSize || '20 Tablets / Box',
-      cartonCapacity: item.cartonCapacity || 30,
+      packSize: item.packSize,
+      cartonCapacity: item.cartonCapacity,
       batchNumber: item.batchNumber,
       productionDate: item.productionDate,
       expiryDate: item.expiryDate,
       wholesalePriceIqd: item.wholesalePriceIqd,
-      cartonPriceIqd: item.cartonPriceIqd || item.wholesalePriceIqd * (item.cartonCapacity || 30),
-      stockPacks: item.stockPacks || item.quantity || 0,
-      minOrderQuantity: item.minOrderQuantity || 1,
+      cartonPriceIqd: item.cartonPriceIqd || item.wholesalePriceIqd * item.cartonCapacity,
+      stockPacks: item.stockPacks,
+      minOrderQuantity: item.minOrderQuantity,
       isAvailable: item.isAvailable,
-      category: item.category || 'General (عام)',
-      barcode: item.barcode || '',
-      qrCode: item.qrCode || '',
+      category: item.category,
       notes: item.notes || '',
     });
     setShowNewMedicineModal(true);
   };
 
-  const openNewModal = (prefilled?: Partial<typeof medicineForm>) => {
+  const openNewModal = () => {
     setEditingMedicine(null);
     setMedicineForm({
-      name: prefilled?.name || '',
-      nameAr: prefilled?.nameAr || '',
-      brand: prefilled?.brand || '',
-      activeIngredient: prefilled?.activeIngredient || '',
-      manufacturer: prefilled?.manufacturer || '',
-      originCountry: prefilled?.originCountry || 'Iraq (العراق)',
-      strength: prefilled?.strength || '500mg',
-      dosageForm: prefilled?.dosageForm || 'Tablets (أقراص)',
-      packSize: prefilled?.packSize || '20 Tablets / Box',
-      cartonCapacity: prefilled?.cartonCapacity || 30,
-      batchNumber: prefilled?.batchNumber || `BAT-${Date.now().toString().slice(-6)}`,
-      productionDate: prefilled?.productionDate || new Date().toISOString().split('T')[0],
-      expiryDate: prefilled?.expiryDate || new Date(Date.now() + 730 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      wholesalePriceIqd: prefilled?.wholesalePriceIqd || 3500,
-      cartonPriceIqd: prefilled?.cartonPriceIqd || 105000,
-      stockPacks: prefilled?.stockPacks || 100,
-      minOrderQuantity: prefilled?.minOrderQuantity || 10,
-      isAvailable: prefilled?.isAvailable !== undefined ? prefilled.isAvailable : true,
-      category: prefilled?.category || 'Antibiotics (مضادات حيوية)',
-      barcode: prefilled?.barcode || '',
-      qrCode: prefilled?.qrCode || '',
-      notes: prefilled?.notes || '',
+      name: '',
+      nameAr: '',
+      activeIngredient: '',
+      manufacturer: '',
+      originCountry: 'Iraq (العراق)',
+      strength: '500mg',
+      dosageForm: 'Tablets (أقراص)',
+      packSize: '20 Tablets / Box',
+      cartonCapacity: 30,
+      batchNumber: `BAT-${Date.now().toString().slice(-6)}`,
+      productionDate: new Date().toISOString().split('T')[0],
+      expiryDate: new Date(Date.now() + 730 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      wholesalePriceIqd: 3500,
+      cartonPriceIqd: 100000,
+      stockPacks: 100,
+      minOrderQuantity: 10,
+      isAvailable: true,
+      category: 'Antibiotics (مضادات حيوية)',
+      notes: '',
     });
     setShowNewMedicineModal(true);
   };
@@ -822,7 +787,7 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
               </span>
             </div>
             <div className="text-xs text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
-              <span>{language === 'ar' ? 'الترخيص:' : 'License:'} <strong className="font-mono text-slate-700">{wholesalerProfile?.licenseNumber || userProfile?.licenseNumber || (language === 'ar' ? 'قيد التوثيق' : 'Under Review')}</strong></span>
+              <span>{language === 'ar' ? 'الترخيص:' : 'License:'} <strong className="font-mono text-slate-700">{wholesalerProfile?.licenseNumber || 'IQ-WHOLE-88301'}</strong></span>
               <span>·</span>
               <span>{wholesalerProfile?.governorate || 'بغداد (Baghdad)'}</span>
               <span>·</span>
@@ -842,27 +807,11 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
           </button>
 
           <button
-            onClick={() => setShowBulkImportModal(true)}
-            className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-800 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
-          >
-            <FileSpreadsheet size={15} className="text-emerald-700" />
-            <span>{language === 'ar' ? 'استيراد أدوية (Excel/CSV)' : 'Import Medicines'}</span>
-          </button>
-
-          <button
-            onClick={() => setShowScanModal(true)}
-            className="px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
-          >
-            <Camera size={15} className="text-emerald-700" />
-            <span>{language === 'ar' ? 'مسح باركود / QR' : 'Scan Barcode / QR'}</span>
-          </button>
-
-          <button
-            onClick={() => openNewModal()}
+            onClick={openNewModal}
             className="px-4 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
           >
             <Plus size={16} />
-            <span>{language === 'ar' ? 'إضافة دواء جديد' : 'Add Medicine'}</span>
+            <span>{language === 'ar' ? 'إضافة وجبة أدوية جديدة' : 'Add Wholesale Medicine'}</span>
           </button>
         </div>
       </div>
@@ -1052,31 +1001,13 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
               </p>
             </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
-              <button
-                onClick={() => setShowBulkImportModal(true)}
-                className="px-3.5 py-2.5 rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-800 font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
-              >
-                <FileSpreadsheet size={15} className="text-emerald-700" />
-                <span>{language === 'ar' ? 'استيراد ملف أدوية (Excel / CSV)' : 'Import Medicines (Excel/CSV)'}</span>
-              </button>
-
-              <button
-                onClick={() => setShowScanModal(true)}
-                className="px-3.5 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
-              >
-                <Camera size={15} className="text-emerald-700" />
-                <span>{language === 'ar' ? 'مسح باركود / QR بالكاميرا' : 'Scan Barcode / QR'}</span>
-              </button>
-
-              <button
-                onClick={() => openNewModal()}
-                className="px-4 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
-              >
-                <Plus size={16} />
-                <span>{language === 'ar' ? 'إضافة دواء يدوياً' : 'Add Medication'}</span>
-              </button>
-            </div>
+            <button
+              onClick={openNewModal}
+              className="px-4 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
+            >
+              <Plus size={16} />
+              <span>{language === 'ar' ? 'إضافة دواء للكتالوج' : 'Add Medication'}</span>
+            </button>
           </div>
 
           {/* Search & Filters */}
@@ -1146,28 +1077,8 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
                     return (
                       <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
                         <td className="p-3">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-bold text-slate-900 text-sm">{item.name}</span>
-                            {item.brand && (
-                              <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-medium">
-                                {item.brand}
-                              </span>
-                            )}
-                          </div>
-                          {item.nameAr && <div className="text-slate-600 text-xs">{item.nameAr}</div>}
-                          <div className="text-slate-500 text-[11px] flex items-center gap-1.5 flex-wrap mt-0.5">
-                            <span>{item.dosageForm} · {item.packSize || item.packageSize}</span>
-                            {item.barcode && (
-                              <span className="font-mono text-[10px] bg-emerald-50 text-emerald-800 px-1.5 py-0.5 rounded border border-emerald-200">
-                                {language === 'ar' ? 'باركود: ' : 'Barcode: '}{item.barcode}
-                              </span>
-                            )}
-                            {item.qrCode && (
-                              <span className="font-mono text-[10px] bg-cyan-50 text-cyan-800 px-1.5 py-0.5 rounded border border-cyan-200">
-                                QR: {item.qrCode}
-                              </span>
-                            )}
-                          </div>
+                          <div className="font-bold text-slate-900 text-sm">{item.name}</div>
+                          <div className="text-slate-500 text-[11px]">{item.dosageForm} · {item.packSize}</div>
                         </td>
                         <td className="p-3">
                           <div className="text-slate-800 font-medium">{item.activeIngredient}</div>
@@ -1462,15 +1373,13 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
 
             <div>
               <label className="block font-bold text-slate-700 mb-1">
-                {language === 'ar' ? 'رقم الإجازة الصحية / نقابة الصيادلة *' : 'Health License / Syndicate ID *'}
+                {language === 'ar' ? 'رقم الإجازة الصحية / نقابة الصيادلة (محمي)' : 'License Number (Certified)'}
               </label>
               <input
                 type="text"
-                required
-                value={profileForm.licenseNumber}
-                onChange={(e) => setProfileForm({ ...profileForm, licenseNumber: e.target.value })}
-                placeholder={language === 'ar' ? 'أدخل رقم الإجازة الصحية / نقابة الصيادلة' : 'Enter Health License / Syndicate ID'}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-700 font-mono text-sm"
+                disabled
+                value={profileForm.licenseNumber || 'IQ-WHOLE-88301'}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-100 text-slate-500 font-mono"
               />
             </div>
 
@@ -1623,49 +1532,6 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
                     onChange={(e) => setMedicineForm({ ...medicineForm, nameAr: e.target.value })}
                     placeholder="أوجمنتين 1 غرام"
                     className="w-full px-3 py-2 rounded-xl border border-slate-300"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">{language === 'ar' ? 'العلامة التجارية (Brand)' : 'Brand'}</label>
-                  <input
-                    type="text"
-                    value={medicineForm.brand}
-                    onChange={(e) => setMedicineForm({ ...medicineForm, brand: e.target.value })}
-                    placeholder="GSK, Glaxo..."
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">{language === 'ar' ? 'الباركود (Barcode)' : 'Barcode'}</label>
-                  <div className="flex gap-1.5">
-                    <input
-                      type="text"
-                      value={medicineForm.barcode}
-                      onChange={(e) => setMedicineForm({ ...medicineForm, barcode: e.target.value })}
-                      placeholder="6281000..."
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowScanModal(true)}
-                      className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-700 shrink-0 cursor-pointer"
-                      title={language === 'ar' ? 'مسح بالكاميرا' : 'Scan'}
-                    >
-                      <Camera size={16} />
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">{language === 'ar' ? 'رمز QR / التتبع' : 'QR Code'}</label>
-                  <input
-                    type="text"
-                    value={medicineForm.qrCode}
-                    onChange={(e) => setMedicineForm({ ...medicineForm, qrCode: e.target.value })}
-                    placeholder="QR-MED-..."
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono"
                   />
                 </div>
               </div>
@@ -2007,38 +1873,6 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
           </div>
         </div>
       )}
-
-      {/* MODAL: MEDICINE CAMERA & BARCODE SCANNER */}
-      <MedicineScanModal
-        isOpen={showScanModal}
-        onClose={() => setShowScanModal(false)}
-        role="wholesaler"
-        existingMedicines={medicines}
-        onSelectExistingForUpdate={(med) => openEditModal(med)}
-        onOpenNewMedicineWithPrefill={(prefilled) => openNewModal(prefilled)}
-        showToast={(msg, type) => {
-          setFeedbackMsg({ type: type === 'error' ? 'error' : 'success', text: msg });
-          setTimeout(() => setFeedbackMsg(null), 3500);
-        }}
-      />
-
-      {/* MODAL: BULK EXCEL & CSV MEDICINE IMPORT WIZARD */}
-      <MedicineBulkImportWizard
-        isOpen={showBulkImportModal}
-        onClose={() => setShowBulkImportModal(false)}
-        role="wholesaler"
-        userId={user?.uid || ''}
-        businessName={wholesalerProfile?.warehouseName || userProfile?.facilityName || 'مذخر أدوية معتمد'}
-        businessPhone={wholesalerProfile?.phone || userProfile?.phone || ''}
-        businessGovernorate={wholesalerProfile?.governorate || userProfile?.governorate || 'بغداد (Baghdad)'}
-        businessAddress={wholesalerProfile?.address || ''}
-        existingMedicines={medicines}
-        onImportComplete={loadWholesalerData}
-        showToast={(msg, type) => {
-          setFeedbackMsg({ type: type === 'error' ? 'error' : 'success', text: msg });
-          setTimeout(() => setFeedbackMsg(null), 3500);
-        }}
-      />
     </div>
   );
 };
