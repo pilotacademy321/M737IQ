@@ -22,7 +22,7 @@ import {
   query, 
   where 
 } from 'firebase/firestore';
-import { db } from './firebase';
+import { db, sanitizeForFirestore } from './firebase';
 import { UserRole } from '../types';
 import { isVerifiedSuperAdmin, SOLE_SUPER_ADMIN_EMAIL } from '../utils/adminSecurity';
 import { DeviceTokenRecord, getUserNotificationPreferences } from './pushNotificationService';
@@ -190,12 +190,43 @@ export async function dispatchM737Notification(
   };
 
   try {
-    await setDoc(doc(db, 'push_outbox', `push_${notifId}`), outboxRecord);
+    await setDoc(doc(db, 'push_outbox', `push_${notifId}`), sanitizeForFirestore(outboxRecord));
   } catch (err) {
     console.warn('[PushDispatcher] Notice creating push outbox job:', err);
   }
 
-  // 5. If Service Worker is active on the current device and matches recipient, trigger local notification
+  // 5. Send real Web Push to active device subscriptions via Backend Push Engine
+  const activeSubscriptions = activeTokens
+    .map((t) => t.subscription)
+    .filter((s): s is NonNullable<typeof s> => Boolean(s && s.endpoint));
+
+  if (activeSubscriptions.length > 0 && typeof window !== 'undefined') {
+    try {
+      fetch('/api/push/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipientUid,
+          recipientRole,
+          category,
+          title: titleAr,
+          body: messageAr,
+          genericBody,
+          targetUrl,
+          targetPortal,
+          priority,
+          sourceEventId,
+          subscriptions: activeSubscriptions,
+        }),
+      }).catch((apiErr) => {
+        console.warn('[PushDispatcher] Backend push API notice:', apiErr);
+      });
+    } catch (e) {
+      console.warn('[PushDispatcher] Fetch dispatch notice:', e);
+    }
+  }
+
+  // 6. If Service Worker is active on the current device and matches recipient, trigger local notification
   if (typeof window !== 'undefined' && 'serviceWorker' in navigator && Notification.permission === 'granted') {
     try {
       const swReg = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js');
@@ -513,6 +544,163 @@ export async function notifySuperAdminAccreditationRequest({
     targetPortal: 'super_admin',
     targetUrl: '/super_admin',
     sourceEventId: `admin_accred_${licenseNumber}_${Date.now()}`,
+    priority: 'urgent',
+  });
+}
+
+/**
+ * 8. ADDITIONAL MULTI-PORTAL EVENT HELPERS
+ */
+
+// Pharmacy Order Status Update to Patient
+export async function notifyPatientPharmacyOrderStatus({
+  patientUid,
+  pharmacyName,
+  orderId,
+  status,
+}: {
+  patientUid: string;
+  pharmacyName: string;
+  orderId: string;
+  status: 'preparing' | 'ready_for_pickup' | 'out_for_delivery' | 'completed' | 'cancelled';
+}) {
+  const statusMap = {
+    preparing: { ar: 'قيد التحضير والتجهيز', en: 'being prepared' },
+    ready_for_pickup: { ar: 'جاهز للاستلام من الصيدلية', en: 'ready for pickup' },
+    out_for_delivery: { ar: 'خرج مع مندوب التوصيل', en: 'out for delivery' },
+    completed: { ar: 'تم التسليم بنجاح', en: 'completed' },
+    cancelled: { ar: 'تم الاعتذار عن الطلب', en: 'cancelled' },
+  };
+
+  return dispatchM737Notification({
+    recipientUid: patientUid,
+    recipientRole: 'patient',
+    category: 'order',
+    titleAr: `تحديث طلب الصيدلية — ${pharmacyName}`,
+    titleEn: `Pharmacy Order Update — ${pharmacyName}`,
+    messageAr: `طلبك الدوائي (${orderId.slice(-6)}) أصبح ${statusMap[status].ar}.`,
+    messageEn: `Your medicine order (${orderId.slice(-6)}) is ${statusMap[status].en}.`,
+    targetPortal: 'patient',
+    targetUrl: '/patient',
+    sourceEventId: `ord_pat_${orderId}_${status}`,
+    priority: status === 'ready_for_pickup' || status === 'out_for_delivery' ? 'urgent' : 'normal',
+  });
+}
+
+// Doctor notification when prescription is dispensed by pharmacy
+export async function notifyDoctorPrescriptionDispensed({
+  doctorUid,
+  patientName,
+  pharmacyName,
+  prescriptionNumber,
+}: {
+  doctorUid: string;
+  patientName: string;
+  pharmacyName: string;
+  prescriptionNumber: string;
+}) {
+  return dispatchM737Notification({
+    recipientUid: doctorUid,
+    recipientRole: 'doctor',
+    category: 'prescription',
+    titleAr: 'تأكيد صرف روشتة إلكترونية',
+    titleEn: 'Prescription Dispensed Confirmation',
+    messageAr: `قامت ${pharmacyName} بصرف الوصفة رقم ${prescriptionNumber} للمريض ${patientName}.`,
+    messageEn: `${pharmacyName} dispensed e-prescription ${prescriptionNumber} for patient ${patientName}.`,
+    targetPortal: 'doctor',
+    targetUrl: '/doctor',
+    sourceEventId: `rx_disp_${prescriptionNumber}`,
+  });
+}
+
+// Doctor notification when booking is cancelled by patient or secretary
+export async function notifyDoctorBookingCancelled({
+  doctorUid,
+  patientName,
+  date,
+  time,
+  appointmentId,
+}: {
+  doctorUid: string;
+  patientName: string;
+  date: string;
+  time: string;
+  appointmentId: string;
+}) {
+  return dispatchM737Notification({
+    recipientUid: doctorUid,
+    recipientRole: 'doctor',
+    category: 'appointment',
+    titleAr: 'إلغاء حجز كشفية بالعيادة',
+    titleEn: 'Clinic Appointment Cancelled',
+    messageAr: `تم إلغاء موعد المريض ${patientName} المقرر في ${date} (${time}).`,
+    messageEn: `Appointment for ${patientName} on ${date} (${time}) was cancelled.`,
+    targetPortal: 'doctor',
+    targetUrl: '/doctor',
+    sourceEventId: `doc_cancel_${appointmentId}`,
+  });
+}
+
+// Wholesaler shipment notification to Pharmacy
+export async function notifyPharmacyWholesaleShipment({
+  pharmacyUid,
+  wholesalerName,
+  orderId,
+  status,
+}: {
+  pharmacyUid: string;
+  wholesalerName: string;
+  orderId: string;
+  status: 'approved' | 'preparing' | 'dispatched' | 'delivered' | 'cancelled';
+}) {
+  const statusMap = {
+    approved: { ar: 'تمت الموافقة على طلب التوريد', en: 'approved your wholesale order' },
+    preparing: { ar: 'قيد التجهيز بمستودع المذخر', en: 'is preparing your items' },
+    dispatched: { ar: 'تم شحن وتوجيه الطلبية لصيدليتكم', en: 'dispatched your medicine order' },
+    delivered: { ar: 'تم توثيق استلام الطلبية بنجاح', en: 'marked order as delivered' },
+    cancelled: { ar: 'تم إلغاء طلب التوريد', en: 'cancelled the wholesale order' },
+  };
+
+  return dispatchM737Notification({
+    recipientUid: pharmacyUid,
+    recipientRole: 'pharmacy',
+    category: 'order',
+    titleAr: `تحديث طلبية المذخر — ${wholesalerName}`,
+    titleEn: `Wholesale Order Update — ${wholesalerName}`,
+    messageAr: `${wholesalerName}: ${statusMap[status].ar} (طلب #${orderId.slice(-6)}).`,
+    messageEn: `${wholesalerName} ${statusMap[status].en} (order #${orderId.slice(-6)}).`,
+    targetPortal: 'pharmacy',
+    targetUrl: '/pharmacy',
+    sourceEventId: `wh_ship_${orderId}_${status}`,
+    priority: status === 'dispatched' ? 'urgent' : 'normal',
+  });
+}
+
+// Professional Account Approval / Status Notification by Super Admin
+export async function notifyUserAccountApprovalStatus({
+  userUid,
+  userRole,
+  isApproved,
+}: {
+  userUid: string;
+  userRole: UserRole | string;
+  isApproved: boolean;
+}) {
+  return dispatchM737Notification({
+    recipientUid: userUid,
+    recipientRole: userRole,
+    category: 'accreditation',
+    titleAr: isApproved ? 'تهانينا! تم اعتماد حسابك المهني' : 'تحديث حول حالة مراجعة حسابك',
+    titleEn: isApproved ? 'Congratulations! Professional Account Approved' : 'Account Verification Update',
+    messageAr: isApproved
+      ? 'تم تدقيق وثائقك وتفعيل حسابك المهني في منصة M737IQ بالكامل. يمكنك الآن بدء العمل.'
+      : 'تمت مراجعة طلب الاعتماد المهني. يرجى مراجعة إدارة المنصة لطلب توضيحات.',
+    messageEn: isApproved
+      ? 'Your professional credentials have been verified and your M737IQ account is active.'
+      : 'Your application has been reviewed. Please contact platform support.',
+    targetPortal: (userRole as any) || 'patient',
+    targetUrl: `/${userRole}`,
+    sourceEventId: `accred_result_${userUid}_${isApproved}`,
     priority: 'urgent',
   });
 }

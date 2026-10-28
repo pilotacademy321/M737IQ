@@ -55,6 +55,7 @@ import {
   Copy
 } from 'lucide-react';
 import { generateFacilityOrUserId, searchPatientProfileAcrossSystem } from '../utils/medicalId';
+import { dispatchM737Notification, notifyDoctorNewBooking } from '../lib/pushEventDispatcher';
 
 interface SecretaryPortalWorkspaceProps {
   onBackToHome: () => void;
@@ -328,21 +329,22 @@ export const SecretaryPortalWorkspace: React.FC<SecretaryPortalWorkspaceProps> =
     }
   };
 
-  // Helper: Send notification to patient if UID is known
+  // Helper: Send push notification to patient if UID is known
   const notifyPatient = async (patientUid: string, title: string, message: string) => {
     if (!patientUid || patientUid.startsWith('walkin_') || patientUid.startsWith('phone_')) return;
     try {
-      const notifId = `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-      const notif: PatientNotification = {
-        id: notifId,
+      await dispatchM737Notification({
         recipientUid: patientUid,
-        title,
-        message,
-        type: 'booking_update',
-        read: false,
-        createdAt: new Date().toISOString()
-      };
-      await setDoc(doc(db, 'notifications', notifId), notif);
+        recipientRole: 'patient',
+        category: 'appointment',
+        titleAr: title,
+        titleEn: 'Clinic Appointment Update',
+        messageAr: message,
+        messageEn: message,
+        targetPortal: 'patient',
+        targetUrl: '/patient',
+        sourceEventId: `sec_notif_${Date.now()}`,
+      });
     } catch (e) {
       console.warn('Could not send patient notification:', e);
     }
@@ -652,6 +654,15 @@ export const SecretaryPortalWorkspace: React.FC<SecretaryPortalWorkspaceProps> =
       };
 
       await setDoc(doc(db, 'appointments', apptId), newAppt);
+
+      // Notify Doctor of new appointment created by front desk
+      await notifyDoctorNewBooking({
+        doctorUid: assignment.doctorId,
+        patientName: walkinForm.patientName.trim(),
+        date: walkinForm.date,
+        time: walkinForm.timeSlot,
+        appointmentId: apptId,
+      });
 
       await logClinicAction(
         'create_walkin',

@@ -23,6 +23,7 @@ import { UserProfile, UserRole, AccountStatus, PatientProfile } from '../types';
 import { generateUniqueMedicalId, ensureUserAccountId } from '../utils/medicalId';
 import firebaseConfig from '@/firebase-applet-config.json';
 import { recordRealMetricEvent } from '../lib/platformMetrics';
+import { notifyUserAccountApprovalStatus, notifySuperAdminAccreditationRequest } from '../lib/pushEventDispatcher';
 
 interface AuthContextType {
   user: User | null;
@@ -619,6 +620,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUserProfile(profile);
       setNeedsOnboarding(false);
       recordRealMetricEvent('user');
+
+      // Notify Super Admin (bcgmoc@gmail.com) of the new accreditation request
+      try {
+        const adminsSnap = await getDocs(collection(db, 'admins'));
+        const superAdminDoc = adminsSnap.docs.find(d => (d.data().email || '').toLowerCase() === SOLE_SUPER_ADMIN_EMAIL.toLowerCase());
+        if (superAdminDoc) {
+          await notifySuperAdminAccreditationRequest({
+            adminUid: superAdminDoc.id,
+            applicantName: payload.displayName,
+            role: payload.role,
+            licenseNumber: payload.licenseNumber || 'PENDING-VERIF',
+          });
+        }
+      } catch (e) {
+        console.warn('Super admin push dispatch notice:', e);
+      }
     } catch (err: unknown) {
       handleFirestoreError(err, OperationType.CREATE, `users/${user.uid}`);
     } finally {
@@ -637,10 +654,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!isAdmin) throw new Error('Unauthorized administrative action');
     try {
       const targetRef = doc(db, 'users', targetUid);
+      const targetSnap = await getDoc(targetRef);
+      const targetData = targetSnap.exists() ? (targetSnap.data() as UserProfile) : null;
+
       await updateDoc(targetRef, {
         status: newStatus,
         updatedAt: new Date().toISOString(),
       });
+
+      // Dispatch push notification to user regarding approval status
+      if (targetData && (newStatus === 'approved' || newStatus === 'rejected' || newStatus === 'suspended')) {
+        try {
+          await notifyUserAccountApprovalStatus({
+            userUid: targetUid,
+            userRole: targetData.role || 'patient',
+            isApproved: newStatus === 'approved',
+          });
+        } catch (e) {
+          console.warn('User status notification dispatch notice:', e);
+        }
+      }
+
       if (user && targetUid === user.uid) {
         await refreshProfile();
       }

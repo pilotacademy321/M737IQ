@@ -30,6 +30,13 @@ import { recordRealMetricEvent } from '../lib/platformMetrics';
 import { validateAndCompressImage, formatWhatsAppUrl } from '../utils/mediaUtils';
 import { normalizeMedicalIdInput, isValidMedicalIdQuery, MEDICAL_ID_PREFIX, generateFacilityOrUserId, searchPatientProfileAcrossSystem } from '../utils/medicalId';
 import { 
+  dispatchM737Notification, 
+  notifyPatientAppointmentStatus, 
+  notifyPharmacyNewPrescription, 
+  notifyPatientPrescriptionReady, 
+  notifyCenterNewRequest 
+} from '../lib/pushEventDispatcher';
+import { 
   collection, 
   query, 
   where, 
@@ -757,18 +764,31 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
   const sendInAppNotification = async (recipientUid: string, title: string, message: string, type: string) => {
     if (!recipientUid) return;
     try {
-      const notifId = `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-      await setDoc(doc(db, 'notifications', notifId), {
-        id: notifId,
+      const category = 
+        type === 'prescription' ? 'prescription' :
+        type === 'lab_order' || type === 'radiology_order' || type === 'report_ready' ? 'lab_radiology' :
+        type === 'booking_update' ? 'appointment' :
+        type === 'order' ? 'order' : 'general';
+
+      const targetPortal = 
+        type === 'lab_order' ? 'laboratory' :
+        type === 'radiology_order' ? 'radiology' :
+        type === 'prescription' && recipientUid !== user?.uid ? 'pharmacy' :
+        'patient';
+
+      await dispatchM737Notification({
         recipientUid,
-        title,
-        message,
-        type,
-        read: false,
-        createdAt: new Date().toISOString(),
+        category,
+        titleAr: title,
+        titleEn: title,
+        messageAr: message,
+        messageEn: message,
+        targetPortal,
+        targetUrl: `/${targetPortal}`,
+        priority: 'urgent',
       });
     } catch (e) {
-      console.warn('Failed to send in-app notification:', e);
+      console.warn('Failed to send notification via push dispatcher:', e);
     }
   };
 
@@ -782,9 +802,9 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
   };
 
   // Appointment Actions
-  // Appointment Actions
   const handleUpdateAppointmentStatus = async (apptId: string, status: AppointmentStatus) => {
     try {
+      const targetAppt = appointments.find(a => a.id === apptId);
       if (isDemoMode) {
         setAppointments(prev => prev.map(a => a.id === apptId ? { ...a, status, updatedAt: new Date().toISOString() } : a));
         showToast(
@@ -800,6 +820,19 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
       showToast(
         language === 'ar' ? `تم تحديث حالة الموعد إلى: ${status}` : `Appointment updated to: ${status}`
       );
+
+      // Real mobile push notification to patient
+      if (targetAppt && targetAppt.patientId && (status === 'confirmed' || status === 'cancelled')) {
+        notifyPatientAppointmentStatus({
+          patientUid: targetAppt.patientId,
+          doctorName: doctorProfile?.fullName || userProfile?.displayName || 'الطبيب المعالج',
+          date: targetAppt.date,
+          time: targetAppt.timeSlot,
+          status: status === 'confirmed' ? 'confirmed' : 'cancelled',
+          appointmentId: apptId,
+        }).catch(e => console.warn('Push notification notice:', e));
+      }
+
       await loadDoctorData();
     } catch (err: unknown) {
       handleFirestoreError(err, OperationType.UPDATE, `appointments/${apptId}`);
@@ -826,7 +859,7 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
       }
       const ref = doc(db, 'appointments', reschedulingAppt.id);
       await updateDoc(ref, {
-        status,
+        status: 'rescheduled',
         rescheduleProposedDate: rescheduleData.newDate,
         rescheduleReason: rescheduleData.reason || 'الموعد المعاد جدولته بناء على توصية الطبيب',
         updatedAt: new Date().toISOString(),
@@ -834,6 +867,19 @@ export const DoctorPortalWorkspace: React.FC<DoctorPortalWorkspaceProps> = ({ on
       showToast(
         language === 'ar' ? 'تم حفظ طلب إعادة الجدولة وإبلاغ المريض' : 'Reschedule request saved'
       );
+
+      // Real mobile push notification to patient about rescheduled date
+      if (reschedulingAppt.patientId) {
+        notifyPatientAppointmentStatus({
+          patientUid: reschedulingAppt.patientId,
+          doctorName: doctorProfile?.fullName || userProfile?.displayName || 'الطبيب المعالج',
+          date: rescheduleData.newDate,
+          time: reschedulingAppt.timeSlot,
+          status: 'rescheduled',
+          appointmentId: reschedulingAppt.id,
+        }).catch(e => console.warn('Push notification notice:', e));
+      }
+
       setReschedulingAppt(null);
       setRescheduleData({ newDate: '', reason: '' });
       await loadDoctorData();

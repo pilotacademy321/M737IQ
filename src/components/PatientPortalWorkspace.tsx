@@ -86,6 +86,12 @@ import {
 } from 'lucide-react';
 import { SmartMedicineSearch, SearchMedicineResult } from './SmartMedicineSearch';
 import { PrescriptionPdfModal } from './PrescriptionPdfModal';
+import {
+  dispatchM737Notification,
+  notifyDoctorNewBooking,
+  notifyDoctorBookingCancelled,
+  notifyCenterNewRequest,
+} from '../lib/pushEventDispatcher';
 
 interface PatientPortalWorkspaceProps {
   onBackToHome: () => void;
@@ -1208,29 +1214,29 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
       try {
         await setDoc(doc(db, 'appointments', aptId), sanitizeForFirestore(newApt));
         recordRealMetricEvent('appointment');
-        // Doctor Notification
-        const notifId = `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-        await setDoc(doc(db, 'notifications', notifId), sanitizeForFirestore({
-          id: notifId,
-          recipientUid: selectedDoctorForBooking.doctorId,
-          title: 'طلب موعد كشفية جديد',
-          message: `طلب مريض (${patientProfile?.fullName || 'مراجع'}) حجز موعد جديد في ${appointmentBookingForm.date} - ${appointmentBookingForm.timeSlot}.`,
-          type: 'booking_update',
-          read: false,
-          createdAt: now,
-        }));
+        
+        // Push notification to Doctor
+        await notifyDoctorNewBooking({
+          doctorUid: selectedDoctorForBooking.doctorId,
+          patientName: patientProfile?.fullName || userProfile?.displayName || 'المراجع',
+          date: appointmentBookingForm.date,
+          time: appointmentBookingForm.timeSlot,
+          appointmentId: aptId,
+        });
 
-        // Patient Confirmation Notification
-        const patNotifId = `notif_pat_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-        await setDoc(doc(db, 'notifications', patNotifId), sanitizeForFirestore({
-          id: patNotifId,
+        // Push confirmation to Patient
+        await dispatchM737Notification({
           recipientUid: user.uid,
-          title: 'تم تسجيل طلب حجز موعدك',
-          message: `تم إرسال طلب حجز كشفية لدى ${selectedDoctorForBooking.fullName} بتاريخ ${appointmentBookingForm.date}، وستصلك رسالة فور اعتماده.`,
-          type: 'booking_update',
-          read: false,
-          createdAt: now,
-        }));
+          recipientRole: 'patient',
+          category: 'appointment',
+          titleAr: 'تم تسجيل طلب حجز موعدك',
+          titleEn: 'Appointment Request Submitted',
+          messageAr: `تم إرسال طلب حجز كشفية لدى ${selectedDoctorForBooking.fullName} بتاريخ ${appointmentBookingForm.date}، وستصلك رسالة فور اعتماده.`,
+          messageEn: `Your appointment request with ${selectedDoctorForBooking.fullName} for ${appointmentBookingForm.date} was sent.`,
+          targetPortal: 'patient',
+          targetUrl: '/patient',
+          sourceEventId: `patient_req_${aptId}`,
+        });
       } catch (err: unknown) {
         console.warn('Booking appointment firestore warning:', err);
       }
@@ -1256,6 +1262,15 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
           status: 'cancelled',
           rescheduleReason: language === 'ar' ? 'تم الإلغاء من قبل المريض' : 'Cancelled by patient',
           updatedAt: new Date().toISOString(),
+        });
+
+        // Notify Doctor of Patient Cancellation via Push
+        await notifyDoctorBookingCancelled({
+          doctorUid: apt.doctorId,
+          patientName: apt.patientName || patientProfile?.fullName || 'المراجع',
+          appointmentId: apt.id,
+          date: apt.date,
+          time: apt.timeSlot,
         });
       } catch (err: unknown) {
         console.warn('Cancel appointment firestore warning:', err);
@@ -1311,28 +1326,35 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
       try {
         await setDoc(doc(db, 'pharmacy_orders', ordId), sanitizeForFirestore(newOrder));
         recordRealMetricEvent('prescription');
-        const notifId = `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-        await setDoc(doc(db, 'notifications', notifId), sanitizeForFirestore({
-          id: notifId,
-          recipientUid: selectedMedicineForOrder.pharmacyId,
-          title: 'طلب دواء جديد من مراجع',
-          message: `طلب مريض (${newOrder.patientName}) صنف: ${selectedMedicineForOrder.name} (${orderQuantity} عبوة).`,
-          type: 'booking_update',
-          read: false,
-          createdAt: now,
-        }));
 
-        // Patient Confirmation Notification
-        const patNotifId = `notif_pat_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-        await setDoc(doc(db, 'notifications', patNotifId), sanitizeForFirestore({
-          id: patNotifId,
+        // Push to Pharmacy
+        await dispatchM737Notification({
+          recipientUid: selectedMedicineForOrder.pharmacyId,
+          recipientRole: 'pharmacy',
+          category: 'order',
+          titleAr: 'طلب دواء جديد من مراجع',
+          titleEn: 'New Medicine Order Received',
+          messageAr: `طلب مريض (${newOrder.patientName}) صنف: ${selectedMedicineForOrder.name} (${orderQuantity} عبوة).`,
+          messageEn: `Patient (${newOrder.patientName}) ordered: ${selectedMedicineForOrder.name} (${orderQuantity} units).`,
+          targetPortal: 'pharmacy',
+          targetUrl: '/pharmacy',
+          sourceEventId: `pharm_ord_${ordId}`,
+          priority: 'urgent',
+        });
+
+        // Push confirmation to Patient
+        await dispatchM737Notification({
           recipientUid: user.uid,
-          title: 'تم إرسال طلب الدواء',
-          message: `تم إرسال طلبك (${selectedMedicineForOrder.name}) إلى ${newOrder.pharmacyName} بنجاح.`,
-          type: 'prescription',
-          read: false,
-          createdAt: now,
-        }));
+          recipientRole: 'patient',
+          category: 'order',
+          titleAr: 'تم إرسال طلب الدواء',
+          titleEn: 'Medicine Order Submitted',
+          messageAr: `تم إرسال طلبك (${selectedMedicineForOrder.name}) إلى ${newOrder.pharmacyName} بنجاح.`,
+          messageEn: `Your order for (${selectedMedicineForOrder.name}) was sent to ${newOrder.pharmacyName}.`,
+          targetPortal: 'patient',
+          targetUrl: '/patient',
+          sourceEventId: `pat_ord_conf_${ordId}`,
+        });
       } catch (err: unknown) {
         console.warn('Order medicine firestore warning:', err);
       }
@@ -1384,6 +1406,29 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
       try {
         await setDoc(doc(db, 'lab_bookings', bookId), sanitizeForFirestore(newBooking));
         recordRealMetricEvent('test');
+
+        // Push notification to Laboratory Center
+        await notifyCenterNewRequest({
+          centerUid: selectedTestForBooking.labId,
+          centerRole: 'laboratory',
+          patientName: newBooking.patientName,
+          testName: selectedTestForBooking.name,
+          requestId: bookId,
+        });
+
+        // Push confirmation to Patient
+        await dispatchM737Notification({
+          recipientUid: user.uid,
+          recipientRole: 'patient',
+          category: 'lab_radiology',
+          titleAr: 'تم إرسال حجز التحليل المخبري',
+          titleEn: 'Lab Test Booking Submitted',
+          messageAr: `تم إرسال حجز تحليل (${selectedTestForBooking.name}) لدى ${newBooking.labName} بنجاح.`,
+          messageEn: `Your lab booking for (${selectedTestForBooking.name}) was sent to ${newBooking.labName}.`,
+          targetPortal: 'patient',
+          targetUrl: '/patient',
+          sourceEventId: `pat_lab_conf_${bookId}`,
+        });
       } catch (err: unknown) {
         console.warn('Book lab test firestore warning:', err);
       }
@@ -1431,6 +1476,29 @@ export const PatientPortalWorkspace: React.FC<PatientPortalWorkspaceProps> = ({ 
       try {
         await setDoc(doc(db, 'radiology_bookings', bookId), sanitizeForFirestore(newScanBooking));
         recordRealMetricEvent('test');
+
+        // Push notification to Radiology Center
+        await notifyCenterNewRequest({
+          centerUid: selectedScanForBooking.centerId,
+          centerRole: 'radiology_center',
+          patientName: newScanBooking.patientName,
+          testName: selectedScanForBooking.name,
+          requestId: bookId,
+        });
+
+        // Push confirmation to Patient
+        await dispatchM737Notification({
+          recipientUid: user.uid,
+          recipientRole: 'patient',
+          category: 'lab_radiology',
+          titleAr: 'تم إرسال حجز فحص الأشعة والسونار',
+          titleEn: 'Radiology Booking Submitted',
+          messageAr: `تم إرسال حجز فحص (${selectedScanForBooking.name}) لدى ${newScanBooking.centerName} بنجاح.`,
+          messageEn: `Your radiology booking for (${selectedScanForBooking.name}) was sent to ${newScanBooking.centerName}.`,
+          targetPortal: 'patient',
+          targetUrl: '/patient',
+          sourceEventId: `pat_rad_conf_${bookId}`,
+        });
       } catch (err: unknown) {
         console.warn('Book radiology scan firestore warning:', err);
       }

@@ -14,6 +14,7 @@ import {
 } from '../types';
 import { logAuditEvent } from '../lib/auditLogger';
 import { validateAndCompressImage, formatWhatsAppUrl } from '../utils/mediaUtils';
+import { dispatchM737Notification, notifyPatientDiagnosticReport } from '../lib/pushEventDispatcher';
 import { 
   uploadMedicalScanFile, 
   StoredMedicalFile, 
@@ -385,22 +386,24 @@ export const RadiologyPortalWorkspace: React.FC<RadiologyPortalWorkspaceProps> =
     setTimeout(() => setFeedbackMsg(null), 4000);
   };
 
-  // Helper to send in-app notification to patient
-  const sendPatientNotification = async (patientUid: string, title: string, message: string, type: 'booking_update' | 'report_ready') => {
-    if (!patientUid) return;
+  // Helper to send push & in-app notification to patient
+  const sendPatientNotification = async (recipientUid: string, title: string, message: string, type: 'booking_update' | 'report_ready') => {
+    if (!recipientUid) return;
     try {
-      const notifId = `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-      await setDoc(doc(db, 'notifications', notifId), {
-        id: notifId,
-        recipientUid: patientUid,
-        title,
-        message,
-        type,
-        read: false,
-        createdAt: new Date().toISOString(),
+      await dispatchM737Notification({
+        recipientUid,
+        category: 'lab_radiology',
+        titleAr: title,
+        titleEn: title,
+        messageAr: message,
+        messageEn: message,
+        targetPortal: 'patient',
+        targetUrl: '/patient',
+        sourceEventId: `rad_notif_${Date.now()}`,
+        priority: type === 'report_ready' ? 'urgent' : 'normal',
       });
     } catch (e) {
-      console.warn('Failed to record notification in firestore:', e);
+      console.warn('Failed to dispatch radiology notification:', e);
     }
   };
 
@@ -598,24 +601,31 @@ export const RadiologyPortalWorkspace: React.FC<RadiologyPortalWorkspaceProps> =
 
       showToast(language === 'ar' ? `تم اعتماد التقرير وإكمال طلب التصوير ${selectedRadOrderForCompletion.orderNumber}` : 'Radiology order completed');
       
-      // 3. Notify Patient
+      // 3. Notify Patient via real Push Notification
       if (selectedRadOrderForCompletion.patientId) {
-        sendPatientNotification(
-          selectedRadOrderForCompletion.patientId,
-          'التقرير الشعاعي جاهز',
-          `تم إصدار التقرير الشعاعي المعتمد لطلب الفحص ${selectedRadOrderForCompletion.orderNumber} ويمكنك تحميله الآن.`,
-          'report_ready'
-        );
+        await notifyPatientDiagnosticReport({
+          patientUid: selectedRadOrderForCompletion.patientId,
+          facilityName: certifiedReportDoc.centerName,
+          type: 'radiology',
+          reportId: repId,
+        });
       }
 
       // 4. Notify Referring Doctor
       if (selectedRadOrderForCompletion.doctorId) {
-        sendPatientNotification(
-          selectedRadOrderForCompletion.doctorId,
-          'صدور تقرير الأشعة للمريض',
-          `أصدر مركز الأشعة التقرير المعتمد للطلب رقم ${selectedRadOrderForCompletion.orderNumber} الخاص بالمريض ${selectedRadOrderForCompletion.patientName}.`,
-          'report_ready'
-        );
+        await dispatchM737Notification({
+          recipientUid: selectedRadOrderForCompletion.doctorId,
+          recipientRole: 'doctor',
+          category: 'lab_radiology',
+          titleAr: 'صدور تقرير الأشعة للمريض',
+          titleEn: 'Patient Radiology Report Certified',
+          messageAr: `أصدر مركز الأشعة التقرير المعتمد للطلب رقم ${selectedRadOrderForCompletion.orderNumber} الخاص بالمريض ${selectedRadOrderForCompletion.patientName}.`,
+          messageEn: `Center issued certified radiology report for order ${selectedRadOrderForCompletion.orderNumber} of patient ${selectedRadOrderForCompletion.patientName}.`,
+          targetPortal: 'doctor',
+          targetUrl: '/doctor',
+          sourceEventId: `rad_res_${repId}`,
+          priority: 'urgent',
+        });
       }
 
       // 5. System Audit Log

@@ -16,6 +16,12 @@ import { PrescriptionPdfModal } from './PrescriptionPdfModal';
 import { DrugInteractionPanel } from './DrugInteractionPanel';
 import { logAuditEvent } from '../lib/auditLogger';
 import { validateAndCompressImage, formatWhatsAppUrl } from '../utils/mediaUtils';
+import {
+  dispatchM737Notification,
+  notifyDoctorPrescriptionDispensed,
+  notifyPatientPharmacyOrderStatus,
+  notifyWholesalerNewOrder,
+} from '../lib/pushEventDispatcher';
 import { 
   collection, 
   query, 
@@ -365,22 +371,24 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
     setTimeout(() => setFeedbackMsg(null), 4000);
   };
 
-  // Helper to send in-app notification to patient
-  const sendPatientNotification = async (patientUid: string, title: string, message: string, type: 'booking_update' | 'general') => {
-    if (!patientUid) return;
+  // Helper to send push & in-app notification
+  const sendPatientNotification = async (recipientUid: string, title: string, message: string, type: 'booking_update' | 'general') => {
+    if (!recipientUid) return;
     try {
-      const notifId = `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-      await setDoc(doc(db, 'notifications', notifId), {
-        id: notifId,
-        recipientUid: patientUid,
-        title,
-        message,
-        type,
-        read: false,
-        createdAt: new Date().toISOString(),
+      await dispatchM737Notification({
+        recipientUid,
+        recipientRole: type === 'booking_update' ? 'patient' : undefined,
+        category: 'order',
+        titleAr: title,
+        titleEn: title,
+        messageAr: message,
+        messageEn: message,
+        targetPortal: 'patient',
+        targetUrl: '/patient',
+        sourceEventId: `pharm_notif_${Date.now()}`,
       });
     } catch (e) {
-      console.warn('Failed to record notification in firestore:', e);
+      console.warn('Failed to dispatch notification:', e);
     }
   };
 
@@ -533,14 +541,14 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
         );
       }
 
-      // Notify Doctor
+      // Notify Doctor via real Push Notification
       if (rx.doctorId) {
-        sendPatientNotification(
-          rx.doctorId,
-          'تأكيد صرف الوصفة الطبية',
-          `تم صرف الوصفة رقم ${rx.prescriptionNumber} للمريض ${rx.patientName} بنجاح لدى ${dispensedData.dispensedPharmacyName}.`,
-          'general'
-        );
+        await notifyDoctorPrescriptionDispensed({
+          doctorUid: rx.doctorId,
+          patientName: rx.patientName,
+          prescriptionNumber: rx.prescriptionNumber,
+          pharmacyName: dispensedData.dispensedPharmacyName,
+        });
       }
 
       // Record System Audit Log
@@ -886,11 +894,14 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
       });
 
       if (patientId) {
-        const notifTitle = language === 'ar' ? 'تحديث طلب الدواء من الصيدلية' : 'Pharmacy Order Update';
-        const notifMsg = language === 'ar'
-          ? `تم تحديث حالة طلبك لدى ${pharmacyProfile?.pharmacyName || 'الصيدلية'} إلى: ${status}`
-          : `Your medicine order status has changed to: ${status}`;
-        await sendPatientNotification(patientId, notifTitle, notifMsg, 'booking_update');
+        await notifyPatientPharmacyOrderStatus({
+          patientUid: patientId,
+          pharmacyName: pharmacyProfile?.pharmacyName || 'الصيدلية',
+          orderId,
+          status: (['preparing', 'ready_for_pickup', 'out_for_delivery', 'completed', 'cancelled'].includes(status)
+            ? (status as any)
+            : 'preparing'),
+        });
       }
 
       showToast(language === 'ar' ? `تم تحديث حالة الطلب إلى: ${status}` : `Order status: ${status}`);
@@ -1026,14 +1037,14 @@ export const PharmacyPortalWorkspace: React.FC<PharmacyPortalWorkspaceProps> = (
         details: `طلب شراء بالجملة رقم ${wholesaleOrderPayload.invoiceNumber} بقيمة ${totalAmount.toLocaleString()} د.ع يضم ${items.length} أصناف دوائية.`
       });
 
-      // Send In-App Notification to Wholesaler
+      // Send Real Push & In-App Notification to Wholesaler
       if (wholesaleOrderPayload.wholesalerId) {
-        sendPatientNotification(
-          wholesaleOrderPayload.wholesalerId,
-          'طلبية شراء جديدة بالجملة',
-          `أرسلت لك ${wholesaleOrderPayload.pharmacyName} طلبية شراء برقم ${wholesaleOrderPayload.invoiceNumber}.`,
-          'booking_update'
-        );
+        await notifyWholesalerNewOrder({
+          wholesalerUid: wholesaleOrderPayload.wholesalerId,
+          pharmacyName: wholesaleOrderPayload.pharmacyName,
+          orderId,
+          itemCount: items.length,
+        });
       }
 
       setB2bOrders((prev) => [wholesaleOrderPayload, ...prev]);

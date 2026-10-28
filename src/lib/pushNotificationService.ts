@@ -42,6 +42,13 @@ export const DEFAULT_PUSH_PREFERENCES: PushNotificationPreferences = {
 export interface DeviceTokenRecord {
   tokenId: string;
   token: string;
+  subscription?: {
+    endpoint: string;
+    keys?: {
+      p256dh: string;
+      auth: string;
+    };
+  };
   uid: string;
   role: UserRole | string;
   platform: 'android' | 'ios' | 'desktop' | 'unknown';
@@ -61,6 +68,44 @@ const VAPID_KEY = (typeof import.meta !== 'undefined' && import.meta.env && impo
 
 let messagingInstance: Messaging | null = null;
 let isFCMSupportedCached: boolean | null = null;
+let cachedDynamicVapidKey: string | null = null;
+
+/**
+ * Converts a URL-safe Base64 string to a Uint8Array for PushManager subscription
+ */
+export function urlB64ToUint8Array(base64String: string): Uint8Array {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
+/**
+ * Retrieves the active VAPID public key dynamically from the backend or env
+ */
+export async function getActiveVapidPublicKey(): Promise<string | undefined> {
+  if (VAPID_KEY) return VAPID_KEY;
+  if (cachedDynamicVapidKey) return cachedDynamicVapidKey;
+  if (typeof window === 'undefined') return undefined;
+
+  try {
+    const res = await fetch('/api/push/vapid-key');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.vapidPublicKey) {
+        cachedDynamicVapidKey = data.vapidPublicKey;
+        return data.vapidPublicKey;
+      }
+    }
+  } catch (err) {
+    console.warn('[PushService] Notice fetching dynamic VAPID key from backend:', err);
+  }
+  return undefined;
+}
 
 /**
  * Checks whether the current browser / device supports Web Push & Service Workers
@@ -189,24 +234,21 @@ export async function requestPushPermissionAndRegisterToken(
       return { success: false, status: 'granted', error: 'Service worker registration failed' };
     }
 
-    // 3. Initialize FCM and obtain Device Registration Token
-    const messaging = await getFCMInstance();
-    if (!messaging) {
-      // In environments without FCM IndexedDB support, standard ServiceWorker showNotification still operates
-      console.warn('[PushService] FCM messaging not fully initialized; local SW notifications remain active.');
-      return { success: true, status: 'granted' };
-    }
+    // 3. Obtain Active VAPID Public Key
+    const activeVapidKey = await getActiveVapidPublicKey();
 
+    // 4. Initialize FCM and obtain Device Registration Token
+    const messaging = await getFCMInstance();
     let token = '';
-    try {
-      token = await getToken(messaging, {
-        vapidKey: VAPID_KEY,
-        serviceWorkerRegistration: swReg,
-      });
-    } catch (tokenErr) {
-      console.warn('[PushService] getToken error with VAPID key:', tokenErr);
-      // Retry without custom VAPID key if provided
-      if (VAPID_KEY) {
+
+    if (messaging) {
+      try {
+        token = await getToken(messaging, {
+          vapidKey: activeVapidKey,
+          serviceWorkerRegistration: swReg,
+        });
+      } catch (tokenErr) {
+        console.warn('[PushService] getToken error with active VAPID key:', tokenErr);
         try {
           token = await getToken(messaging, { serviceWorkerRegistration: swReg });
         } catch (retryErr) {
@@ -215,13 +257,37 @@ export async function requestPushPermissionAndRegisterToken(
       }
     }
 
-    if (!token) {
+    // 5. Also acquire native WebPush subscription from PushManager
+    let pushSubscriptionData: { endpoint: string; keys?: { p256dh: string; auth: string } } | undefined = undefined;
+    try {
+      let sub = await swReg.pushManager.getSubscription();
+      if (!sub && activeVapidKey) {
+        sub = await swReg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlB64ToUint8Array(activeVapidKey) as unknown as BufferSource,
+        });
+      }
+      if (sub) {
+        const json = sub.toJSON();
+        if (json.endpoint) {
+          pushSubscriptionData = {
+            endpoint: json.endpoint,
+            keys: json.keys as { p256dh: string; auth: string },
+          };
+        }
+      }
+    } catch (subErr) {
+      console.warn('[PushService] PushManager subscription notice:', subErr);
+    }
+
+    if (!token && !pushSubscriptionData) {
       // Fallback: save permission state locally
       return { success: true, status: 'granted' };
     }
 
-    // 4. Save device token record to Firestore
-    const tokenId = hashToken(token);
+    // 6. Save device token record to Firestore
+    const effectiveTokenString = token || pushSubscriptionData?.endpoint || `sub_${Date.now()}`;
+    const tokenId = hashToken(effectiveTokenString);
     const now = new Date().toISOString();
     const prefs: PushNotificationPreferences = {
       ...DEFAULT_PUSH_PREFERENCES,
@@ -231,7 +297,8 @@ export async function requestPushPermissionAndRegisterToken(
 
     const record: DeviceTokenRecord = {
       tokenId,
-      token,
+      token: token || effectiveTokenString,
+      subscription: pushSubscriptionData,
       uid,
       role,
       platform: detectPlatform(),
@@ -343,6 +410,40 @@ export async function sendLocalTestNotification({
   try {
     const swReg = await registerPushServiceWorker();
     if (swReg) {
+      // 1. Attempt real server-side Web Push round-trip test if subscription is available
+      try {
+        let sub = await swReg.pushManager.getSubscription();
+        if (!sub) {
+          const activeKey = await getActiveVapidPublicKey();
+          if (activeKey) {
+            sub = await swReg.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: urlB64ToUint8Array(activeKey) as unknown as BufferSource,
+            });
+          }
+        }
+
+        if (sub) {
+          const res = await fetch('/api/push/test', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              subscription: sub.toJSON(),
+              title,
+              body,
+              url,
+            }),
+          });
+          if (res.ok) {
+            console.log('[PushService] Real backend Web Push test delivered successfully.');
+            return true;
+          }
+        }
+      } catch (backendTestErr) {
+        console.warn('[PushService] Backend test endpoint notice, falling back to local SW notification:', backendTestErr);
+      }
+
+      // 2. Service Worker local showNotification fallback
       await swReg.showNotification(title, {
         body,
         icon: '/icons/icon-192.png',
@@ -364,6 +465,25 @@ export async function sendLocalTestNotification({
     console.error('[PushService] sendLocalTestNotification error:', err);
     return false;
   }
+}
+
+/**
+ * Queries active device push subscriptions for a recipient UID
+ */
+export async function getRecipientDeviceSubscriptions(recipientUid: string): Promise<any[]> {
+  const subs: any[] = [];
+  try {
+    const snap = await getDocs(collection(db, 'users', recipientUid, 'device_tokens'));
+    snap.forEach((d) => {
+      const data = d.data() as DeviceTokenRecord;
+      if (data.subscription && data.preferences?.enabled !== false) {
+        subs.push(data.subscription);
+      }
+    });
+  } catch (err) {
+    console.warn('[PushService] Notice querying recipient device subscriptions:', err);
+  }
+  return subs;
 }
 
 /**

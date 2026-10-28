@@ -58,6 +58,7 @@ import { generateFacilityOrUserId } from '../utils/medicalId';
 import { SmartMedicineSearch, SearchMedicineResult } from './SmartMedicineSearch';
 import { logAuditEvent } from '../lib/auditLogger';
 import { validateAndCompressImage, formatWhatsAppUrl } from '../utils/mediaUtils';
+import { dispatchM737Notification, notifyPharmacyWholesaleShipment } from '../lib/pushEventDispatcher';
 
 interface WholesalerPortalWorkspaceProps {
   onBackToHome: () => void;
@@ -508,24 +509,16 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
         });
       }
 
-      // Dual notifications to pharmacy
+      // Send Real Push & In-App Notification to pharmacy
       if (order?.pharmacyId) {
         try {
-          const notifRef = doc(collection(db, 'notifications'));
-          const titles: Record<string, string> = {
-            approved: 'تمت الموافقة على طلبية الأدوية',
-            preparing: 'طلبية الأدوية قيد التجهيز بالمذخر',
-            dispatched: 'طلبية الأدوية خرجت مع مندوب التوصيل',
-            delivered: 'تم تسليم طلبية الأدوية بنجاح',
-          };
-          await setDoc(notifRef, {
-            id: notifRef.id,
-            userId: order.pharmacyId,
-            title: titles[newStatus] || 'تحديث حالة طلبية الأدوية',
-            message: `تم تحديث حالة طلبيتكم رقم ${order.invoiceNumber || order.id} إلى (${newStatus}).`,
-            type: 'b2b_order_status',
-            read: false,
-            createdAt: now,
+          await notifyPharmacyWholesaleShipment({
+            pharmacyUid: order.pharmacyId,
+            wholesalerName: wholesalerProfile?.warehouseName || userProfile?.facilityName || 'مذخر الأدوية المعتمد',
+            orderId: order.invoiceNumber || order.id,
+            status: (['approved', 'preparing', 'dispatched', 'delivered'].includes(newStatus)
+              ? (newStatus as any)
+              : 'approved'),
           });
         } catch {
           // sandbox fallback
@@ -580,18 +573,14 @@ export const WholesalerPortalWorkspace: React.FC<WholesalerPortalWorkspaceProps>
         }
       }
 
-      // Notify pharmacy
+      // Send Real Push & In-App Notification to pharmacy
       if (cancellingOrder.pharmacyId) {
         try {
-          const notifRef = doc(collection(db, 'notifications'));
-          await setDoc(notifRef, {
-            id: notifRef.id,
-            userId: cancellingOrder.pharmacyId,
-            title: 'إلغاء طلبية الأدوية بالجملة',
-            message: `تم إلغاء طلبيتكم رقم ${cancellingOrder.invoiceNumber || cancellingOrder.id} من قبل المذخر. السبب: ${updates.cancellationReason}`,
-            type: 'b2b_order_status',
-            read: false,
-            createdAt: now,
+          await notifyPharmacyWholesaleShipment({
+            pharmacyUid: cancellingOrder.pharmacyId,
+            wholesalerName: wholesalerProfile?.warehouseName || userProfile?.facilityName || 'مذخر الأدوية المعتمد',
+            orderId: cancellingOrder.invoiceNumber || cancellingOrder.id,
+            status: 'cancelled',
           });
         } catch {
           // sandbox fallback

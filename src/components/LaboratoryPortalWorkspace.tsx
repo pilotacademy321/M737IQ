@@ -16,6 +16,7 @@ import {
 } from '../types';
 import { logAuditEvent } from '../lib/auditLogger';
 import { validateAndCompressImage, formatWhatsAppUrl } from '../utils/mediaUtils';
+import { dispatchM737Notification, notifyPatientDiagnosticReport } from '../lib/pushEventDispatcher';
 import { 
   collection, 
   query, 
@@ -496,22 +497,24 @@ export const LaboratoryPortalWorkspace: React.FC<LaboratoryPortalWorkspaceProps>
     setTimeout(() => setFeedbackMsg(null), 4000);
   };
 
-  // Helper to send in-app notification to patient
-  const sendPatientNotification = async (patientUid: string, title: string, message: string, type: 'booking_update' | 'report_ready') => {
-    if (!patientUid) return;
+  // Helper to send push & in-app notification
+  const sendPatientNotification = async (recipientUid: string, title: string, message: string, type: 'booking_update' | 'report_ready') => {
+    if (!recipientUid) return;
     try {
-      const notifId = `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-      await setDoc(doc(db, 'notifications', notifId), {
-        id: notifId,
-        recipientUid: patientUid,
-        title,
-        message,
-        type,
-        read: false,
-        createdAt: new Date().toISOString(),
+      await dispatchM737Notification({
+        recipientUid,
+        category: 'lab_radiology',
+        titleAr: title,
+        titleEn: title,
+        messageAr: message,
+        messageEn: message,
+        targetPortal: 'patient',
+        targetUrl: '/patient',
+        sourceEventId: `lab_notif_${Date.now()}`,
+        priority: type === 'report_ready' ? 'urgent' : 'normal',
       });
     } catch (e) {
-      console.warn('Failed to record notification in firestore:', e);
+      console.warn('Failed to dispatch laboratory notification:', e);
     }
   };
 
@@ -713,24 +716,31 @@ export const LaboratoryPortalWorkspace: React.FC<LaboratoryPortalWorkspaceProps>
 
       showToast(language === 'ar' ? `تم اعتماد ونشر النتائج المخبرية للطلب ${selectedOrderForCompletion.orderNumber}` : 'Lab order completed');
       
-      // 3. Notify Patient
+      // 3. Notify Patient via real Push Notification
       if (selectedOrderForCompletion.patientId) {
-        sendPatientNotification(
-          selectedOrderForCompletion.patientId,
-          'نتائج الفحص المخبري جاهزة',
-          `أصبحت نتائج التحاليل للطلب ${selectedOrderForCompletion.orderNumber} معتمدة ومتاحة للمعاينة في سجلك الطبي.`,
-          'report_ready'
-        );
+        await notifyPatientDiagnosticReport({
+          patientUid: selectedOrderForCompletion.patientId,
+          facilityName: certifiedResultDoc.labName,
+          type: 'laboratory',
+          reportId: resId,
+        });
       }
 
       // 4. Notify Referring Doctor
       if (selectedOrderForCompletion.doctorId) {
-        sendPatientNotification(
-          selectedOrderForCompletion.doctorId,
-          'صدور نتيجة فحص المريض',
-          `أصدر المختبر النتائج المعتمدة لطلب التحليل رقم ${selectedOrderForCompletion.orderNumber} الخاص بالمريض ${selectedOrderForCompletion.patientName}.`,
-          'report_ready'
-        );
+        await dispatchM737Notification({
+          recipientUid: selectedOrderForCompletion.doctorId,
+          recipientRole: 'doctor',
+          category: 'lab_radiology',
+          titleAr: 'صدور نتيجة فحص المريض',
+          titleEn: 'Patient Lab Report Certified',
+          messageAr: `أصدر المختبر النتائج المعتمدة لطلب التحليل رقم ${selectedOrderForCompletion.orderNumber} الخاص بالمريض ${selectedOrderForCompletion.patientName}.`,
+          messageEn: `Lab issued certified results for order ${selectedOrderForCompletion.orderNumber} of patient ${selectedOrderForCompletion.patientName}.`,
+          targetPortal: 'doctor',
+          targetUrl: '/doctor',
+          sourceEventId: `lab_res_${resId}`,
+          priority: 'urgent',
+        });
       }
 
       // 5. System Audit Log
