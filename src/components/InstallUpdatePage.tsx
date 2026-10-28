@@ -438,7 +438,7 @@ export const InstallUpdatePage: React.FC<InstallUpdatePageProps> = ({
             {/* Direct GitHub Release Action */}
             <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
               <a
-                href="https://github.com/releases"
+                href="https://github.com/pilotacademy321/M737IQ/releases"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-xs"
