@@ -75,6 +75,7 @@ import {
   AuthorizedSearchResult, 
   PORTAL_ID_PREFIXES 
 } from '../utils/medicalId';
+import { notifyUserAccountApprovalStatus } from '../lib/pushEventDispatcher';
 
 interface SuperAdminPortalWorkspaceProps {
   onBackToHome: () => void;
@@ -713,6 +714,20 @@ export const SuperAdminPortalWorkspace: React.FC<SuperAdminPortalWorkspaceProps>
       setUsersList(prev => prev.map(u => u.uid === targetUid ? { ...u, status: newStatus, updatedAt: new Date().toISOString() } : u));
       if (selectedUser && selectedUser.uid === targetUid) {
         setSelectedUser(prev => prev ? { ...prev, status: newStatus } : null);
+      }
+
+      // Dispatch Push and In-App notification to the provider
+      const affectedUser = usersList.find(u => u.uid === targetUid);
+      if (affectedUser) {
+        try {
+          await notifyUserAccountApprovalStatus({
+            userUid: targetUid,
+            userRole: affectedUser.role,
+            isApproved: newStatus === 'approved',
+          });
+        } catch (notifErr) {
+          console.warn('[SuperAdmin] Notice dispatching approval notification:', notifErr);
+        }
       }
     } catch (err: unknown) {
       showToast(language === 'ar' ? 'فشل تحديث الحالة: يرجى التحقق من أذونات المدير' : 'Failed to update status', 'error');

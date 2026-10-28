@@ -1241,6 +1241,47 @@
         "updatedAt": { "type": "string" }
       },
       "required": ["accountId", "uid", "role", "displayName", "createdAt", "updatedAt"]
+    },
+    "DeviceTokenRecord": {
+      "title": "DeviceTokenRecord",
+      "description": "FCM and Web Push device registration tokens with client platform metadata and preference overrides",
+      "type": "object",
+      "properties": {
+        "tokenId": { "type": "string", "maxLength": 128 },
+        "token": { "type": "string", "maxLength": 4096 },
+        "subscription": { "type": "object" },
+        "uid": { "type": "string", "maxLength": 128 },
+        "role": { "type": "string", "maxLength": 64 },
+        "platform": { "type": "string", "enum": ["android", "ios", "desktop", "unknown"] },
+        "userAgent": { "type": "string", "maxLength": 512 },
+        "createdAt": { "type": "string" },
+        "lastSeenAt": { "type": "string" },
+        "preferences": { "type": "object" }
+      },
+      "required": ["tokenId", "token", "uid", "createdAt", "lastSeenAt"]
+    },
+    "PushOutboxRecord": {
+      "title": "PushOutboxRecord",
+      "description": "Idempotent push notification delivery job records and audit log",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "recipientUid": { "type": "string", "maxLength": 128 },
+        "recipientRole": { "type": "string", "maxLength": 64 },
+        "category": { "type": "string", "maxLength": 64 },
+        "title": { "type": "string", "maxLength": 256 },
+        "body": { "type": "string", "maxLength": 2048 },
+        "genericBody": { "type": "string", "maxLength": 512 },
+        "targetUrl": { "type": "string", "maxLength": 256 },
+        "targetPortal": { "type": "string", "maxLength": 64 },
+        "priority": { "type": "string", "enum": ["normal", "urgent"] },
+        "status": { "type": "string", "enum": ["pending", "delivered", "failed", "skipped"] },
+        "deviceTokensCount": { "type": "number" },
+        "idempotencyKey": { "type": "string", "maxLength": 256 },
+        "createdAt": { "type": "string" },
+        "deliveredAt": { "type": "string" }
+      },
+      "required": ["id", "recipientUid", "category", "title", "body", "status", "idempotencyKey", "createdAt"]
     }
   },
   "firestore": {
@@ -1351,6 +1392,18 @@
     "/platform_metrics/{docId}": {
       "schema": "PlatformMetrics",
       "description": "Live non-PII aggregated statistics counters"
+    },
+    "/users/{userId}/device_tokens/{tokenId}": {
+      "schema": "DeviceTokenRecord",
+      "description": "User device registration tokens for FCM and Web Push"
+    },
+    "/device_tokens/{tokenId}": {
+      "schema": "DeviceTokenRecord",
+      "description": "Global device token registry indexed by token ID"
+    },
+    "/push_outbox/{jobId}": {
+      "schema": "PushOutboxRecord",
+      "description": "Push notification outbox queue and delivery audit log"
     }
   }
 }
