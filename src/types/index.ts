@@ -29,8 +29,60 @@ export interface UserProfile {
   facilityName?: string;
   governorate?: string;
   phone?: string;
+  legalConsent?: {
+    accepted: boolean;
+    signedAt: string;
+    signatureFullName: string;
+    contractVersion: string;
+    contractRecordId?: string;
+    termsAccepted?: boolean;
+    medicalDisclaimerAccepted?: boolean;
+    dataProcessingAccepted?: boolean;
+  };
   createdAt: string;
   updatedAt: string;
+}
+
+export interface LegalContractRecord {
+  id: string; // contract_${userId}_${timestamp}
+  userId: string;
+  userEmail: string;
+  displayName: string;
+  role: UserRole;
+  signatureFullName: string;
+  signatureDrawData?: string;
+  signedAt: string;
+  contractVersion: string;
+  contractTitleAr: string;
+  contractTitleEn: string;
+  contractTextSnapshot: string;
+  termsAccepted: boolean;
+  medicalDisclaimerAccepted: boolean;
+  dataProcessingConsentAccepted: boolean;
+  legalLiabilityAcknowledged: boolean;
+  userAgent?: string;
+  clientPlatform?: string;
+  status: 'active' | 'archived';
+  createdAt: string;
+}
+
+export interface LegalContractTemplate {
+  id: string;
+  version: string;
+  titleAr: string;
+  titleEn: string;
+  sloganAr: string;
+  sloganEn: string;
+  contentAr: string;
+  contentEn: string;
+  updatedAt: string;
+  updatedBy: string;
+  previousVersions?: Array<{
+    version: string;
+    updatedAt: string;
+    updatedBy: string;
+    contentAr: string;
+  }>;
 }
 
 export interface AccountIdentifierRecord {

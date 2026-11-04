@@ -44,7 +44,7 @@ const MainAppContent: React.FC = () => {
 
   const [legalModal, setLegalModal] = useState<{
     isOpen: boolean;
-    type: 'privacy' | 'terms' | null;
+    type: 'privacy' | 'terms' | 'contract' | null;
   }>({
     isOpen: false,
     type: null,
@@ -82,7 +82,7 @@ const MainAppContent: React.FC = () => {
     navigateTo('portals');
   };
 
-  const handleOpenLegal = (type: 'privacy' | 'terms') => {
+  const handleOpenLegal = (type: 'privacy' | 'terms' | 'contract') => {
     setLegalModal({ isOpen: true, type });
   };
 

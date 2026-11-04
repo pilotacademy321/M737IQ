@@ -176,8 +176,8 @@ export const InstallUpdatePage: React.FC<InstallUpdatePageProps> = ({
   // WhatsApp share link
   const shareText = encodeURIComponent(
     language === 'ar'
-      ? `رابط التثبيت والتحديث الرسمي لتطبيق منصة M737IQ الطبية (أندرويد وآيفون):\n${installUrl}`
-      : `Official installation and update link for M737IQ Medical Platform (Android & iPhone):\n${installUrl}`
+      ? `رابط التثبيت والتحديث الرسمي لتطبيق منصة صحتك (أندرويد وآيفون):\n${installUrl}`
+      : `Official installation and update link for Sehatok Platform (Android & iPhone):\n${installUrl}`
   );
   const whatsappUrl = `https://wa.me/?text=${shareText}`;
 
@@ -205,19 +205,19 @@ export const InstallUpdatePage: React.FC<InstallUpdatePageProps> = ({
 
           <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-sky-400/15 border border-sky-300/30 text-sky-200 text-xs font-black mb-3">
             <Sparkles size={13} className="text-amber-300" />
-            <span>{language === 'ar' ? 'الرابط الدائم الموحد لنظامي أندرويد وآيفون' : 'Permanent Unified Link for Android & iPhone'}</span>
+            <span>{language === 'ar' ? 'منصة صحتك — الرابط الدائم الموحد لنظامي أندرويد وآيفون' : 'Sehatok Platform — Permanent Unified Link for Android & iPhone'}</span>
           </div>
 
           <h1 className="text-2xl sm:text-4xl font-black tracking-tight leading-tight mb-3">
             {language === 'ar'
-              ? 'تثبيت وتحديث تطبيق منصة M737IQ الطبية'
-              : 'Install & Update M737IQ Medical Platform'}
+              ? 'تثبيت وتحديث تطبيق منصة صحتك'
+              : 'Install & Update Sehatok Medical Platform'}
           </h1>
 
           <p className="text-sm sm:text-base text-slate-200 leading-relaxed max-w-2xl">
             {language === 'ar'
-              ? 'صفحة رسمية موحدة ودائمة تتيح لجميع المرضى، الأطباء، والمراكز الطبية تثبيت التطبيق وتحديثه على أجهزة Android و iPhone والكمبيوتر بخطوات موثوقة ومباشرة.'
-              : 'One permanent official page for patients, doctors, and medical providers to install and update M737IQ across Android, iPhone, and Desktop.'}
+              ? 'صفحة رسمية موحدة ودائمة تتيح لجميع المرضى، الأطباء، والمراكز الطبية تثبيت تطبيق منصة صحتك وتحديثه على أجهزة Android و iPhone والكمبيوتر بخطوات موثوقة ومباشرة.'
+              : 'One permanent official page for patients, doctors, and medical providers to install and update Sehatok Platform across Android, iPhone, and Desktop.'}
           </p>
 
           {/* Device Detection Chip */}

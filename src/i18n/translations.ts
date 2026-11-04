@@ -1,7 +1,7 @@
 export const translations = {
   ar: {
-    brandName: 'منصة M737 الطبية',
-    brandTagline: 'MEDICAL PLATFORM',
+    brandName: 'منصة صحتك',
+    brandTagline: 'تواصلك مع الطبيب أسهل',
     nav: {
       home: 'الرئيسية',
       about: 'من نحن',
@@ -14,19 +14,19 @@ export const translations = {
     },
     hero: {
       badge: 'المنظومة الصحية الرقمية المتكاملة في العراق',
-      headline: 'منصة M737 الطبية المتكاملة',
+      headline: 'منصة صحتك الطبية المتكاملة',
       subtitle: 'تجمع بين الأطباء والمختبرات والأشعة والصيدليات والمرضى في مكان واحد لخدمة صحية أفضل.',
-      secondarySubtitle: 'Bringing together doctors, laboratories, radiology, pharmacies, and patients in one place for better healthcare.',
+      secondarySubtitle: 'تواصلك مع الطبيب أسهل — Bringing doctors, clinics, laboratories, radiology, pharmacies, and patients together.',
       getStartedBtn: 'ابدأ الآن',
       learnMoreBtn: 'استكشف البوابات',
-      slogan: 'معاً... لمستقبل صحي أفضل',
+      slogan: 'تواصلك مع الطبيب أسهل',
       stats: {
         portalsCount: '٨ بوابات مستقلة',
         portalsDesc: 'تغطي كافة الاحتياجات الصحية',
         iraqCoverage: 'تغطية المحافظات',
         iraqCoverageDesc: 'بغداد وكافة المدن العراقية',
         precision: 'دقة وموثوقية',
-        precisionDesc: 'مستوحاة من معايير الطيران',
+        precisionDesc: 'معايير طبية موثوقة وعالية الأمان',
       }
     },
     portalsSection: {
@@ -34,29 +34,29 @@ export const translations = {
       title: 'منظومة البوابات الطبية الثمانية',
       description: 'تم تصميم كل بوابة كمركز تشغيلي مستقل يلبي الاحتياجات المحددة لشركاء المنظومة الطبية مع الحفاظ على الربط المتكامل والتنسيق الفوري.',
       openPortal: 'دخول البوابة',
-      shellNotice: 'مرحلة التهيئة الأولية للمظهر ونقاط الدخول',
+      shellNotice: 'بوابات المنظومة الصحية الموحدة',
     },
     portalShell: {
       backToHome: 'العودة إلى الصفحة الرئيسية',
       currentPortal: 'بوابة نشطة',
-      phase1NoticeTitle: 'بيئة استعراض واجهة البوابة (المرحلة الأولى)',
-      phase1NoticeDesc: 'هذه الشاشة تمثل الهيكل التشغيلي لواجهة البوابة المستقلة. يتم في هذه المرحلة ضبط الهوية البصرية، ونقاط الدخول، وهيكلية الوحدات البرمجية. لم يتم ربط قاعدة بيانات حية أو تسجيل دخول وهمي بعد، وسيتم تفعيل المصادقة الرقمية والربط السحابي في المراحل اللاحقة.',
-      keyModulesTitle: 'الوحدات التشغيلية المخططة لهذه البوابة',
+      phase1NoticeTitle: 'بيئة العمل التشغيلية للبوابة',
+      phase1NoticeDesc: 'هذه الشاشة تمثل مساحة العمل المتكاملة للبوابة الطبية، تتيح إدارة السجلات والمواعيد والتقارير الطبية وفق أعلى المعايير.',
+      keyModulesTitle: 'الوحدات التشغيلية المعتمدة لهذه البوابة',
       accessBoxTitle: 'نقطة دخول البوابة',
       accessBoxDesc: 'واجهة الدخول المخصصة لكوادر ومستخدمي هذه البوابة:',
       inputIdentifier: 'معرّف الحساب / البريد الإلكتروني أو الترخيص',
       inputPassword: 'رمز المرور أو المفتاح الآمن',
-      btnSignIn: 'دخول البوابة (قيد التفعيل في المرحلة القادمة)',
+      btnSignIn: 'دخول البوابة',
       statusActive: 'بوابة مهيأة تشغيلياً',
       otherPortals: 'الانتقال السريع إلى بوابات أخرى:',
-      superAdminNotice: 'تنبيه أمني صارم: بوابة المشرف العام محمية ولا تعرض بيانات أو صلاحيات تشغيلية قبل استكمال طبقة المصادقة المشفرة وإدارة الأذونات المركزية في المرحلة اللاحقة.'
+      superAdminNotice: 'تنبيه أمني صارم: بوابة المشرف العام محمية ولا تعرض بيانات أو صلاحيات تشغيلية قبل استكمال طبقة المصادقة المشفرة وإدارة الأذونات المركزية.'
     },
     about: {
       kicker: 'رؤيتنا الوطنية',
-      title: 'من نحن - قصة منصة M737',
-      lead: 'منصة طبية عراقية رائدة تجمع بين شرف المهنة الطبية ودقة وهيبة الطيران لخدمة كل مريض وكادر صحي.',
-      p1: 'انطلقت فكرة منصة M737 الطبية من حاجة ماسة لإنهاء الانعزال بين مفاصل القطاع الصحي في العراق. فعلى مدار سنوات، ظل المريض يتنقل بين عيادة الطبيب، ومختبر التحاليل، ومركز السونار والأشعة، والصيدلية، حاملاً أوراقه يدوياً مع ما يرافق ذلك من تأخير وتشتت للبيانات.',
-      p2: 'استوحينا هويتنا من طراز M737 الذي يرمز إلى السرعة والانضباط الصارم وأعلى معايير الأمان الدولية المتبعة في الملاحة الجوية، لنسقطها على عالم الرعاية الصحية. هدفنا ربط المراكز التخصصية في بغداد والبصرة والموصل وأربيل والنجف وكافة أرجاء الوطن في فضاء رقمي متماسك.',
+      title: 'من نحن - قصة منصة صحتك',
+      lead: 'منصة طبية عراقية رائدة تجمع بين شرف المهنة الطبية والتكنولوجيا السحابية المتقدمة لخدمة كل مريض وكادر صحي.',
+      p1: 'انطلقت فكرة منصة صحتك من حاجة ماسة لإنهاء الانعزال بين مفاصل القطاع الصحي في العراق. فعلى مدار سنوات، ظل المريض يتنقل بين عيادة الطبيب ومختبر التحاليل ومركز السونار والأشعة والصيدلية، حاملاً أوراقه يدوياً مع ما يرافق ذلك من تأخير وتشتت للبيانات.',
+      p2: 'نهدف في منصة صحتك إلى ترسيخ التواصل الطبي السلس والفوري، وتوفير تجربة صحية كريمة ومنضبطة تربط المراكز التخصصية في بغداد والبصرة والموصل وأربيل والنجف وكافة أرجاء الوطن في فضاء رقمي متماسك تحت شعار: تواصلك مع الطبيب أسهل.',
       values: [
         {
           title: 'الربط المباشر',
@@ -135,14 +135,14 @@ export const translations = {
       whatsappNumber: '07885663748',
       whatsappAction: 'مراسلة عبر واتساب الآن',
       instagramTitle: 'حساب إنستغرام الرسمي',
-      instagramHandle: '@m737iq',
+      instagramHandle: '@sehatok.iq',
       instagramAction: 'متابعة عبر إنستغرام',
       emailTitle: 'البريد الإلكتروني للدعم',
       emailAddress: 'bcgmoc@gmail.com',
       emailAction: 'إرسال بريد إلكتروني',
       supportBadge: 'الدعم الفني: نحن هنا لمساعدتك دائماً',
       formTitle: 'طلب استفسار أو انضمام مركز صحي',
-      formDesc: 'املأ النموذج وسيقوم فريق الدعم الفني لـ M737 بالتواصل معك مباشرة عبر الهاتف أو البريد.',
+      formDesc: 'املأ النموذج وسيقوم فريق الدعم الفني لمنصة صحتك بالتواصل معك مباشرة عبر الهاتف أو البريد.',
       namePlaceholder: 'الاسم الكامل أو اسم العيادة/المركز',
       emailPlaceholder: 'البريد الإلكتروني للمتابعة',
       phonePlaceholder: 'رقم الهاتف (واتساب)',
@@ -151,13 +151,13 @@ export const translations = {
       submitBtn: 'إرسال الاستفسار',
       submittingBtn: 'جاري الإرسال...',
       successTitle: 'تم استلام رسالتك بنجاح',
-      successMessage: 'شكراً لتواصلك مع منصة M737 الطبية. سيقوم فريق الدعم الفني بمتابعة استفسارك عبر الواتساب أو البريد الإلكتروني خلال وقت وجيز.'
+      successMessage: 'شكراً لتواصلك مع منصة صحتك. سيقوم فريق الدعم الفني بمتابعة استفسارك عبر الواتساب أو البريد الإلكتروني خلال وقت وجيز.'
     },
     footer: {
-      brandDesc: 'منصة عراقية متكاملة لربط الأطباء والمختبرات ومراكز الأشعة والصيدليات والمرضى في منظومة موحدة تسعى لرفع جودة الرعاية الصحية في العراق.',
-      slogan: 'معاً... لمستقبل صحي أفضل.',
+      brandDesc: 'منصة صحتك - منظومة طبية عراقية رقمية متكاملة لربط الأطباء والمختبرات ومراكز الأشعة والصيدليات والمراجعين في بيئة آمنة وفعالة.',
+      slogan: 'تواصلك مع الطبيب أسهل',
       subSlogan: 'صحة أفضل ... لمستقبل أكثر إشراقاً',
-      copyright: 'جميع الحقوق محفوظة. © 2026 M737 Medical Platform.',
+      copyright: 'جميع الحقوق محفوظة. © 2026 منصة صحتك - Sehatok Platform.',
       links: {
         about: 'من نحن',
         terms: 'شروط الاستخدام',
@@ -167,14 +167,14 @@ export const translations = {
     },
     legal: {
       privacyTitle: 'سياسة الخصوصية وحماية البيانات الطبية',
-      termsTitle: 'شروط استخدام منصة M737 الطبية',
-      placeholderDisclaimer: 'إشعار توضيحي: هذه الوثيقة مسودة أولية لهيكلية الخصوصية والاستخدام للمنصة في مرحلتها الأولى، ولا تشكل استشارة قانونية نهائية.',
+      termsTitle: 'شروط استخدام منصة صحتك الطبية',
+      placeholderDisclaimer: 'إشعار توضيحي: يخضع استخدام منصة صحتك للشروط والأحكام والقوانين المنظمة للرعاية الصحية في جمهورية العراق، ولا تعد المنصة بديلاً عن التدخل الطبي الطارئ أو الفحص المباشر.',
       close: 'إغلاق النافذة'
     }
   },
   en: {
-    brandName: 'M737 Medical Platform',
-    brandTagline: 'INTEGRATED HEALTHCARE',
+    brandName: 'Sehatok Platform',
+    brandTagline: 'Connecting with your doctor is easier',
     nav: {
       home: 'Home',
       about: 'About Us',
@@ -187,19 +187,19 @@ export const translations = {
     },
     hero: {
       badge: 'Integrated Digital Health Platform in Iraq',
-      headline: 'M737 Integrated Medical Platform',
+      headline: 'Sehatok Medical Platform',
       subtitle: 'Bringing together doctors, laboratories, radiology, pharmacies, and patients in one place for better healthcare.',
-      secondarySubtitle: 'منصة M737 الطبية المتكاملة — تجمع بين الأطباء والمختبرات والأشعة والصيدليات والمرضى في مكان واحد لخدمة صحية أفضل.',
+      secondarySubtitle: 'Connecting with your doctor is easier — Unified digital healthcare ecosystem across Iraq.',
       getStartedBtn: 'Get Started',
       learnMoreBtn: 'Explore Portals',
-      slogan: 'Together... for a better health future.',
+      slogan: 'Connecting with your doctor is easier',
       stats: {
         portalsCount: '8 Dedicated Portals',
         portalsDesc: 'Covering every clinical necessity',
         iraqCoverage: 'National Reach',
         iraqCoverageDesc: 'Baghdad and all Iraqi governorates',
         precision: 'Precision & Reliability',
-        precisionDesc: 'Inspired by aviation standards',
+        precisionDesc: 'High-security medical-grade clinical standards',
       }
     },
     portalsSection: {
@@ -207,29 +207,29 @@ export const translations = {
       title: 'The Eight Medical Portals',
       description: 'Each portal is built as an independent operational workstation addressing the exact workflows of healthcare partners while keeping clinical data synchronized.',
       openPortal: 'Access Portal',
-      shellNotice: 'Phase 1 UI Shell & Entry Points',
+      shellNotice: 'Unified Healthcare Gateway Network',
     },
     portalShell: {
       backToHome: 'Back to Home Page',
       currentPortal: 'Active Portal',
-      phase1NoticeTitle: 'Portal Interface Preview Environment (Phase 1)',
-      phase1NoticeDesc: 'This screen represents the standalone visual shell of this portal. In this stage, visual identity, access routes, and modular layouts are established. Live database integration and simulated authentication are intentionally omitted until Phase 2 Firebase deployment.',
-      keyModulesTitle: 'Planned Operating Modules for this Portal',
+      phase1NoticeTitle: 'Portal Operating Environment',
+      phase1NoticeDesc: 'This screen represents the specialized medical workspace providing clinical record coordination, prescriptions, and diagnostics.',
+      keyModulesTitle: 'Operating Modules for this Portal',
       accessBoxTitle: 'Portal Access Gate',
       accessBoxDesc: 'Dedicated login console for certified users of this portal:',
       inputIdentifier: 'Account Identifier / Medical License / Email',
       inputPassword: 'Password or Access Key',
-      btnSignIn: 'Sign In (Active in Phase 2)',
-      statusActive: 'Operational Shell Ready',
+      btnSignIn: 'Sign In',
+      statusActive: 'Operational Workspace Ready',
       otherPortals: 'Quick Switch to Other Portals:',
-      superAdminNotice: 'Strict Security Directive: The Super Admin Portal is locked and does not expose operational data or elevated controls without multi-factor authorization in subsequent phases.'
+      superAdminNotice: 'Strict Security Directive: The Super Admin Portal is locked and requires multi-factor authorization and central governance approval.'
     },
     about: {
       kicker: 'Our National Vision',
-      title: 'About Us — The M737 Story',
-      lead: 'A pioneering Iraqi medical platform combining clinical excellence with the discipline and reliability of aviation for every patient and care provider.',
-      p1: 'M737 Medical Platform was born out of an urgent need to bridge the fragmentation across Iraq’s healthcare ecosystem. For years, patients traveled with paper records between clinics, pathology labs, imaging centers, and pharmacies, causing delays and lost information.',
-      p2: 'Inspired by the M737 moniker — embodying rapid transit, uncompromising safety checklists, and international operational standards — we set out to connect healthcare centers across Baghdad, Basra, Mosul, Erbil, Najaf, and all Iraqi provinces into a unified digital continuum.',
+      title: 'About Us — The Sehatok Story',
+      lead: 'A pioneering Iraqi digital healthcare platform bridging doctors, clinics, diagnostics, pharmacies, and patients with dignity and reliability.',
+      p1: 'Sehatok Platform was born out of an urgent need to bridge the fragmentation across Iraq’s healthcare ecosystem. For years, patients traveled with paper records between clinics, pathology labs, imaging centers, and pharmacies, causing delays and lost information.',
+      p2: 'At Sehatok Platform, our goal is to streamline medical communication and eliminate friction under our guiding mission: Connecting with your doctor is easier. We link specialized centers across Baghdad, Basra, Mosul, Erbil, Najaf, and all provinces into a cohesive digital continuum.',
       values: [
         {
           title: 'Direct Connectivity',
@@ -237,7 +237,7 @@ export const translations = {
         },
         {
           title: 'Extreme Reliability',
-          desc: 'Aviation-grade consistency in reports, appointment accuracy, and live medication availability.'
+          desc: 'Medical-grade consistency in reports, appointment accuracy, and live medication availability.'
         },
         {
           title: 'Human Dignity',
@@ -308,14 +308,14 @@ export const translations = {
       whatsappNumber: '07885663748',
       whatsappAction: 'Open WhatsApp Chat',
       instagramTitle: 'Official Instagram',
-      instagramHandle: '@m737iq',
+      instagramHandle: '@sehatok.iq',
       instagramAction: 'Follow on Instagram',
       emailTitle: 'Support Email',
       emailAddress: 'bcgmoc@gmail.com',
       emailAction: 'Send Email Message',
       supportBadge: 'Technical Support: We are always here to help',
       formTitle: 'Direct Inquiry or Facility Onboarding',
-      formDesc: 'Submit your query and our M737 support team will follow up directly via WhatsApp or email.',
+      formDesc: 'Submit your query and our Sehatok support team will follow up directly via WhatsApp or email.',
       namePlaceholder: 'Full Name or Clinic/Center Name',
       emailPlaceholder: 'Email Address for Correspondence',
       phonePlaceholder: 'Phone Number (WhatsApp)',
@@ -324,13 +324,13 @@ export const translations = {
       submitBtn: 'Send Inquiry',
       submittingBtn: 'Sending...',
       successTitle: 'Inquiry Successfully Received',
-      successMessage: 'Thank you for reaching out to M737 Medical Platform. Our support team will review your message and reply via WhatsApp or email shortly.'
+      successMessage: 'Thank you for reaching out to Sehatok Platform. Our support team will review your message and reply via WhatsApp or email shortly.'
     },
     footer: {
-      brandDesc: 'An integrated Iraqi medical platform connecting clinicians, laboratories, radiology centers, pharmacies, and patients into a unified ecosystem advancing healthcare across Iraq.',
-      slogan: 'Together... for a better health future.',
+      brandDesc: 'Sehatok Platform — An integrated Iraqi digital healthcare platform connecting clinicians, laboratories, radiology centers, pharmacies, and patients into a unified ecosystem.',
+      slogan: 'Connecting with your doctor is easier',
       subSlogan: 'Better health ... for a brighter tomorrow',
-      copyright: 'All rights reserved. © 2026 M737 Medical Platform.',
+      copyright: 'All rights reserved. © 2026 Sehatok Platform - منصة صحتك.',
       links: {
         about: 'About Us',
         terms: 'Terms of Use',
@@ -340,8 +340,8 @@ export const translations = {
     },
     legal: {
       privacyTitle: 'Privacy Policy & Medical Data Protection',
-      termsTitle: 'Terms of Use — M737 Medical Platform',
-      placeholderDisclaimer: 'Notice: This document represents preliminary terms for Phase 1 preview and does not constitute finalized legal counsel.',
+      termsTitle: 'Terms of Use — Sehatok Platform',
+      placeholderDisclaimer: 'Notice: Platform usage is governed by Terms of Service and applicable Republic of Iraq healthcare laws. The platform is not an emergency response service or replacement for physical examination.',
       close: 'Close Window'
     }
   }

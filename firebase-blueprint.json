@@ -1404,6 +1404,14 @@
     "/push_outbox/{jobId}": {
       "schema": "PushOutboxRecord",
       "description": "Push notification outbox queue and delivery audit log"
+    },
+    "/legal_contracts_audit/{contractId}": {
+      "schema": "LegalContractRecord",
+      "description": "Immutable signed electronic contracts, legal disclaimers, and user signatures audit ledger"
+    },
+    "/system_settings/{settingId}": {
+      "schema": "LegalContractTemplate",
+      "description": "System legal contract templates and editable terms versions"
     }
   }
 }

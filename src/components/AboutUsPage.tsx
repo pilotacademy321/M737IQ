@@ -1,7 +1,6 @@
 import React from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { 
-  Plane, 
   ShieldCheck, 
   HeartPulse, 
   Building2, 
@@ -47,7 +46,7 @@ export const AboutUsPage: React.FC<AboutUsPageProps> = ({
           </button>
           <span>{isRTL ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}</span>
           <span className="text-[#003366] font-bold">
-            {language === 'ar' ? 'من نحن (رؤية ورسالة المنصة)' : 'About M737IQ Platform'}
+            {language === 'ar' ? 'من نحن (رؤية ورسالة منصة صحتك)' : 'About Sehatok Platform'}
           </span>
         </div>
       </div>
@@ -55,23 +54,23 @@ export const AboutUsPage: React.FC<AboutUsPageProps> = ({
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
         {/* Hero Section */}
         <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#00172e] via-[#003366] to-[#0a192f] p-8 sm:p-14 text-white shadow-xl">
-          <div className="absolute top-0 right-0 w-80 h-80 bg-red-600/15 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-600/15 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 left-0 w-80 h-80 bg-sky-500/20 rounded-full blur-3xl pointer-events-none" />
 
           <div className="relative z-10 max-w-3xl space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-sky-300 text-xs font-bold border border-white/20">
-              <Plane size={14} />
-              <span>{language === 'ar' ? 'الانضباط التشغيلي والرعاية المتقدمة' : 'Precision Aviation in Modern Healthcare'}</span>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-emerald-300 text-xs font-bold border border-white/20">
+              <Stethoscope size={14} />
+              <span>{language === 'ar' ? 'تواصلك مع الطبيب أسهل' : 'Connecting with your doctor is easier'}</span>
             </div>
 
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
-              {language === 'ar' ? 'منصة M737 الطبية الرقمية المتكاملة في العراق' : 'M737IQ Integrated Digital Healthcare Ecosystem'}
+              {language === 'ar' ? 'منصة صحتك — المنظومة الصحية الرقمية المتكاملة في العراق' : 'Sehatok Platform — Integrated Digital Healthcare Ecosystem in Iraq'}
             </h1>
 
             <p className="text-sm sm:text-base text-slate-200 leading-relaxed pt-2">
               {language === 'ar'
-                ? 'مشروع وطني يهدف إلى إعادة هيكلة التواصل السريري واللوجستي بين الأطباء، والمختبرات المرضية، ومراكز الأشعة، والصيدليات، ومذاخر الأدوية لخدمة المريض العراقي بأعلى درجات الدقة والسرعة.'
-                : 'A nationwide Iraqi initiative uniting doctors, diagnostic laboratories, radiology centers, retail pharmacies, and wholesale bureaus to deliver transparent, synchronized care for citizens.'}
+                ? 'مشروع وطني رائد يهدف إلى تسهيل التواصل السريري واللوجستي بين المرضى، والأطباء، والمختبرات المرضية، ومراكز الأشعة، والصيدليات، ومذاخر الأدوية لخدمة كل مراجع وكادر صحي بأعلى درجات الدقة والسرعة.'
+                : 'A nationwide Iraqi initiative uniting patients, doctors, diagnostic laboratories, radiology centers, retail pharmacies, and wholesale warehouses to deliver streamlined, synchronized care.'}
             </p>
 
             <div className="pt-4 flex flex-wrap items-center gap-3">
@@ -94,35 +93,35 @@ export const AboutUsPage: React.FC<AboutUsPageProps> = ({
           </div>
         </div>
 
-        {/* Why M737 Aviation Motif Card */}
+        {/* Brand Mission & Architecture Card */}
         <div className="bg-white rounded-3xl p-8 sm:p-10 border border-slate-200 shadow-sm grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           <div className="lg:col-span-8 space-y-4">
-            <span className="text-xs font-bold text-[#c4152e] uppercase tracking-wider block">
-              {language === 'ar' ? 'فلسفة التسمية والهوية' : 'Origin of the M737 Identity'}
+            <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider block">
+              {language === 'ar' ? 'رسالة وهوية المنصة' : 'Identity & Mission'}
             </span>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-              {language === 'ar' ? 'لماذا طراز M737 رمزاً لمشروعنا الصحي؟' : 'Why M737 as our Healthcare Symbol?'}
+              {language === 'ar' ? 'منصة صحتك: تواصلك مع الطبيب أسهل' : 'Sehatok: Connecting with your doctor is easier'}
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
               {language === 'ar'
-                ? 'في عالم الطيران، لا يُسمح بأي هامش للخطأ العشوائي، حيث تحكم كل رحلة قوائم فحص بروتوكولية دقيقة وتنسيق لاسلكي فوري. هذه الروح ذاتها هي ما يحتاجه القطاع الصحي في العراق: نتائج تحاليل خالية من اللبس، صور أشعة تشخيصية تصل فوراً، وصرف دوائي مدقق يمنع التداخلات والجرعات الخاطئة.'
-                : 'In civil aviation, passenger safety is guaranteed by systematic checklists and flawless real-time communication. M737IQ transplants this rigorous operational ethos into Iraqi healthcare: error-free lab diagnostics, instantaneous medical image relay, and strictly validated prescription fulfillment.'}
+                ? 'انطلقت منصة صحتك لإنهاء معاناة المريض العراقي مع الملفات الورقية المشتتة والانتظار العشوائي في العيادات والمراكز الصحية. نعمل على توفير منظومة سحابية متقدمة وآمنة ترتكز على إتاحة المعلومة الطبية الموثوقة لحظياً بين جميع مفاصل الرعاية.'
+                : 'Sehatok Platform was born to resolve patient frustration with fragmented paper files and disorganized clinic queues. We provide a state-of-the-art secure cloud ecosystem delivering reliable clinical data in real-time across all healthcare touchpoints.'}
             </p>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
               {language === 'ar'
-                ? 'شعارنا الدائم: "معاً... لمستقبل صحي أفضل"، مستندين إلى كوادرنا الطبية الوطنية وكفاءاتنا العلمية المنتشرة في بغداد وكافة المحافظات.'
-                : 'Our motto: "Together for a Healthier Future", grounded in certified Iraqi doctors, pharmacists, pathologists, and radiologists nationwide.'}
+                ? 'شعارنا الدائم: "تواصلك مع الطبيب أسهل"، مستندين إلى كوادرنا الطبية الوطنية وكفاءاتنا العلمية المنتشرة في بغداد وكافة المحافظات.'
+                : 'Our motto: "Connecting with your doctor is easier", grounded in certified Iraqi doctors, pharmacists, pathologists, and radiologists nationwide.'}
             </p>
           </div>
 
           <div className="lg:col-span-4 bg-slate-900 text-white rounded-2xl p-6 space-y-4">
-            <div className="text-xs font-bold text-sky-400 uppercase tracking-widest">
-              {language === 'ar' ? 'ركائز الانضباط' : 'Core Disciplines'}
+            <div className="text-xs font-bold text-emerald-400 uppercase tracking-widest">
+              {language === 'ar' ? 'معايير الجودة الطبية' : 'Clinical Standards'}
             </div>
             <div className="space-y-3 text-xs">
               <div className="flex items-start gap-2.5">
                 <CheckCircle2 size={16} className="text-emerald-400 shrink-0 mt-0.5" />
-                <span>{language === 'ar' ? 'قوائم فحص طبية قبل إرسال الوصفات' : 'Systematic checklist audits before prescription dispatch'}</span>
+                <span>{language === 'ar' ? 'تحقق إلكتروني من التراخيص والوصفات الطبية' : 'Electronic verification of licenses and e-prescriptions'}</span>
               </div>
               <div className="flex items-start gap-2.5">
                 <CheckCircle2 size={16} className="text-emerald-400 shrink-0 mt-0.5" />
@@ -134,7 +133,7 @@ export const AboutUsPage: React.FC<AboutUsPageProps> = ({
               </div>
               <div className="flex items-start gap-2.5">
                 <CheckCircle2 size={16} className="text-emerald-400 shrink-0 mt-0.5" />
-                <span>{language === 'ar' ? 'رقابة فدرالية لحماية بيانات المرضى' : 'Encrypted patient privacy and sovereign data storage'}</span>
+                <span>{language === 'ar' ? 'تشفير شامل لحماية خصوصية بيانات المرضى' : 'Encrypted patient privacy and sovereign data storage'}</span>
               </div>
             </div>
           </div>

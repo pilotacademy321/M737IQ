@@ -1,7 +1,7 @@
 import React from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { Logo } from './Logo';
-import { ArrowLeft, ArrowRight, ShieldCheck, Activity, Plane, Users } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ShieldCheck, Activity, Stethoscope, Users } from 'lucide-react';
 
 interface HeroSectionProps {
   onExplorePortals: () => void;
@@ -19,34 +19,34 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
       id="home"
       className="relative pt-24 pb-16 md:pt-32 md:pb-24 overflow-hidden min-h-[85vh] flex items-center justify-center bg-slate-900"
     >
-      {/* Background Layer: High-resolution visual from reference image + rich gradient scrim */}
+      {/* Background Layer: High-resolution visual + rich gradient scrim */}
       <div className="absolute inset-0 z-0">
         <img
           src="/assets/aistudio/file_0000000028548210b7a1ceb04b95422a_ba7a6257.png"
-          alt="M737IQ — منصة M737IQ الطبية"
+          alt="منصة صحتك — تواصلك مع الطبيب أسهل"
           className="w-full h-full object-cover object-center opacity-65 scale-100 transition-transform duration-1000"
           referrerPolicy="no-referrer"
           onError={(e) => {
             (e.target as HTMLImageElement).src = '/assets/images/m737_vip_hero_banner.png';
           }}
         />
-        {/* Soft daylight and sunset atmospheric scrims to preserve 4.5:1 text contrast */}
+        {/* Soft daylight atmospheric scrims to preserve 4.5:1 text contrast */}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/60 to-slate-900/30" />
         <div className="absolute inset-0 bg-gradient-to-r from-slate-950/80 via-transparent to-slate-950/70" />
       </div>
 
-      {/* Decorative Iraqi River & Aviation Glow Elements */}
-      <div className="absolute top-1/4 -right-20 w-96 h-96 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-10 -left-20 w-96 h-96 bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
+      {/* Decorative Glow Elements */}
+      <div className="absolute top-1/4 -right-20 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-10 -left-20 w-96 h-96 bg-sky-600/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* Hero Content Container */}
       <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center flex flex-col items-center">
-        {/* Subtle Brand Slogan Pill (Clean unboxed metadata) */}
+        {/* Brand Slogan Pill */}
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-xs sm:text-sm font-semibold mb-6 shadow-sm">
-          <Plane size={15} className="text-sky-300" />
+          <Stethoscope size={15} className="text-emerald-300" />
           <span>{t.hero.badge}</span>
           <span className="opacity-40">|</span>
-          <span className="text-red-300 font-bold">{t.hero.slogan}</span>
+          <span className="text-emerald-300 font-bold">{t.hero.slogan}</span>
         </div>
 
         {/* Central Prominent Brand Mark */}

@@ -662,28 +662,43 @@ export const Header: React.FC<HeaderProps> = ({
                     : (userProfile?.status || 'Active')}
                 </span>
               </div>
+
+              {/* Electronic Contract Signature Stamp */}
+              {userProfile?.legalConsent?.signedAt && (
+                <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px] text-emerald-700 bg-emerald-50/60 p-2 rounded-lg">
+                  <div className="flex items-center gap-1.5 font-semibold">
+                    <CheckCircle2 size={13} className="text-emerald-600" />
+                    <span>{language === 'ar' ? 'العقد موقّع إلكترونياً باسم:' : 'Contract Signed As:'}</span>
+                    <span className="font-bold">{userProfile.legalConsent.signatureFullName}</span>
+                  </div>
+                  <span className="font-mono text-[10px] text-emerald-600">{userProfile.legalConsent.contractVersion}</span>
+                </div>
+              )}
             </div>
 
-            <div className="flex items-center justify-between pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowAccountModal(false);
-                  setShowSelfDeleteModal(true);
-                }}
-                className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1.5 cursor-pointer"
-              >
-                <Trash2 size={13} />
-                <span>{language === 'ar' ? 'حذف الحساب نهائياً' : 'Delete Account'}</span>
-              </button>
+            {/* Quick Actions in Account Modal */}
+            <div className="pt-2 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAccountModal(false);
+                    setShowSelfDeleteModal(true);
+                  }}
+                  className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Trash2 size={13} />
+                  <span>{language === 'ar' ? 'حذف الحساب نهائياً' : 'Delete Account'}</span>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => setShowAccountModal(false)}
-                className="px-5 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs hover:bg-slate-800 transition-colors cursor-pointer"
-              >
-                {language === 'ar' ? 'إغلاق' : 'Close'}
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAccountModal(false)}
+                  className="px-5 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  {language === 'ar' ? 'إغلاق' : 'Close'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

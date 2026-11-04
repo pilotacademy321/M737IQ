@@ -725,6 +725,26 @@ service cloud.firestore {
       allow update, delete: if false; // Immutable audit log
     }
 
+    // Legal Contracts & Audit Signatures: /legal_contracts_audit/{contractId}
+    match /legal_contracts_audit/{contractId} {
+      allow get: if isSignedIn() && (
+        resource.data.userId == request.auth.uid || 
+        isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        isAdmin()
+      );
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid;
+      allow update: if false; // Immutable signed contracts
+      allow delete: if isAdmin();
+    }
+
+    // Platform Legal Settings & Contract Templates: /system_settings/{settingId}
+    match /system_settings/{settingId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
     // Platform Realtime Public Metrics (Zero-PII aggregated live counters)
     match /platform_metrics/{docId} {
       allow read: if true;

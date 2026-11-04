@@ -48,42 +48,42 @@ export const AboutSection: React.FC = () => {
             </div>
           </div>
 
-          {/* Iraqi Healthcare Heritage & Aviation Precision Graphic Card */}
+          {/* Iraqi Healthcare Integration & Clinical Quality Graphic Card */}
           <div className="lg:col-span-5">
             <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-slate-200 bg-gradient-to-br from-[#002244] via-[#003366] to-[#0a192f] p-8 text-white">
               {/* Background ambient lighting */}
-              <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/20 rounded-full blur-2xl pointer-events-none" />
+              <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-600/20 rounded-full blur-2xl pointer-events-none" />
               <div className="absolute bottom-0 left-0 w-64 h-64 bg-sky-500/20 rounded-full blur-2xl pointer-events-none" />
 
               <div className="relative z-10">
                 <div className="w-12 h-12 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white mb-6">
-                  <Plane size={24} className="text-sky-300" />
+                  <HeartPulse size={24} className="text-emerald-300" />
                 </div>
 
-                <span className="text-xs font-bold text-sky-300 uppercase tracking-widest block mb-2">
-                  {language === 'ar' ? 'معايير الطيران في خدمة الصحة' : 'Aviation Discipline in Health'}
+                <span className="text-xs font-bold text-emerald-300 uppercase tracking-widest block mb-2">
+                  {language === 'ar' ? 'تواصلك مع الطبيب أسهل' : 'Connecting with your doctor is easier'}
                 </span>
 
                 <h3 className="text-xl sm:text-2xl font-bold mb-4 leading-snug">
                   {language === 'ar'
-                    ? 'لماذا اخترنا طراز M737 رمزاً لمشروعنا الطبي؟'
-                    : 'Why M737 as our Healthcare Symbol?'}
+                    ? 'رؤية منصة صحتك للرعاية المتكاملة'
+                    : 'The Sehatok Vision for Integrated Healthcare'}
                 </h3>
 
                 <p className="text-xs sm:text-sm text-slate-200 leading-relaxed mb-6">
                   {language === 'ar'
-                    ? 'في الطيران، لا مجال للخطأ، فكل إجراء مدقق بقائمة فحص محكمة. هذا بالضبط ما يحتاجه القطاع الصحي في العراق: دقة بالغة في نتائج التحاليل، سرعة في استلام صور الأشعة، وصرف دقيق للوصفات الطبية.'
-                    : 'In aviation, safety is governed by rigorous checklists and zero-compromise coordination. We bring that exact standard to Iraqi healthcare: exact diagnostic results, zero delay in imaging transfers, and error-free prescription dispensing.'}
+                    ? 'صممت منصة صحتك لتكون الجسر الرقمي الآمن والموثوق بين المريض والطبيب والصيدلية والمختبر ومركز الأشعة، حيث تلتقي سهولة الاستخدام مع أعلى معايير أمن وسرية البيانات الطبية.'
+                    : 'Sehatok Platform was designed to serve as the secure, trusted digital bridge connecting patients, doctors, pharmacies, labs, and imaging centers — where seamless accessibility meets clinical security.'}
                 </p>
 
                 <div className="pt-6 border-t border-white/15 space-y-3">
                   <div className="flex items-center gap-3 text-xs sm:text-sm text-slate-100">
                     <ShieldCheck size={18} className="text-emerald-400 shrink-0" />
-                    <span>{language === 'ar' ? 'اعتماد أعلى معايير أمان البيانات والخصوصية' : 'Highest medical data security & confidentiality'}</span>
+                    <span>{language === 'ar' ? 'اعتماد أعلى معايير أمان البيانات والخصوصية الطبية' : 'Highest medical data security & confidentiality'}</span>
                   </div>
                   <div className="flex items-center gap-3 text-xs sm:text-sm text-slate-100">
                     <Building2 size={18} className="text-sky-400 shrink-0" />
-                    <span>{language === 'ar' ? 'تغطية للمستشفيات والعيادات والمراكز الأهلية' : 'Connecting private clinics, labs, and hospitals'}</span>
+                    <span>{language === 'ar' ? 'ربط العيادات والمختبرات والمراكز التخصصية في كافة المحافظات' : 'Connecting clinics, labs, and diagnostic centers nationwide'}</span>
                   </div>
                   <div className="flex items-center gap-3 text-xs sm:text-sm text-slate-100">
                     <HeartPulse size={18} className="text-red-400 shrink-0" />

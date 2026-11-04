@@ -66,7 +66,10 @@ import {
   DollarSign,
   Server,
   Check,
-  Copy
+  Copy,
+  ScrollText,
+  FileCheck2,
+  PenTool
 } from 'lucide-react';
 import { 
   auditAndMigrateAccountIds, 
@@ -76,6 +79,12 @@ import {
   PORTAL_ID_PREFIXES 
 } from '../utils/medicalId';
 import { notifyUserAccountApprovalStatus } from '../lib/pushEventDispatcher';
+import { 
+  getAllSignedContractsForAdmin, 
+  getActiveContractTemplate, 
+  updateContractTemplateByAdmin 
+} from '../lib/legalContractService';
+import { LegalContractRecord, LegalContractTemplate } from '../types';
 
 interface SuperAdminPortalWorkspaceProps {
   onBackToHome: () => void;
@@ -94,7 +103,7 @@ export const SuperAdminPortalWorkspace: React.FC<SuperAdminPortalWorkspaceProps>
   } = useAuth();
   const { language, isRTL } = useLanguage();
 
-  const [activeTab, setActiveTab] = useState<'accreditation' | 'analytics' | 'audit_logs' | 'subscriptions' | 'id_audit'>('accreditation');
+  const [activeTab, setActiveTab] = useState<'accreditation' | 'analytics' | 'audit_logs' | 'subscriptions' | 'id_audit' | 'contracts'>('accreditation');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
@@ -164,6 +173,17 @@ export const SuperAdminPortalWorkspace: React.FC<SuperAdminPortalWorkspaceProps>
   const [roleFilter, setRoleFilter] = useState<'all' | UserRole>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | AccountStatus>('all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Legal Contracts & Audit State
+  const [signedContractsList, setSignedContractsList] = useState<LegalContractRecord[]>([]);
+  const [contractsLoading, setContractsLoading] = useState(false);
+  const [contractTemplateData, setContractTemplateData] = useState<LegalContractTemplate | null>(null);
+  const [isEditingTemplate, setIsEditingTemplate] = useState(false);
+  const [templateFormContentAr, setTemplateFormContentAr] = useState('');
+  const [templateFormContentEn, setTemplateFormContentEn] = useState('');
+  const [templateVersionInput, setTemplateVersionInput] = useState('');
+  const [selectedAuditContract, setSelectedAuditContract] = useState<LegalContractRecord | null>(null);
+  const [savingTemplate, setSavingTemplate] = useState(false);
 
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
     setFeedbackMsg({ text, type });
@@ -390,6 +410,19 @@ export const SuperAdminPortalWorkspace: React.FC<SuperAdminPortalWorkspaceProps>
         setUserSubscriptions(subs);
       } catch (err) {
         console.warn('Error loading subscriptions:', err);
+      }
+
+      // 6. Fetch Legal Contracts & Audits
+      try {
+        const contracts = await getAllSignedContractsForAdmin();
+        setSignedContractsList(contracts);
+        const tpl = await getActiveContractTemplate();
+        setContractTemplateData(tpl);
+        setTemplateFormContentAr(tpl.contentAr);
+        setTemplateFormContentEn(tpl.contentEn);
+        setTemplateVersionInput(tpl.version);
+      } catch (err) {
+        console.warn('Error loading signed contracts:', err);
       }
 
     } catch (err: unknown) {
@@ -1035,7 +1068,24 @@ export const SuperAdminPortalWorkspace: React.FC<SuperAdminPortalWorkspaceProps>
           }`}
         >
           <Database size={16} />
-          <span>{language === 'ar' ? 'تدقيق معرّفات الحسابات (M737 IDs)' : 'Account IDs & Audit'}</span>
+          <span>{language === 'ar' ? 'تدقيق معرّفات الحسابات' : 'Account IDs & Audit'}</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('contracts')}
+          className={`flex-1 min-w-[140px] py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            activeTab === 'contracts'
+              ? 'bg-[#003366] text-white shadow-sm'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+          }`}
+        >
+          <ScrollText size={16} />
+          <span>{language === 'ar' ? 'العقود والشروط القانونية' : 'Legal Contracts & Audit'}</span>
+          {signedContractsList.length > 0 && (
+            <span className="w-5 h-5 rounded-full bg-emerald-500 text-white text-[10px] font-black flex items-center justify-center">
+              {signedContractsList.length}
+            </span>
+          )}
         </button>
       </div>
 
@@ -2285,6 +2335,272 @@ export const SuperAdminPortalWorkspace: React.FC<SuperAdminPortalWorkspaceProps>
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* TAB 6: LEGAL CONTRACTS & ELECTRONIC AGREEMENTS AUDIT */}
+      {activeTab === 'contracts' && (
+        <div className="space-y-6">
+          {/* Contracts Header Banner */}
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider block">
+                  {language === 'ar' ? 'سجل التدقيق القانوني والعقود المعتمدة' : 'Legal Compliance & Agreement Contracts'}
+                </span>
+                <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-1">
+                  {language === 'ar' ? 'عقود الاتفاق والتواقيع الإلكترونية للمستخدمين' : 'Signed User Agreements & Electronic Signatures'}
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  {language === 'ar'
+                    ? 'توثيق غير قابل للتعديل للتواقيع الإلكترونية وموافقات الإقرار الطبي وفق أحكام قانون التوقيع والمعاملات الإلكترونية العراقي رقم 78 لسنة 2012.'
+                    : 'Immutable audit trail of electronic signatures and medical consents under Iraqi Law No. 78 of 2012.'}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEditingTemplate(!isEditingTemplate)}
+                  className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-xs"
+                >
+                  <PenTool size={14} />
+                  <span>
+                    {isEditingTemplate 
+                      ? (language === 'ar' ? 'إغلاق محرر العقد' : 'Close Editor') 
+                      : (language === 'ar' ? 'تعديل صياغة العقد وإصدار نسخة جديدة' : 'Edit Contract Template')}
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {/* Template Editor Collapsible Box */}
+            {isEditingTemplate && (
+              <div className="mt-4 p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-4 animate-in fade-in">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-900">
+                    <ScrollText size={16} className="text-[#003366]" />
+                    <span>{language === 'ar' ? 'تعديل مسودة العقد الإلكتروني المعتمد للمنصة' : 'Edit Official Platform Agreement Contract Draft'}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="text-slate-500">{language === 'ar' ? 'رقم الإصدار الجديد:' : 'New Version:'}</span>
+                    <input
+                      type="text"
+                      value={templateVersionInput}
+                      onChange={(e) => setTemplateVersionInput(e.target.value)}
+                      placeholder="v1.1.0-iq-2026"
+                      className="px-2.5 py-1 rounded-lg border border-slate-300 font-mono text-xs font-bold bg-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      {language === 'ar' ? 'نص العقد بالعربية (المعتمد قانونياً):' : 'Arabic Contract Text:'}
+                    </label>
+                    <textarea
+                      rows={12}
+                      value={templateFormContentAr}
+                      onChange={(e) => setTemplateFormContentAr(e.target.value)}
+                      className="w-full p-3 rounded-xl border border-slate-300 text-xs font-sans whitespace-pre-line leading-relaxed bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      {language === 'ar' ? 'الترجمة الإنجليزية للعقد:' : 'English Contract Text:'}
+                    </label>
+                    <textarea
+                      rows={12}
+                      value={templateFormContentEn}
+                      onChange={(e) => setTemplateFormContentEn(e.target.value)}
+                      className="w-full p-3 rounded-xl border border-slate-300 text-xs font-sans whitespace-pre-line leading-relaxed bg-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-slate-200">
+                  <span className="text-[11px] text-slate-500">
+                    {language === 'ar'
+                      ? 'ملاحظة: حفظ التعديلات يؤرشف النسخة الحالية تلقائياً في السجل التاريخي دون التأثير على العقود الموقعة مسبقاً.'
+                      : 'Notice: Saving archives current version in history without modifying already signed audit records.'}
+                  </span>
+
+                  <button
+                    type="button"
+                    disabled={savingTemplate}
+                    onClick={async () => {
+                      if (!templateFormContentAr.trim() || !templateVersionInput.trim()) {
+                        showToast(language === 'ar' ? 'يرجى إكمال نص العقد ورقم الإصدار' : 'Fill contract text and version', 'error');
+                        return;
+                      }
+                      setSavingTemplate(true);
+                      try {
+                        const updated = await updateContractTemplateByAdmin({
+                          adminUid: user?.uid || 'super-admin-uid',
+                          adminEmail: user?.email || 'bcgmoc@gmail.com',
+                          newTitleAr: contractTemplateData?.titleAr || 'عقد الاتفاق والشروط القانونية والطبية المعتمدة — منصة صحتك',
+                          newTitleEn: contractTemplateData?.titleEn || 'Official Medical Terms & User Agreement — Sehatok Platform',
+                          newContentAr: templateFormContentAr.trim(),
+                          newContentEn: templateFormContentEn.trim(),
+                          newVersion: templateVersionInput.trim(),
+                        });
+                        setContractTemplateData(updated);
+                        setIsEditingTemplate(false);
+                        showToast(language === 'ar' ? 'تم حفظ وتحديث مسودة العقد الرسمي بنجاح' : 'Contract template updated successfully');
+                      } catch (err) {
+                        console.error('Failed to update contract:', err);
+                        showToast(language === 'ar' ? 'فشل حفظ التعديلات' : 'Failed to update contract', 'error');
+                      } finally {
+                        setSavingTemplate(false);
+                      }
+                    }}
+                    className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <FileCheck2 size={14} />
+                    <span>{savingTemplate ? (language === 'ar' ? 'جاري الحفظ...' : 'Saving...') : (language === 'ar' ? 'اعتماد وحفظ العقد الرسمي' : 'Save & Deploy Version')}</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Signed Contracts Audit Log Table */}
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileCheck2 size={18} className="text-[#003366]" />
+                <h4 className="font-bold text-sm sm:text-base text-slate-900">
+                  {language === 'ar' ? 'سجل التواقيع الإلكترونية الموثقة في قاعدة البيانات' : 'Verified Electronic Signatures Ledger'}
+                </h4>
+              </div>
+              <span className="text-xs font-mono font-bold text-slate-500">
+                {signedContractsList.length} {language === 'ar' ? 'عقد موقّع' : 'records'}
+              </span>
+            </div>
+
+            {signedContractsList.length === 0 ? (
+              <div className="p-8 text-center text-slate-400 text-xs rounded-2xl bg-slate-50 border border-dashed border-slate-200">
+                {language === 'ar'
+                  ? 'لا توجد عقود مسجلة بعد. عند تسجيل المستخدمين الجدد أو إكمال الخطوات، تظهر سجلات التوقيع هنا فوراً.'
+                  : 'No signed contract audit records found yet.'}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-start">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-slate-500 font-bold">
+                      <th className="py-2.5 px-3 text-start">{language === 'ar' ? 'الموقّع (الاسم القانوني)' : 'Legal Name'}</th>
+                      <th className="py-2.5 px-3 text-start">{language === 'ar' ? 'البريد / الحساب' : 'Email'}</th>
+                      <th className="py-2.5 px-3 text-start">{language === 'ar' ? 'الصفة' : 'Role'}</th>
+                      <th className="py-2.5 px-3 text-start">{language === 'ar' ? 'الإصدار' : 'Version'}</th>
+                      <th className="py-2.5 px-3 text-start">{language === 'ar' ? 'تاريخ التوقيع' : 'Timestamp'}</th>
+                      <th className="py-2.5 px-3 text-end">{language === 'ar' ? 'الإجراء' : 'Action'}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {signedContractsList.map((rec) => (
+                      <tr key={rec.id} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="py-3 px-3">
+                          <span className="font-bold text-slate-900">{rec.signatureFullName}</span>
+                        </td>
+                        <td className="py-3 px-3 font-mono text-[11px] text-slate-600">
+                          {rec.userEmail || rec.userId}
+                        </td>
+                        <td className="py-3 px-3">
+                          <span className="px-2 py-0.5 rounded-md font-mono text-[10px] font-bold bg-slate-100 text-slate-700">
+                            {rec.role}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 font-mono text-[11px] text-slate-600">
+                          {rec.contractVersion}
+                        </td>
+                        <td className="py-3 px-3 font-mono text-[11px] text-slate-500">
+                          {rec.signedAt ? rec.signedAt.slice(0, 19).replace('T', ' ') : '—'}
+                        </td>
+                        <td className="py-3 px-3 text-end">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedAuditContract(rec)}
+                            className="px-3 py-1 rounded-lg bg-[#003366] hover:bg-sky-900 text-white font-bold text-[11px] transition-colors cursor-pointer"
+                          >
+                            {language === 'ar' ? 'استعراض الوثيقة' : 'View Audit'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Audit Contract Detail Modal */}
+          {selectedAuditContract && (
+            <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-150 max-h-[85vh] overflow-y-auto">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+                      <FileCheck2 size={20} />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-base text-slate-900">
+                        {language === 'ar' ? 'وثيقة العقد والتوقيع الإلكتروني المؤرشفة' : 'Archived Signed Contract Document'}
+                      </h3>
+                      <span className="text-xs text-slate-400 font-mono">
+                        ID: {selectedAuditContract.id}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setSelectedAuditContract(null)}
+                    className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 text-xs p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+                  <div>
+                    <span className="text-slate-400 block">{language === 'ar' ? 'الاسم الثلاثي الموقّع به:' : 'Signed Legal Name:'}</span>
+                    <strong className="text-slate-900">{selectedAuditContract.signatureFullName}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block">{language === 'ar' ? 'تاريخ ووقت التوثيق (ISO):' : 'Timestamp:'}</span>
+                    <span className="font-mono text-slate-700">{selectedAuditContract.signedAt}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block">{language === 'ar' ? 'الحساب / UID:' : 'User ID:'}</span>
+                    <span className="font-mono text-slate-700 text-[10px] break-all">{selectedAuditContract.userId}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block">{language === 'ar' ? 'إصدار العقد المعتمد:' : 'Contract Version:'}</span>
+                    <span className="font-mono font-bold text-emerald-700">{selectedAuditContract.contractVersion}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5 text-xs text-slate-700">
+                  <label className="font-bold text-slate-800 block">
+                    {language === 'ar' ? 'نص العقد الموقّع وقت الإقرار:' : 'Contract Snapshot at Signing:'}
+                  </label>
+                  <div className="p-3.5 rounded-xl bg-slate-100 border border-slate-200 max-h-56 overflow-y-auto whitespace-pre-line font-sans text-xs text-slate-800 leading-relaxed">
+                    {selectedAuditContract.contractTextSnapshot || 'نص العقد الافتراضي لمنصة صحتك.'}
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-slate-100 flex justify-end">
+                  <button
+                    onClick={() => setSelectedAuditContract(null)}
+                    className="px-5 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs hover:bg-slate-800 transition-colors cursor-pointer"
+                  >
+                    {language === 'ar' ? 'إغلاق' : 'Close'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

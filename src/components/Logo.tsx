@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLanguage } from '../context/LanguageContext';
 
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
@@ -13,71 +14,103 @@ export const Logo: React.FC<LogoProps> = ({
   className = '',
   light = false,
 }) => {
+  const { language } = useLanguage();
+
   const dimensions = {
-    sm: { width: 140, height: 42, iconSize: 28, textClass: 'text-lg', subClass: 'text-[9px]' },
-    md: { width: 190, height: 56, iconSize: 36, textClass: 'text-2xl', subClass: 'text-[11px]' },
-    lg: { width: 260, height: 78, iconSize: 48, textClass: 'text-3xl', subClass: 'text-xs' },
-    xl: { width: 340, height: 100, iconSize: 64, textClass: 'text-4xl', subClass: 'text-sm' },
+    sm: { iconSize: 30, textClass: 'text-base sm:text-lg', subClass: 'text-[10px]' },
+    md: { iconSize: 40, textClass: 'text-xl sm:text-2xl', subClass: 'text-xs' },
+    lg: { iconSize: 52, textClass: 'text-2xl sm:text-3xl', subClass: 'text-sm' },
+    xl: { iconSize: 66, textClass: 'text-3xl sm:text-4xl', subClass: 'text-base' },
   }[size];
 
   const primaryTextColor = light ? 'text-white' : 'text-[#002b49]';
-  const accentRedColor = '#c4152e';
-  const aviationBlue = light ? '#60a5fa' : '#003366';
+  const accentTealColor = light ? '#2dd4bf' : '#0d9488';
+  const deepBlueColor = light ? '#60a5fa' : '#003366';
+  const pulseRed = '#e11d48';
 
   return (
     <div className={`inline-flex items-center gap-3 select-none ${className}`}>
-      {/* SVG Icon: Flight Trail + Airplane + ECG Heartbeat integrated into M */}
+      {/* Pure Medical Icon: Heartbeat Pulse + Stethoscope Arc & Caring Hands / Cross */}
       <svg
-        viewBox="0 0 100 80"
+        viewBox="0 0 100 100"
         className="shrink-0 transition-transform hover:scale-105 duration-200"
-        style={{ width: dimensions.iconSize * 1.25, height: dimensions.iconSize }}
+        style={{ width: dimensions.iconSize, height: dimensions.iconSize }}
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         aria-hidden="true"
       >
-        {/* Dynamic Flight Arch Path */}
-        <path
-          d="M 12 60 C 25 22, 55 12, 82 14"
-          stroke={aviationBlue}
+        <defs>
+          <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor={deepBlueColor} />
+            <stop offset="100%" stopColor={accentTealColor} />
+          </linearGradient>
+          <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
+        </defs>
+
+        {/* Outer Medical Protective Shield / Rounded Square Badge */}
+        <rect
+          x="6"
+          y="6"
+          width="88"
+          height="88"
+          rx="24"
+          fill={light ? 'rgba(255, 255, 255, 0.12)' : '#f0fdfa'}
+          stroke="url(#shieldGrad)"
           strokeWidth="3.5"
-          strokeLinecap="round"
-          className="opacity-90"
         />
 
-        {/* Airplane Silhouette climbing to top right */}
-        <g transform="translate(80, 14) rotate(18)">
-          <path
-            d="M 0 -7 L 4 -2 L 11 -2 L 13 -4 L 14 -4 L 13 0 L 14 4 L 13 4 L 11 2 L 4 2 L 0 7 L -2 7 L 0 2 L -8 2 L -11 5 L -13 5 L -12 0 L -13 -5 L -11 -5 L -8 -2 L 0 -2 Z"
-            fill={aviationBlue}
-          />
-        </g>
-
-        {/* Medical ECG Pulse Wave forming the M base */}
+        {/* Stethoscope Chestpiece Loop (Healthcare & Doctor Connection) */}
         <path
-          d="M 8 52 L 20 52 L 24 44 L 28 62 L 34 32 L 40 68 L 45 48 L 50 54 L 54 52 L 64 52"
-          stroke={accentRedColor}
+          d="M 28 32 C 28 54, 42 66, 50 66 C 58 66, 72 54, 72 32"
+          stroke={accentTealColor}
+          strokeWidth="4"
+          strokeLinecap="round"
+          fill="none"
+        />
+
+        {/* Stethoscope Earpieces & Binaural Upper Tube */}
+        <path
+          d="M 36 22 L 36 28 M 64 22 L 64 28"
+          stroke={deepBlueColor}
           strokeWidth="3.5"
+          strokeLinecap="round"
+        />
+        <circle cx="36" cy="20" r="3" fill={accentTealColor} />
+        <circle cx="64" cy="20" r="3" fill={accentTealColor} />
+
+        {/* Vital Heartbeat ECG Line (Red Accent) across center */}
+        <path
+          d="M 20 50 L 34 50 L 39 40 L 46 64 L 54 28 L 61 58 L 66 48 L 80 48"
+          stroke={pulseRed}
+          strokeWidth="4"
           strokeLinecap="round"
           strokeLinejoin="round"
+          filter="url(#softGlow)"
         />
 
-        {/* Subtle Stethoscope / Pulse node glow dot */}
-        <circle cx="34" cy="32" r="3" fill={accentRedColor} />
+        {/* Pulse vitality dot */}
+        <circle cx="54" cy="28" r="3.5" fill={pulseRed} />
       </svg>
 
-      {/* Typography: M737 and MEDICAL PLATFORM */}
-      <div className="flex flex-col leading-none">
-        <div className={`font-extrabold tracking-tight flex items-baseline ${dimensions.textClass}`}>
-          <span className="text-[#c4152e]">M</span>
-          <span className={primaryTextColor}>737</span>
+      {/* Typography: "منصة صحتك" + Marketing Slogan: "تواصلك مع الطبيب أسهل" */}
+      <div className="flex flex-col leading-tight text-start">
+        <div className={`font-black tracking-tight flex items-center gap-1.5 ${dimensions.textClass}`}>
+          <span className={primaryTextColor}>
+            {language === 'ar' ? 'منصة صحتك' : 'منصة صحتك'}
+          </span>
+          <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
         </div>
+
         {showTagline && (
           <span
-            className={`font-semibold tracking-[0.22em] uppercase transition-colors ${
-              light ? 'text-slate-200' : 'text-[#003366]'
+            className={`font-bold transition-colors ${
+              light ? 'text-teal-200' : 'text-teal-700'
             } ${dimensions.subClass} mt-0.5`}
           >
-            MEDICAL PLATFORM
+            {language === 'ar' ? 'تواصلك مع الطبيب أسهل' : 'Connecting with your doctor is easier'}
           </span>
         )}
       </div>
