@@ -149,39 +149,15 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
             onClick={handleHomeClick}
             className="flex items-center gap-3 text-start group cursor-pointer focus:outline-hidden"
           >
-            {/* Custom Aviation + ECG Flight Mark */}
-            <div className="relative w-11 h-11 rounded-xl bg-gradient-to-br from-[#0284c7] to-[#002b5c] p-2 flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
-              <svg viewBox="0 0 100 80" className="w-full h-full" fill="none">
-                <path
-                  d="M 10 58 C 24 22, 54 14, 84 16"
-                  stroke="#38bdf8"
-                  strokeWidth="5"
-                  strokeLinecap="round"
-                />
-                <g transform="translate(82, 16) rotate(16)">
-                  <path
-                    d="M 0 -8 L 5 -2 L 13 -2 L 16 -5 L 17 -5 L 15 0 L 17 5 L 16 5 L 13 2 L 5 2 L 0 8 L -3 8 L 0 2 L -9 2 L -13 6 L -15 6 L -14 0 L -15 -6 L -13 -6 L -9 -2 L 0 -2 Z"
-                    fill="#38bdf8"
-                  />
-                </g>
-                <path
-                  d="M 6 52 L 18 52 L 23 42 L 28 62 L 35 30 L 42 66 L 48 46 L 53 54 L 58 52 L 70 52"
-                  stroke="#ef4444"
-                  strokeWidth="4.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+            {/* Neutral Medical Icon */}
+            <div className="w-10 h-10 rounded-xl bg-slate-800 text-sky-400 flex items-center justify-center border border-slate-700">
+              <Stethoscope size={22} />
             </div>
 
             <div>
-              <div className="flex items-baseline gap-1 font-black text-2xl tracking-tight leading-none text-white">
-                <span>M737</span>
-                <span className="text-[#38bdf8]">IQ</span>
+              <div className="font-bold text-sm tracking-tight leading-none text-white">
+                {language === 'ar' ? 'المنظومة الطبية' : 'Healthcare Platform'}
               </div>
-              <span className="text-[10px] font-medium text-slate-300 tracking-wider block mt-1">
-                Your Health, Our Priority
-              </span>
             </div>
           </button>
 
@@ -298,7 +274,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
               className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium text-slate-300 hover:bg-slate-800/70 hover:text-white transition-all cursor-pointer"
             >
               <FileText size={17} className="text-slate-400" />
-              <span>{language === 'ar' ? 'دليل ميزات M737IQ' : 'M737IQ Features Guide'}</span>
+              <span>{language === 'ar' ? 'دليل ميزات المنظومة' : 'Platform Features Guide'}</span>
             </button>
 
             {/* Profile */}
@@ -364,7 +340,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
           </a>
 
           <div className="text-center text-[10px] text-slate-400 font-mono tracking-wider">
-            M737IQ v1.0.1
+            v1.0.1
           </div>
         </div>
       </aside>

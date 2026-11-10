@@ -49,7 +49,6 @@ export const SupportContactPage: React.FC<SupportContactPageProps> = ({
 
   const whatsappHref = 'https://wa.me/9647885663748';
   const emailHref = 'mailto:bcgmoc@gmail.com';
-  const instagramHref = 'https://www.instagram.com/m737iq';
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -144,7 +143,7 @@ export const SupportContactPage: React.FC<SupportContactPageProps> = ({
           </div>
 
           <h1 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
-            {language === 'ar' ? 'نحن هنا لمساعدتكم والتنسيق معكم' : 'Get in Touch with M737IQ Support'}
+            {language === 'ar' ? 'نحن هنا لمساعدتكم والتنسيق معكم' : 'Direct Support & Clinical Coordination'}
           </h1>
 
           <p className="mt-3 text-xs sm:text-base text-slate-600 leading-relaxed text-balance">
@@ -154,8 +153,8 @@ export const SupportContactPage: React.FC<SupportContactPageProps> = ({
           </p>
         </div>
 
-        {/* 4 Verified Direct Channels Strip */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* 3 Verified Direct Channels Strip */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* WhatsApp Channel */}
           <a
             href={whatsappHref}
@@ -181,35 +180,6 @@ export const SupportContactPage: React.FC<SupportContactPageProps> = ({
             </div>
             <div className="pt-4 mt-4 border-t border-emerald-200/60 flex items-center justify-between text-xs font-bold text-emerald-700">
               <span>{language === 'ar' ? 'فتح المحادثة الآن' : 'Start WhatsApp Chat'}</span>
-              <ArrowUpRight size={16} />
-            </div>
-          </a>
-
-          {/* Instagram Channel */}
-          <a
-            href={instagramHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-6 rounded-3xl bg-pink-50/70 hover:bg-pink-100/70 border border-pink-200 transition-all flex flex-col justify-between group shadow-xs"
-          >
-            <div>
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 text-white flex items-center justify-center mb-4 shadow-sm group-hover:scale-105 transition-transform">
-                <Instagram size={24} />
-              </div>
-              <span className="text-xs font-bold text-pink-800 uppercase tracking-wide block">
-                {t.contact.instagramTitle}
-              </span>
-              <div className="text-lg font-mono font-black text-slate-900 mt-1">
-                @m737iq
-              </div>
-              <p className="text-xs text-pink-900 mt-2 leading-relaxed">
-                {language === 'ar'
-                  ? 'متابعة مستجدات المنصة، التحديثات الطبية، والتواصل المباشر مع فريق الإدارة.'
-                  : 'Follow clinical updates, verified medical posts, and platform announcements.'}
-              </p>
-            </div>
-            <div className="pt-4 mt-4 border-t border-pink-200/60 flex items-center justify-between text-xs font-bold text-pink-700">
-              <span>{t.contact.instagramAction}</span>
               <ArrowUpRight size={16} />
             </div>
           </a>
@@ -277,7 +247,7 @@ export const SupportContactPage: React.FC<SupportContactPageProps> = ({
               <p className="text-xs text-slate-500 mt-1">
                 {language === 'ar'
                   ? 'املأ النموذج التالي وسيصل طلبك فوراً إلى مكتب الاستجابة والتنسيق.'
-                  : 'Complete this form to dispatch your message to the M737IQ coordination team.'}
+                  : 'Complete this form to dispatch your message to the clinical coordination team.'}
               </p>
             </div>
 
@@ -291,7 +261,7 @@ export const SupportContactPage: React.FC<SupportContactPageProps> = ({
                 </h4>
                 <p className="text-xs text-emerald-800 max-w-md mx-auto leading-relaxed">
                   {language === 'ar'
-                    ? 'شكراً لتواصلك مع M737IQ. سيقوم فريق المتابعة بالتواصل معك خلال ساعات العمل عبر الهاتف أو البريد الإلكتروني.'
+                    ? 'شكراً لتواصلك معنا. سيقوم فريق المتابعة بالتواصل معك خلال ساعات العمل عبر الهاتف أو البريد الإلكتروني.'
                     : 'Thank you for reaching out. A coordinator will follow up via your provided contact details.'}
                 </p>
                 <button
@@ -458,8 +428,8 @@ export const SupportContactPage: React.FC<SupportContactPageProps> = ({
               </div>
               <p className="text-xs text-red-800 leading-relaxed">
                 {language === 'ar'
-                  ? 'منصة M737IQ مخصصة للرعاية المنتظمة وتنسيق المواعيد والأدوية. في حال وجود حالة طوارئ حرجة فورية، يرجى الاتصال بالإسعاف الفوري العراقي على الرقم (122) أو التوجه لأقرب طوارئ مستشفى حكومي.'
-                  : 'M737IQ is designed for scheduled care and clinical coordination. For life-threatening emergencies, please dial Iraqi Emergency Dispatch at 122 or proceed to the nearest emergency room immediately.'}
+                  ? 'هذه المنظومة مخصصة للرعاية المنتظمة وتنسيق المواعيد والخدمات الطبية. في حال وجود حالة طوارئ حرجة فورية، يرجى الاتصال بالإسعاف الفوري العراقي على الرقم (122) أو التوجه لأقرب طوارئ مستشفى حكومي.'
+                  : 'This platform is designed for scheduled care and clinical coordination. For life-threatening emergencies, please dial Iraqi Emergency Dispatch at 122 or proceed to the nearest emergency room immediately.'}
               </p>
             </div>
           </div>

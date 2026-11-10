@@ -61,19 +61,19 @@ export const AboutSection: React.FC = () => {
                 </div>
 
                 <span className="text-xs font-bold text-emerald-300 uppercase tracking-widest block mb-2">
-                  {language === 'ar' ? 'تواصلك مع الطبيب أسهل' : 'Connecting with your doctor is easier'}
+                  {language === 'ar' ? 'الرعاية الطبية المتكاملة' : 'Integrated Medical Care'}
                 </span>
 
                 <h3 className="text-xl sm:text-2xl font-bold mb-4 leading-snug">
                   {language === 'ar'
-                    ? 'رؤية منصة صحتك للرعاية المتكاملة'
-                    : 'The Sehatok Vision for Integrated Healthcare'}
+                    ? 'رؤية المنظومة الموحدة للرعاية المتكاملة'
+                    : 'Vision for Integrated Healthcare'}
                 </h3>
 
                 <p className="text-xs sm:text-sm text-slate-200 leading-relaxed mb-6">
                   {language === 'ar'
-                    ? 'صممت منصة صحتك لتكون الجسر الرقمي الآمن والموثوق بين المريض والطبيب والصيدلية والمختبر ومركز الأشعة، حيث تلتقي سهولة الاستخدام مع أعلى معايير أمن وسرية البيانات الطبية.'
-                    : 'Sehatok Platform was designed to serve as the secure, trusted digital bridge connecting patients, doctors, pharmacies, labs, and imaging centers — where seamless accessibility meets clinical security.'}
+                    ? 'صممت المنظومة لتكون الجسر الرقمي الآمن والموثوق بين المريض والطبيب والصيدلية والمختبر ومركز الأشعة، حيث تلتقي سهولة الاستخدام مع أعلى معايير أمن وسرية البيانات الطبية.'
+                    : 'The platform was designed to serve as the secure, trusted digital bridge connecting patients, doctors, pharmacies, labs, and imaging centers — where seamless accessibility meets clinical security.'}
                 </p>
 
                 <div className="pt-6 border-t border-white/15 space-y-3">

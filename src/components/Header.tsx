@@ -270,7 +270,7 @@ export const Header: React.FC<HeaderProps> = ({
                     ? 'bg-[#003366] text-white border-[#003366] shadow-xs'
                     : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200'
                 }`}
-                title={language === 'ar' ? 'تثبيت تطبيق M737IQ على الأندرويد والآيفون' : 'Install M737IQ on Android & iPhone'}
+                title={language === 'ar' ? 'تثبيت التطبيق على الأندرويد والآيفون' : 'Install App on Android & iPhone'}
               >
                 <Smartphone size={14} className={activeSection === 'install' ? 'text-emerald-300' : 'text-emerald-600'} />
                 <span>{language === 'ar' ? 'تثبيت التطبيق' : 'Install App'}</span>

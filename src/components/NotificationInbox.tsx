@@ -444,8 +444,8 @@ export const NotificationInbox: React.FC<NotificationInboxProps> = ({
         </h3>
         <p className="text-sm text-slate-600 mb-6 leading-relaxed max-w-md mx-auto">
           {language === 'ar'
-            ? 'سجل الإشعارات خاص ومشفر لكل مستخدم معتمد في منصة M737IQ. يرجى تسجيل الدخول لعرض إشعارات المواعيد، الوصفات، ونتائج الفحوصات الخاصة بك.'
-            : 'Notification records are securely tied to your authenticated M737IQ account. Please sign in to view your appointments, prescriptions, and lab reports.'}
+            ? 'سجل الإشعارات خاص ومشفر لكل مستخدم معتمد في المنظومة الطبية. يرجى تسجيل الدخول لعرض إشعارات المواعيد، الوصفات، ونتائج الفحوصات الخاصة بك.'
+            : 'Notification records are securely tied to your authenticated account. Please sign in to view your appointments, prescriptions, and lab reports.'}
         </p>
         <button
           onClick={() => signInWithGoogle()}
@@ -819,8 +819,8 @@ export const NotificationInbox: React.FC<NotificationInboxProps> = ({
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           <span>
             {language === 'ar'
-              ? 'متصل بقاعدة بيانات M737IQ وخدمة Web Push الحية'
-              : 'Connected to live M737IQ Firestore & Web Push Engine'}
+              ? 'متصل بقاعدة البيانات السحابية وخدمة الإشعارات الحية'
+              : 'Connected to live cloud database & Web Push engine'}
           </span>
         </div>
 

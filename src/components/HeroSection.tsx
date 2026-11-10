@@ -19,20 +19,10 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
       id="home"
       className="relative pt-24 pb-16 md:pt-32 md:pb-24 overflow-hidden min-h-[85vh] flex items-center justify-center bg-slate-900"
     >
-      {/* Background Layer: High-resolution visual + rich gradient scrim */}
-      <div className="absolute inset-0 z-0">
-        <img
-          src="/assets/aistudio/file_0000000028548210b7a1ceb04b95422a_ba7a6257.png"
-          alt="منصة صحتك — تواصلك مع الطبيب أسهل"
-          className="w-full h-full object-cover object-center opacity-65 scale-100 transition-transform duration-1000"
-          referrerPolicy="no-referrer"
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = '/assets/images/m737_vip_hero_banner.png';
-          }}
-        />
-        {/* Soft daylight atmospheric scrims to preserve 4.5:1 text contrast */}
+      {/* Background Layer: Clean neutral medical gradient */}
+      <div className="absolute inset-0 z-0 bg-gradient-to-br from-[#00172e] via-[#003366] to-[#0a192f]">
+        {/* Soft atmospheric scrims to preserve 4.5:1 text contrast */}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/60 to-slate-900/30" />
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/80 via-transparent to-slate-950/70" />
       </div>
 
       {/* Decorative Glow Elements */}

@@ -262,65 +262,16 @@ export const HomePageView: React.FC<HomePageViewProps> = ({
 
   return (
     <div className="space-y-6 pb-12">
-      {/* 1. HERO BANNER: Iraqi National & Aviation VIP Medical Banner (M737IQ — منصة M737IQ الطبية) */}
-      <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-slate-700/60 bg-[#001738] group">
-        {/* Responsive Banner Artwork Frame */}
-        <div className="relative w-full aspect-[16/11] sm:aspect-[16/9] lg:aspect-[21/9] min-h-[280px] sm:min-h-[380px] lg:min-h-[460px] overflow-hidden flex items-end">
-          <img
-            src="/assets/aistudio/file_0000000028548210b7a1ceb04b95422a_ba7a6257.png"
-            alt="M737IQ — منصة M737IQ الطبية"
-            className="absolute inset-0 w-full h-full object-cover object-center transform transition-transform duration-700 group-hover:scale-[1.01]"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = '/assets/images/m737_vip_hero_banner.png';
-            }}
-          />
-
-          {/* Top VIP Title Badge displaying exact platform name */}
-          <div className="absolute top-3 sm:top-5 start-3 sm:start-5 z-20 flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-slate-950/80 backdrop-blur-md border border-amber-400/40 text-white shadow-xl">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-            <h1 className="text-xs sm:text-sm md:text-base font-extrabold tracking-wide flex items-center gap-2">
-              <span className="text-amber-300 font-black">M737IQ</span>
-              <span className="text-white/60">—</span>
-              <span className="text-white">منصة M737IQ الطبية</span>
-            </h1>
-          </div>
-
-          {/* Bottom Floating Action Bar for Buttons (احجز عيادتك & تواصل معنا) */}
-          <div className="relative z-20 w-full p-3 sm:p-4 m-2.5 sm:m-4 rounded-2xl bg-slate-950/80 backdrop-blur-md border border-white/15 shadow-2xl flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-white">
-              <span className="text-xs sm:text-sm font-bold text-amber-300">
-                {language === 'ar' ? 'صحتك .. أولويتنا' : 'Your Health .. Our Priority'}
-              </span>
-              <span className="text-white/40 hidden sm:inline">•</span>
-              <span className="text-xs sm:text-sm text-slate-200 hidden sm:inline font-medium">
-                {language === 'ar' ? 'معاً .. نبني عراقاً أكثر صحة' : 'Together .. Building a Healthier Iraq'}
-              </span>
-            </div>
-
-            {/* Action Buttons: احجز عيادتك & تواصل معنا */}
-            <div className="flex items-center gap-2.5 ms-auto">
-              {/* Primary Button: احجز عيادتك */}
-              <button
-                onClick={() => onSelectPortal('patient')}
-                className="px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-sky-600 to-[#002b5c] hover:from-sky-500 hover:to-[#001f42] text-white font-bold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer group/btn"
-              >
-                <Calendar size={16} className="text-sky-300 group-hover/btn:scale-110 transition-transform" />
-                <span>{language === 'ar' ? 'احجز عيادتك' : 'Book Your Clinic'}</span>
-              </button>
-
-              {/* WhatsApp Button: تواصل معنا */}
-              <a
-                href="https://wa.me/9647885663748"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer group/btn"
-              >
-                <MessageCircle size={16} className="text-white fill-white/20 group-hover/btn:scale-110 transition-transform" />
-                <span>{language === 'ar' ? 'تواصل معنا' : 'Contact Us'}</span>
-              </a>
-            </div>
-          </div>
-        </div>
+      {/* 1. CLEAN PORTALS HEADER (No hero banner, no promotional images or old brands) */}
+      <div className="pt-2 pb-1">
+        <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          {language === 'ar' ? 'البوابات الطبية المستقلة' : 'Medical Portals'}
+        </h2>
+        <p className="text-xs sm:text-sm text-slate-500 mt-1">
+          {language === 'ar' 
+            ? 'اختر البوابة المطلوبة للوصول إلى بيئة العمل والخدمات المخصصة'
+            : 'Select a portal to access your dedicated workspace and services'}
+        </p>
       </div>
 
       {/* 2. THE 8 COLORFUL PORTAL CARDS GRID */}
@@ -556,52 +507,39 @@ export const HomePageView: React.FC<HomePageViewProps> = ({
           </div>
         </div>
 
-        {/* Panel 3 (Right in RTL): صحتك .. أولويتنا */}
-        <div className="relative rounded-3xl overflow-hidden shadow-sm border border-slate-200/90 min-h-[300px] flex flex-col justify-between text-white p-6 bg-slate-950">
-          {/* Background night tower image */}
-          <img
-            src="/assets/images/baghdad_night_tower_1792964555970.jpg"
-            alt="Baghdad Night Skyline & Tower"
-            className="absolute inset-0 w-full h-full object-cover object-center opacity-40 scale-105"
-            onError={(e) => {
-              (e.target as HTMLImageElement).style.display = 'none';
-            }}
-          />
-
-          {/* Rich navy gradient */}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#001738] via-[#001d4a]/85 to-transparent pointer-events-none" />
-
+        {/* Panel 3: System Overview (Clean, unbranded, no promotional background image) */}
+        <div className="rounded-3xl shadow-sm border border-slate-200/90 min-h-[300px] flex flex-col justify-between text-slate-800 p-6 bg-white">
           {/* Top text */}
-          <div className="relative z-10 text-center pt-2">
-            <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-              {language === 'ar' ? 'صحتك .. أولويتنا' : 'Your Health .. Our Priority'}
+          <div className="text-center pt-2">
+            <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+              {language === 'ar' ? 'منظومة الرعاية الصحية الموحدة' : 'Unified Healthcare Ecosystem'}
             </h3>
-            <p className="text-xs sm:text-sm text-sky-200 font-medium mt-1">
+            <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
               {language === 'ar'
-                ? 'مع M737IQ .. كل خدماتك الصحية في مكان واحد'
-                : 'With M737IQ .. All your health services in one unified space'}
+                ? 'ربط مباشر ومتكامل بين المراكز الطبية والعيادات والمراجعين'
+                : 'Direct interoperability across clinics, diagnostics, and patients'}
             </p>
           </div>
 
           {/* 3 Value Pillars at bottom */}
-          <div className="relative z-10 grid grid-cols-3 gap-2 pt-6">
-            <div className="p-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 text-center flex flex-col items-center justify-center">
-              <Share2 size={18} className="text-sky-300 mb-1.5" />
-              <span className="text-[10px] sm:text-[11px] font-bold text-white leading-tight">
+          <div className="grid grid-cols-3 gap-2 pt-6">
+            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 text-center flex flex-col items-center justify-center">
+              <Share2 size={18} className="text-sky-600 mb-1.5" />
+              <span className="text-[10px] sm:text-[11px] font-bold text-slate-700 leading-tight">
                 {language === 'ar' ? 'ربط متكامل بين جميع الأبواب' : 'Unified Ecosystem'}
               </span>
             </div>
 
-            <div className="p-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 text-center flex flex-col items-center justify-center">
-              <Zap size={18} className="text-amber-300 mb-1.5" />
-              <span className="text-[10px] sm:text-[11px] font-bold text-white leading-tight">
+            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 text-center flex flex-col items-center justify-center">
+              <Zap size={18} className="text-amber-600 mb-1.5" />
+              <span className="text-[10px] sm:text-[11px] font-bold text-slate-700 leading-tight">
                 {language === 'ar' ? 'خدمات سريعة وسهلة' : 'Instant & Frictionless'}
               </span>
             </div>
 
-            <div className="p-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 text-center flex flex-col items-center justify-center">
-              <ShieldCheck size={18} className="text-emerald-300 mb-1.5" />
-              <span className="text-[10px] sm:text-[11px] font-bold text-white leading-tight">
+            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 text-center flex flex-col items-center justify-center">
+              <ShieldCheck size={18} className="text-emerald-600 mb-1.5" />
+              <span className="text-[10px] sm:text-[11px] font-bold text-slate-700 leading-tight">
                 {language === 'ar' ? 'أمان عالي لبياناتك' : 'Top Security'}
               </span>
             </div>

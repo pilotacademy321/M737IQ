@@ -211,7 +211,7 @@ export const OnboardingModal: React.FC = () => {
         <div className="text-center pb-5 border-b border-slate-100">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-semibold mb-3 border border-emerald-200">
             <ShieldCheck size={14} className="text-emerald-600" />
-            <span>{language === 'ar' ? 'منصة صحتك — تواصلك مع الطبيب أسهل' : 'Sehatok Platform — Connecting with your doctor is easier'}</span>
+            <span>{language === 'ar' ? 'المنظومة الطبية الموحدة — بوابات الرعاية الصحية' : 'Unified Healthcare Platform — Medical Gateways'}</span>
           </div>
 
           <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
@@ -462,8 +462,8 @@ export const OnboardingModal: React.FC = () => {
                 </p>
                 <p className="mt-0.5 text-amber-800">
                   {language === 'ar'
-                    ? 'منصة صحتك وسيلة تقنية لتنظيم التواصل والمواعيد ولا تعد بديلاً عن التدخل الطبي الطارئ أو الفحص السريري المباشر. تخضع بنود هذا العقد للمراجعة القانونية المستمرة ولا تشكل إعفاءً تلقائياً من أي مسؤولية قانونية نظامية مقررة بحكم القانون.'
-                    : 'Sehatok Platform is a digital communication and appointment facilitation tool, NOT a substitute for urgent clinical in-person examination or emergency intervention. Acceptance does not constitute an automatic statutory liability waiver under applicable laws.'}
+                    ? 'هذه المنظومة وسيلة تقنية لتنظيم التواصل والمواعيد ولا تعد بديلاً عن التدخل الطبي الطارئ أو الفحص السريري المباشر. تخضع بنود هذا العقد للمراجعة القانونية المستمرة ولا تشكل إعفاءً تلقائياً من أي مسؤولية قانونية نظامية مقررة بحكم القانون.'
+                    : 'The platform is a digital communication and appointment facilitation tool, NOT a substitute for urgent clinical in-person examination or emergency intervention. Acceptance does not constitute an automatic statutory liability waiver under applicable laws.'}
                 </p>
               </div>
             </div>
@@ -507,11 +507,11 @@ export const OnboardingModal: React.FC = () => {
                 <span className="leading-snug">
                   {language === 'ar' ? (
                     <>
-                      أوافق صراحة وبشكل كامل على <strong className="text-slate-900">شروط الاستخدام وسياسة الخصوصية وحماية البيانات</strong> الخاصة بـ "منصة صحتك".
+                      أوافق صراحة وبشكل كامل على <strong className="text-slate-900">شروط الاستخدام وسياسة الخصوصية وحماية البيانات</strong> الخاصة بالمنظومة الطبية.
                     </>
                   ) : (
                     <>
-                      I explicitly agree to the <strong className="text-slate-900">Terms of Service and Privacy Policy</strong> of Sehatok Platform.
+                      I explicitly agree to the <strong className="text-slate-900">Terms of Service and Privacy Policy</strong> of the Healthcare Platform.
                     </>
                   )}
                 </span>

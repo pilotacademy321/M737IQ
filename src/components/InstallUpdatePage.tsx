@@ -143,8 +143,8 @@ export const InstallUpdatePage: React.FC<InstallUpdatePageProps> = ({
         setCheckingUpdate(false);
         setUpdateStatus({
           type: 'latest',
-          messageAr: 'أنت تعمل حالياً بأحدث إصدار رسمي معتمد لمنصة M737IQ (الإصدار 1.0.1).',
-          messageEn: 'You are running the latest official verified version of M737IQ (v1.0.1).',
+          messageAr: 'أنت تعمل حالياً بأحدث إصدار رسمي معتمد للمنظومة (الإصدار 1.0.1).',
+          messageEn: 'You are running the latest official verified version of the platform (v1.0.1).',
         });
       }, 700);
     } catch (err) {
@@ -176,8 +176,8 @@ export const InstallUpdatePage: React.FC<InstallUpdatePageProps> = ({
   // WhatsApp share link
   const shareText = encodeURIComponent(
     language === 'ar'
-      ? `رابط التثبيت والتحديث الرسمي لتطبيق منصة صحتك (أندرويد وآيفون):\n${installUrl}`
-      : `Official installation and update link for Sehatok Platform (Android & iPhone):\n${installUrl}`
+      ? `رابط التثبيت والتحديث الرسمي لتطبيق المنظومة الطبية (أندرويد وآيفون):\n${installUrl}`
+      : `Official installation and update link for the Medical Platform (Android & iPhone):\n${installUrl}`
   );
   const whatsappUrl = `https://wa.me/?text=${shareText}`;
 
@@ -205,19 +205,19 @@ export const InstallUpdatePage: React.FC<InstallUpdatePageProps> = ({
 
           <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-sky-400/15 border border-sky-300/30 text-sky-200 text-xs font-black mb-3">
             <Sparkles size={13} className="text-amber-300" />
-            <span>{language === 'ar' ? 'منصة صحتك — الرابط الدائم الموحد لنظامي أندرويد وآيفون' : 'Sehatok Platform — Permanent Unified Link for Android & iPhone'}</span>
+            <span>{language === 'ar' ? 'الرابط الدائم الموحد لنظامي أندرويد وآيفون' : 'Permanent Unified Link for Android & iPhone'}</span>
           </div>
 
           <h1 className="text-2xl sm:text-4xl font-black tracking-tight leading-tight mb-3">
             {language === 'ar'
-              ? 'تثبيت وتحديث تطبيق منصة صحتك'
-              : 'Install & Update Sehatok Medical Platform'}
+              ? 'تثبيت وتحديث تطبيق المنظومة الطبية'
+              : 'Install & Update Medical Platform App'}
           </h1>
 
           <p className="text-sm sm:text-base text-slate-200 leading-relaxed max-w-2xl">
             {language === 'ar'
-              ? 'صفحة رسمية موحدة ودائمة تتيح لجميع المرضى، الأطباء، والمراكز الطبية تثبيت تطبيق منصة صحتك وتحديثه على أجهزة Android و iPhone والكمبيوتر بخطوات موثوقة ومباشرة.'
-              : 'One permanent official page for patients, doctors, and medical providers to install and update Sehatok Platform across Android, iPhone, and Desktop.'}
+              ? 'صفحة رسمية موحدة ودائمة تتيح لجميع المرضى، الأطباء، والمراكز الطبية تثبيت تطبيق المنظومة وتحديثه على أجهزة Android و iPhone والكمبيوتر بخطوات موثوقة ومباشرة.'
+              : 'One permanent official page for patients, doctors, and medical providers to install and update the platform across Android, iPhone, and Desktop.'}
           </p>
 
           {/* Device Detection Chip */}
@@ -328,7 +328,7 @@ export const InstallUpdatePage: React.FC<InstallUpdatePageProps> = ({
                 <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-xl">
                   {language === 'ar'
                     ? 'يتيح لك تثبيت المنصة كتطبيق كامل على هاتفك الأندرويد دون الحاجة لتنزيل ملفات خارجية. يظهر كأيقونة مستقلة على شاشتك الرئيسية ويدعم الإشعارات الفورية الكاملة.'
-                    : 'Installs M737IQ directly to your Android home screen with push notifications and full standalone experience.'}
+                    : 'Installs the platform directly to your Android home screen with push notifications and full standalone experience.'}
                 </p>
               </div>
 
@@ -380,7 +380,7 @@ export const InstallUpdatePage: React.FC<InstallUpdatePageProps> = ({
                   <span className="w-6 h-6 rounded-full bg-[#003366] text-white flex items-center justify-center font-bold shrink-0">3</span>
                   <div>
                     <span className="font-bold text-slate-900 block mb-0.5">{language === 'ar' ? 'تأكيد التثبيت' : 'Confirm Install'}</span>
-                    <span className="text-slate-600">{language === 'ar' ? 'اضغط "تثبيت" وسيظهر التطبيق بأيقونته الرسمية على شاشة هاتفك.' : 'Confirm and M737IQ icon will appear on your app drawer.'}</span>
+                    <span className="text-slate-600">{language === 'ar' ? 'اضغط "تثبيت" وسيظهر التطبيق بأيقونته الرسمية على شاشة هاتفك.' : 'Confirm and the app icon will appear on your phone.'}</span>
                   </div>
                 </div>
               </div>
@@ -401,7 +401,7 @@ export const InstallUpdatePage: React.FC<InstallUpdatePageProps> = ({
                 <p className="text-xs sm:text-sm text-slate-600">
                   {language === 'ar'
                     ? 'مشروع الأندرويد الأصلي المبني بتقنية Trusted Web Activity (TWA) بحزمة رسمية موثقة.'
-                    : 'The native Android wrapper built with Trusted Web Activity targeting package app.m737iq.com.'}
+                    : 'The native Android wrapper built with Trusted Web Activity.'}
                 </p>
               </div>
 
@@ -409,7 +409,7 @@ export const InstallUpdatePage: React.FC<InstallUpdatePageProps> = ({
               <div className="bg-slate-50 rounded-2xl p-3 border border-slate-200 text-xs space-y-1 font-mono shrink-0">
                 <div className="flex items-center justify-between gap-4">
                   <span className="text-slate-400">Package ID:</span>
-                  <span className="font-bold text-slate-900">app.m737iq.com</span>
+                  <span className="font-bold text-slate-900">app.medplatform.com</span>
                 </div>
                 <div className="flex items-center justify-between gap-4">
                   <span className="text-slate-400">Version:</span>
@@ -466,7 +466,7 @@ export const InstallUpdatePage: React.FC<InstallUpdatePageProps> = ({
                 <span>{language === 'ar' ? 'تطبيق آبل الرسمي • Apple PWA Standard' : 'Official Apple PWA Standard'}</span>
               </div>
               <h3 className="text-xl sm:text-2xl font-black text-slate-900">
-                {language === 'ar' ? 'تثبيت منصة M737IQ على أجهزة iPhone و iPad' : 'Install M737IQ on iPhone & iPad'}
+                {language === 'ar' ? 'تثبيت المنظومة الطبية على أجهزة iPhone و iPad' : 'Install Platform on iPhone & iPad'}
               </h3>
               <p className="text-xs sm:text-sm text-slate-600 mt-1 max-w-xl">
                 {language === 'ar'
@@ -558,8 +558,8 @@ export const InstallUpdatePage: React.FC<InstallUpdatePageProps> = ({
                   <h5 className="font-black text-slate-900 text-sm mb-1">{language === 'ar' ? 'تأكيد الإضافة' : 'Confirm & Launch'}</h5>
                   <p className="text-slate-600 leading-relaxed text-xs">
                     {language === 'ar'
-                      ? 'اضغط على "إضافة" (Add) في الزاوية العلوية، وسيظهر تطبيق M737IQ بين تطبيقات هاتفك.'
-                      : 'Tap "Add" top right. M737IQ app icon will appear with your iOS apps.'}
+                      ? 'اضغط على "إضافة" (Add) في الزاوية العلوية، وسيظهر تطبيق المنظومة بين تطبيقات هاتفك.'
+                      : 'Tap "Add" top right. The app icon will appear with your iOS apps.'}
                   </p>
                 </div>
                 <div className="pt-2 border-t border-slate-100 text-[10px] font-bold text-emerald-700">
@@ -591,12 +591,12 @@ export const InstallUpdatePage: React.FC<InstallUpdatePageProps> = ({
                 <span>{language === 'ar' ? 'أنظمة Windows & macOS & Linux' : 'Windows, macOS & Linux'}</span>
               </div>
               <h3 className="text-xl sm:text-2xl font-black text-slate-900">
-                {language === 'ar' ? 'تثبيت M737IQ على الكمبيوتر المكتبي واللابتوب' : 'Install M737IQ on Desktop PC / Mac'}
+                {language === 'ar' ? 'تثبيت التطبيق على الكمبيوتر المكتبي واللابتوب' : 'Install App on Desktop PC / Mac'}
               </h3>
               <p className="text-xs sm:text-sm text-slate-600 mt-1 max-w-xl">
                 {language === 'ar'
                   ? 'يمكن للأطباء وموظفي الاستقبال والصيادلة تثبيت المنصة كتطبيق مكتبي منفصل على حواسيبهم لسرعة الوصول والشاشة الكاملة.'
-                  : 'Clinicians, receptionists, and pharmacists can install M737IQ as a standalone desktop app for seamless clinic operation.'}
+                  : 'Clinicians, receptionists, and pharmacists can install the platform as a standalone desktop app for seamless clinic operation.'}
               </p>
             </div>
 

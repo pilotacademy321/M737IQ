@@ -161,12 +161,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <h2 className="text-base sm:text-lg font-bold tracking-tight">
                 {mode === 'reset' 
                   ? (language === 'ar' ? 'استعادة كلمة المرور' : 'Reset Password')
-                  : (language === 'ar' ? 'تسجيل الدخول إلى منصة صحتك' : 'Sign in to Sehatok')}
+                  : (language === 'ar' ? 'تسجيل الدخول إلى المنظومة الطبية' : 'Sign in to Healthcare Platform')}
               </h2>
               <p className="text-xs text-slate-300">
                 {mode === 'reset'
                   ? (language === 'ar' ? 'إرسال رابط إعادة التعيين الرسمي' : 'Official Firebase password reset')
-                  : (language === 'ar' ? 'تواصلك مع الطبيب أسهل' : 'Connecting with your doctor is easier')}
+                  : (language === 'ar' ? 'بوابات الرعاية الصحية الموحدة' : 'Unified Medical Gateway')}
               </p>
             </div>
           </div>

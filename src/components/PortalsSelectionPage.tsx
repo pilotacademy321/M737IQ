@@ -90,7 +90,7 @@ export const PortalsSelectionPage: React.FC<PortalsSelectionPageProps> = ({
           </button>
           <span>{isRTL ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}</span>
           <span className="text-[#003366] font-bold">
-            {language === 'ar' ? 'بوابات المنظومة الطبية المعتمدة' : 'M737IQ Medical Portals'}
+            {language === 'ar' ? 'بوابات المنظومة الطبية المعتمدة' : 'Operational Medical Portals'}
           </span>
         </div>
       </div>

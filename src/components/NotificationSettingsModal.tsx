@@ -87,7 +87,7 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
       setPreferences(prev => ({ ...prev, enabled: true }));
       setFeedback(
         language === 'ar'
-          ? 'تم تفعيل الإشعارات الفورية وربط جهازك بنجاح بنظام M737IQ!'
+          ? 'تم تفعيل الإشعارات الفورية وربط جهازك بنجاح بالمنظومة الطبية!'
           : 'Push notifications enabled and device registered successfully!'
       );
     } else {
@@ -121,10 +121,10 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
   const handleSendTestPush = async () => {
     setTestStatus('sending');
     const ok = await sendLocalTestNotification({
-      title: language === 'ar' ? 'M737IQ — إشعار تجريبي مباشر' : 'M737IQ — Live Push Test',
+      title: language === 'ar' ? 'إشعار تجريبي مباشر' : 'Live Push Test',
       body: language === 'ar'
         ? 'تم استلام الإشعار بنجاح! جهازك متصل الآن بمنظومة الرعاية الصحية الفورية.'
-        : 'Notification received! Your device is synchronized with M737IQ cloud.',
+        : 'Notification received! Your device is synchronized with the platform.',
       url: userProfile ? `/${userProfile.role}` : '/patient',
     });
 
@@ -208,7 +208,7 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
             <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-900 leading-relaxed">
               {language === 'ar'
                 ? 'ملاحظة لأجهزة iPhone / iPad: يلزم إضافة المنصة للشاشة الرئيسية (Add to Home Screen) من قائمة مشاركة Safari لتفعيل الإشعارات الفورية في نظام iOS 16.4+.'
-                : 'For iOS devices: Push notifications require adding M737IQ to your Home Screen from the Safari share menu.'}
+                : 'For iOS devices: Push notifications require adding the platform to your Home Screen from the Safari share menu.'}
             </div>
           )}
 
@@ -279,7 +279,7 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
           </div>
           <p className="text-[11px] text-amber-800 leading-relaxed">
             {language === 'ar'
-              ? 'إخفاء أسماء الأدوية والفحوصات في شاشة القفل، وإظهار نص عام: "لديك تحديث جديد في منصة M737IQ" لحماية سرية بياناتك الطبية أمام الآخرين.'
+              ? 'إخفاء أسماء الأدوية والفحوصات في شاشة القفل، وإظهار نص عام: "لديك تحديث طبي جديد" لحماية سرية بياناتك الطبية أمام الآخرين.'
               : 'Show generic text on lockscreen to hide medical details until you unlock and open the app.'}
           </p>
         </div>

@@ -95,25 +95,7 @@ export const Logo: React.FC<LogoProps> = ({
         <circle cx="54" cy="28" r="3.5" fill={pulseRed} />
       </svg>
 
-      {/* Typography: "منصة صحتك" + Marketing Slogan: "تواصلك مع الطبيب أسهل" */}
-      <div className="flex flex-col leading-tight text-start">
-        <div className={`font-black tracking-tight flex items-center gap-1.5 ${dimensions.textClass}`}>
-          <span className={primaryTextColor}>
-            {language === 'ar' ? 'منصة صحتك' : 'منصة صحتك'}
-          </span>
-          <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-        </div>
-
-        {showTagline && (
-          <span
-            className={`font-bold transition-colors ${
-              light ? 'text-teal-200' : 'text-teal-700'
-            } ${dimensions.subClass} mt-0.5`}
-          >
-            {language === 'ar' ? 'تواصلك مع الطبيب أسهل' : 'Connecting with your doctor is easier'}
-          </span>
-        )}
-      </div>
+      {/* Clean neutral medical symbol only - no old brand names or promotional slogans */}
     </div>
   );
 };

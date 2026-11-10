@@ -2136,8 +2136,8 @@ export const SuperAdminPortalWorkspace: React.FC<SuperAdminPortalWorkspaceProps>
                 </h2>
                 <p className="text-xs sm:text-sm text-sky-100/90 leading-relaxed">
                   {language === 'ar'
-                    ? 'نظام التدقيق الشامل لمعرّفات M737IQ الدائمة لكافة الحسابات (المرضى، الأطباء، الصيدليات، المختبرات، مراكز الأشعة، السكرتارية، المذاخر). يضمن النظام عدم تكرار المعرّفات، واستكمال أي معرّف مفقود بصورة آمنة ودائمة دون التأثير على البيانات الحالية.'
-                    : 'Unified M737 permanent account identity audit across all 7 platform portals. Guarantees concurrency safety, zero duplicate IDs, and idempotent backfilling preserving all production records.'}
+                    ? 'نظام التدقيق الشامل لمعرّفات الحسابات الدائمة لكافة البوابات (المرضى، الأطباء، الصيدليات، المختبرات، مراكز الأشعة، السكرتارية، المذاخر). يضمن النظام عدم تكرار المعرّفات، واستكمال أي معرّف مفقود بصورة آمنة ودائمة دون التأثير على البيانات الحالية.'
+                    : 'Unified permanent account identity audit across all platform portals. Guarantees concurrency safety, zero duplicate IDs, and idempotent backfilling preserving all production records.'}
                 </p>
               </div>
 
@@ -2440,8 +2440,8 @@ export const SuperAdminPortalWorkspace: React.FC<SuperAdminPortalWorkspaceProps>
                         const updated = await updateContractTemplateByAdmin({
                           adminUid: user?.uid || 'super-admin-uid',
                           adminEmail: user?.email || 'bcgmoc@gmail.com',
-                          newTitleAr: contractTemplateData?.titleAr || 'عقد الاتفاق والشروط القانونية والطبية المعتمدة — منصة صحتك',
-                          newTitleEn: contractTemplateData?.titleEn || 'Official Medical Terms & User Agreement — Sehatok Platform',
+                          newTitleAr: contractTemplateData?.titleAr || 'عقد الاتفاق والشروط القانونية والطبية المعتمدة — المنظومة الطبية الموحدة',
+                          newTitleEn: contractTemplateData?.titleEn || 'Official Medical Terms & User Agreement — Healthcare Platform',
                           newContentAr: templateFormContentAr.trim(),
                           newContentEn: templateFormContentEn.trim(),
                           newVersion: templateVersionInput.trim(),
@@ -2586,7 +2586,7 @@ export const SuperAdminPortalWorkspace: React.FC<SuperAdminPortalWorkspaceProps>
                     {language === 'ar' ? 'نص العقد الموقّع وقت الإقرار:' : 'Contract Snapshot at Signing:'}
                   </label>
                   <div className="p-3.5 rounded-xl bg-slate-100 border border-slate-200 max-h-56 overflow-y-auto whitespace-pre-line font-sans text-xs text-slate-800 leading-relaxed">
-                    {selectedAuditContract.contractTextSnapshot || 'نص العقد الافتراضي لمنصة صحتك.'}
+                    {selectedAuditContract.contractTextSnapshot || 'نص العقد الافتراضي للمنظومة الطبية.'}
                   </div>
                 </div>
 

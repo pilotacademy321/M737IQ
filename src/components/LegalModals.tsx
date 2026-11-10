@@ -72,8 +72,8 @@ export const LegalModal: React.FC<LegalModalProps> = ({
               </h3>
               <span className="text-xs text-slate-500">
                 {language === 'ar' 
-                  ? 'منصة صحتك — معتمد وفق القوانين والأنظمة الصحية العراقية' 
-                  : 'Sehatok Platform — Under Applicable Iraqi Healthcare Laws'}
+                  ? 'المنظومة الطبية — معتمد وفق القوانين والأنظمة الصحية العراقية' 
+                  : 'Healthcare Platform — Under Applicable Iraqi Healthcare Laws'}
               </span>
             </div>
           </div>
@@ -90,8 +90,8 @@ export const LegalModal: React.FC<LegalModalProps> = ({
         <div className="mt-4 p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs leading-relaxed">
           <strong>{language === 'ar' ? 'إقرار طبي وقانوني:' : 'Medical & Legal Disclaimer:'}</strong>{' '}
           {language === 'ar'
-            ? 'منصة صحتك وسيلة رقمية لتنظيم التواصل والمواعيد الطبية وليست بديلاً عن حالات الطوارئ أو الفحص السريري المباشر. تخضع شروط الاستخدام للمراجعة القانونية المستمرة ولا تشكل إعفاءً تلقائياً من أي مسؤولية قانونية نظامية مقررة بحكم القانون العراقي النافذ.'
-            : 'Sehatok Platform is a communication and appointment coordination tool, not an emergency facility or a substitute for urgent in-person physical clinical examination. Terms do not constitute an automatic statutory waiver under mandatory Iraqi laws.'}
+            ? 'هذه المنظومة وسيلة رقمية لتنظيم التواصل والمواعيد الطبية وليست بديلاً عن حالات الطوارئ أو الفحص السريري المباشر. تخضع شروط الاستخدام للمراجعة القانونية المستمرة ولا تشكل إعفاءً تلقائياً من أي مسؤولية قانونية نظامية مقررة بحكم القانون العراقي النافذ.'
+            : 'This platform is a communication and appointment coordination tool, not an emergency facility or a substitute for urgent in-person physical clinical examination. Terms do not constitute an automatic statutory waiver under mandatory Iraqi laws.'}
         </div>
 
         {/* If viewing a signed contract copy */}
@@ -117,8 +117,8 @@ export const LegalModal: React.FC<LegalModalProps> = ({
             <>
               <p>
                 {language === 'ar'
-                  ? 'تلتزم منصة صحتك بحماية خصوصية المرضى والكوادر الطبية والمراكز الصحية في العراق وفق أرقى المعايير التقنية والأخلاقية.'
-                  : 'Sehatok Platform is committed to safeguarding patient, clinician, and medical facility confidentiality in accordance with strict ethical and technological benchmarks.'}
+                  ? 'تلتزم المنظومة بحماية خصوصية المرضى والكوادر الطبية والمراكز الصحية في العراق وفق أرقى المعايير التقنية والأخلاقية.'
+                  : 'The platform is committed to safeguarding patient, clinician, and medical facility confidentiality in accordance with strict ethical and technological benchmarks.'}
               </p>
               <h4 className="font-bold text-slate-800 text-sm mt-3">
                 {language === 'ar' ? '١. جمع البيانات وتشفيرها' : '1. Data Collection & Encryption'}
@@ -145,8 +145,8 @@ export const LegalModal: React.FC<LegalModalProps> = ({
             <>
               <p>
                 {language === 'ar'
-                  ? 'تحكم هذه الشروط استخدام منصة صحتك وبواباتها المستقلة المخصصة للرعاية الصحية في العراق.'
-                  : 'These terms govern the access and authorized utilization of Sehatok Platform and its clinical gateways.'}
+                  ? 'تحكم هذه الشروط استخدام المنظومة الطبية وبواباتها المستقلة المخصصة للرعاية الصحية في العراق.'
+                  : 'These terms govern the access and authorized utilization of the platform and its clinical gateways.'}
               </p>
               <h4 className="font-bold text-slate-800 text-sm mt-3">
                 {language === 'ar' ? '١. الاعتماد والترخيص المهني وفق القانون العراقي' : '1. Medical Licensing & Accreditation'}

@@ -17,7 +17,6 @@ export const ContactSection: React.FC = () => {
 
   const whatsappHref = 'https://wa.me/9647885663748';
   const emailHref = 'mailto:bcgmoc@gmail.com';
-  const instagramHref = 'https://www.instagram.com/m737iq';
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,8 +86,8 @@ export const ContactSection: React.FC = () => {
               </div>
               <p className="mt-3 text-xs text-emerald-900 leading-relaxed">
                 {language === 'ar'
-                  ? 'تواصل مباشر وسريع مع فريق الدعم الفني لـ M737 عبر تطبيق واتساب.'
-                  : 'Fast direct chat with the M737 technical coordination desk via WhatsApp.'}
+                  ? 'تواصل مباشر وسريع مع فريق الدعم الفني عبر تطبيق واتساب.'
+                  : 'Fast direct chat with the technical coordination desk via WhatsApp.'}
               </p>
               <div className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700">
                 <span>{t.contact.whatsappAction}</span>
@@ -125,41 +124,6 @@ export const ContactSection: React.FC = () => {
               </p>
               <div className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-[#003366]">
                 <span>{t.contact.emailAction}</span>
-              </div>
-            </a>
-
-            {/* Instagram Card */}
-            <a
-              href={instagramHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block bg-gradient-to-r from-pink-500/10 via-purple-500/10 to-amber-500/10 hover:from-pink-500/20 hover:via-purple-500/20 hover:to-amber-500/20 border border-pink-200/90 rounded-2xl p-6 transition-all duration-200 shadow-sm hover:shadow-md group"
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 text-white flex items-center justify-center shadow-md shrink-0">
-                    <Instagram size={24} />
-                  </div>
-                  <div>
-                    <span className="text-xs font-bold text-pink-900 uppercase tracking-wide block">
-                      {t.contact.instagramTitle}
-                    </span>
-                    <span className="text-lg sm:text-xl font-black text-slate-900 font-mono tracking-wider mt-0.5 block">
-                      @m737iq
-                    </span>
-                  </div>
-                </div>
-                <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-pink-700 shadow-xs group-hover:scale-110 transition-transform">
-                  <ArrowUpRight size={18} />
-                </div>
-              </div>
-              <p className="mt-3 text-xs text-slate-700 leading-relaxed">
-                {language === 'ar'
-                  ? 'متابعة مستجدات المنصة الطبية والروابط المعتمدة والإعلانات الرسمية عبر إنستغرام.'
-                  : 'Follow the latest platform releases, certified clinical announcements, and stories on Instagram.'}
-              </p>
-              <div className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-pink-700">
-                <span>{t.contact.instagramAction}</span>
               </div>
             </a>
 

@@ -1,7 +1,7 @@
 export const translations = {
   ar: {
-    brandName: 'منصة صحتك',
-    brandTagline: 'تواصلك مع الطبيب أسهل',
+    brandName: '',
+    brandTagline: '',
     nav: {
       home: 'الرئيسية',
       about: 'من نحن',
@@ -14,12 +14,12 @@ export const translations = {
     },
     hero: {
       badge: 'المنظومة الصحية الرقمية المتكاملة في العراق',
-      headline: 'منصة صحتك الطبية المتكاملة',
+      headline: 'منظومة الرعاية والخدمات الطبية الموحدة',
       subtitle: 'تجمع بين الأطباء والمختبرات والأشعة والصيدليات والمرضى في مكان واحد لخدمة صحية أفضل.',
-      secondarySubtitle: 'تواصلك مع الطبيب أسهل — Bringing doctors, clinics, laboratories, radiology, pharmacies, and patients together.',
+      secondarySubtitle: 'Bringing doctors, clinics, laboratories, radiology, pharmacies, and patients together.',
       getStartedBtn: 'ابدأ الآن',
       learnMoreBtn: 'استكشف البوابات',
-      slogan: 'تواصلك مع الطبيب أسهل',
+      slogan: '',
       stats: {
         portalsCount: '٨ بوابات مستقلة',
         portalsDesc: 'تغطي كافة الاحتياجات الصحية',
@@ -53,10 +53,10 @@ export const translations = {
     },
     about: {
       kicker: 'رؤيتنا الوطنية',
-      title: 'من نحن - قصة منصة صحتك',
-      lead: 'منصة طبية عراقية رائدة تجمع بين شرف المهنة الطبية والتكنولوجيا السحابية المتقدمة لخدمة كل مريض وكادر صحي.',
-      p1: 'انطلقت فكرة منصة صحتك من حاجة ماسة لإنهاء الانعزال بين مفاصل القطاع الصحي في العراق. فعلى مدار سنوات، ظل المريض يتنقل بين عيادة الطبيب ومختبر التحاليل ومركز السونار والأشعة والصيدلية، حاملاً أوراقه يدوياً مع ما يرافق ذلك من تأخير وتشتت للبيانات.',
-      p2: 'نهدف في منصة صحتك إلى ترسيخ التواصل الطبي السلس والفوري، وتوفير تجربة صحية كريمة ومنضبطة تربط المراكز التخصصية في بغداد والبصرة والموصل وأربيل والنجف وكافة أرجاء الوطن في فضاء رقمي متماسك تحت شعار: تواصلك مع الطبيب أسهل.',
+      title: 'من نحن - منظومة الرعاية الطبية الموحدة',
+      lead: 'منصة طبية عراقية تجمع بين شرف المهنة الطبية والتكنولوجيا السحابية المتقدمة لخدمة كل مريض وكادر صحي.',
+      p1: 'انطلقت المنظومة من حاجة ماسة لإنهاء الانعزال بين مفاصل القطاع الصحي في العراق، وتيسير الربط بين عيادات الأطباء، ومختبرات التحاليل، ومراكز الأشعة والسونار، والصيدليات ومذاخر الأدوية.',
+      p2: 'نهدف إلى ترسيخ التواصل الطبي السلس والفوري، وتوفير بيئة رقمية متكاملة تربط المراكز التخصصية في بغداد والبصرة والموصل وأربيل والنجف وكافة أرجاء الوطن في فضاء رقمي موحد وآمن.',
       values: [
         {
           title: 'الربط المباشر',
@@ -134,15 +134,15 @@ export const translations = {
       whatsappTitle: 'تواصل معنا عبر واتساب',
       whatsappNumber: '07885663748',
       whatsappAction: 'مراسلة عبر واتساب الآن',
-      instagramTitle: 'حساب إنستغرام الرسمي',
-      instagramHandle: '@sehatok.iq',
-      instagramAction: 'متابعة عبر إنستغرام',
+      instagramTitle: '',
+      instagramHandle: '',
+      instagramAction: '',
       emailTitle: 'البريد الإلكتروني للدعم',
       emailAddress: 'bcgmoc@gmail.com',
       emailAction: 'إرسال بريد إلكتروني',
       supportBadge: 'الدعم الفني: نحن هنا لمساعدتك دائماً',
       formTitle: 'طلب استفسار أو انضمام مركز صحي',
-      formDesc: 'املأ النموذج وسيقوم فريق الدعم الفني لمنصة صحتك بالتواصل معك مباشرة عبر الهاتف أو البريد.',
+      formDesc: 'املأ النموذج وسيقوم فريق الدعم الفني بمتابعة استفسارك والتواصل معك مباشرة عبر الهاتف أو البريد.',
       namePlaceholder: 'الاسم الكامل أو اسم العيادة/المركز',
       emailPlaceholder: 'البريد الإلكتروني للمتابعة',
       phonePlaceholder: 'رقم الهاتف (واتساب)',
@@ -151,13 +151,13 @@ export const translations = {
       submitBtn: 'إرسال الاستفسار',
       submittingBtn: 'جاري الإرسال...',
       successTitle: 'تم استلام رسالتك بنجاح',
-      successMessage: 'شكراً لتواصلك مع منصة صحتك. سيقوم فريق الدعم الفني بمتابعة استفسارك عبر الواتساب أو البريد الإلكتروني خلال وقت وجيز.'
+      successMessage: 'شكراً لتواصلك. سيقوم فريق الدعم الفني بمتابعة استفسارك عبر الواتساب أو البريد الإلكتروني خلال وقت وجيز.'
     },
     footer: {
-      brandDesc: 'منصة صحتك - منظومة طبية عراقية رقمية متكاملة لربط الأطباء والمختبرات ومراكز الأشعة والصيدليات والمراجعين في بيئة آمنة وفعالة.',
-      slogan: 'تواصلك مع الطبيب أسهل',
-      subSlogan: 'صحة أفضل ... لمستقبل أكثر إشراقاً',
-      copyright: 'جميع الحقوق محفوظة. © 2026 منصة صحتك - Sehatok Platform.',
+      brandDesc: 'منظومة طبية رقمية متكاملة لربط الأطباء والمختبرات ومراكز الأشعة والصيدليات والمراجعين في بيئة آمنة وفعالة.',
+      slogan: '',
+      subSlogan: '',
+      copyright: 'جميع الحقوق محفوظة. © 2026 المنظومة الطبية الموحدة.',
       links: {
         about: 'من نحن',
         terms: 'شروط الاستخدام',
@@ -167,14 +167,14 @@ export const translations = {
     },
     legal: {
       privacyTitle: 'سياسة الخصوصية وحماية البيانات الطبية',
-      termsTitle: 'شروط استخدام منصة صحتك الطبية',
-      placeholderDisclaimer: 'إشعار توضيحي: يخضع استخدام منصة صحتك للشروط والأحكام والقوانين المنظمة للرعاية الصحية في جمهورية العراق، ولا تعد المنصة بديلاً عن التدخل الطبي الطارئ أو الفحص المباشر.',
+      termsTitle: 'شروط استخدام المنظومة الطبية الموحدة',
+      placeholderDisclaimer: 'إشعار توضيحي: يخضع استخدام المنظومة للشروط والأحكام والقوانين المنظمة للرعاية الصحية في جمهورية العراق، ولا تعد المنصة بديلاً عن التدخل الطبي الطارئ أو الفحص المباشر.',
       close: 'إغلاق النافذة'
     }
   },
   en: {
-    brandName: 'Sehatok Platform',
-    brandTagline: 'Connecting with your doctor is easier',
+    brandName: '',
+    brandTagline: '',
     nav: {
       home: 'Home',
       about: 'About Us',
@@ -187,12 +187,12 @@ export const translations = {
     },
     hero: {
       badge: 'Integrated Digital Health Platform in Iraq',
-      headline: 'Sehatok Medical Platform',
+      headline: 'Unified Medical Care & Diagnostic Gateway',
       subtitle: 'Bringing together doctors, laboratories, radiology, pharmacies, and patients in one place for better healthcare.',
-      secondarySubtitle: 'Connecting with your doctor is easier — Unified digital healthcare ecosystem across Iraq.',
+      secondarySubtitle: 'Unified digital healthcare ecosystem across Iraq.',
       getStartedBtn: 'Get Started',
       learnMoreBtn: 'Explore Portals',
-      slogan: 'Connecting with your doctor is easier',
+      slogan: '',
       stats: {
         portalsCount: '8 Dedicated Portals',
         portalsDesc: 'Covering every clinical necessity',
@@ -226,10 +226,10 @@ export const translations = {
     },
     about: {
       kicker: 'Our National Vision',
-      title: 'About Us — The Sehatok Story',
+      title: 'About Us — Unified Medical Platform',
       lead: 'A pioneering Iraqi digital healthcare platform bridging doctors, clinics, diagnostics, pharmacies, and patients with dignity and reliability.',
-      p1: 'Sehatok Platform was born out of an urgent need to bridge the fragmentation across Iraq’s healthcare ecosystem. For years, patients traveled with paper records between clinics, pathology labs, imaging centers, and pharmacies, causing delays and lost information.',
-      p2: 'At Sehatok Platform, our goal is to streamline medical communication and eliminate friction under our guiding mission: Connecting with your doctor is easier. We link specialized centers across Baghdad, Basra, Mosul, Erbil, Najaf, and all provinces into a cohesive digital continuum.',
+      p1: 'The platform was born out of an urgent need to bridge the fragmentation across Iraq’s healthcare ecosystem, connecting clinics, pathology labs, imaging centers, and pharmacies into a synchronized continuum.',
+      p2: 'Our goal is to streamline medical communication and eliminate friction, linking specialized centers across Baghdad, Basra, Mosul, Erbil, Najaf, and all provinces into a cohesive digital network.',
       values: [
         {
           title: 'Direct Connectivity',
@@ -241,7 +241,7 @@ export const translations = {
         },
         {
           title: 'Human Dignity',
-          desc: 'Saving Iraqi patients time, stress, and resources by making top-tier care accessible with respect.'
+          desc: 'Saving patients time, stress, and resources by making top-tier care accessible with respect.'
         }
       ]
     },
@@ -307,15 +307,15 @@ export const translations = {
       whatsappTitle: 'Contact Us via WhatsApp',
       whatsappNumber: '07885663748',
       whatsappAction: 'Open WhatsApp Chat',
-      instagramTitle: 'Official Instagram',
-      instagramHandle: '@sehatok.iq',
-      instagramAction: 'Follow on Instagram',
+      instagramTitle: '',
+      instagramHandle: '',
+      instagramAction: '',
       emailTitle: 'Support Email',
       emailAddress: 'bcgmoc@gmail.com',
       emailAction: 'Send Email Message',
       supportBadge: 'Technical Support: We are always here to help',
       formTitle: 'Direct Inquiry or Facility Onboarding',
-      formDesc: 'Submit your query and our Sehatok support team will follow up directly via WhatsApp or email.',
+      formDesc: 'Submit your query and our support team will follow up directly via WhatsApp or email.',
       namePlaceholder: 'Full Name or Clinic/Center Name',
       emailPlaceholder: 'Email Address for Correspondence',
       phonePlaceholder: 'Phone Number (WhatsApp)',
@@ -324,13 +324,13 @@ export const translations = {
       submitBtn: 'Send Inquiry',
       submittingBtn: 'Sending...',
       successTitle: 'Inquiry Successfully Received',
-      successMessage: 'Thank you for reaching out to Sehatok Platform. Our support team will review your message and reply via WhatsApp or email shortly.'
+      successMessage: 'Thank you for reaching out. Our support team will review your message and reply via WhatsApp or email shortly.'
     },
     footer: {
-      brandDesc: 'Sehatok Platform — An integrated Iraqi digital healthcare platform connecting clinicians, laboratories, radiology centers, pharmacies, and patients into a unified ecosystem.',
-      slogan: 'Connecting with your doctor is easier',
-      subSlogan: 'Better health ... for a brighter tomorrow',
-      copyright: 'All rights reserved. © 2026 Sehatok Platform - منصة صحتك.',
+      brandDesc: 'An integrated digital healthcare platform connecting clinicians, laboratories, radiology centers, pharmacies, and patients into a unified ecosystem.',
+      slogan: '',
+      subSlogan: '',
+      copyright: 'All rights reserved. © 2026 Unified Healthcare Platform.',
       links: {
         about: 'About Us',
         terms: 'Terms of Use',
@@ -340,7 +340,7 @@ export const translations = {
     },
     legal: {
       privacyTitle: 'Privacy Policy & Medical Data Protection',
-      termsTitle: 'Terms of Use — Sehatok Platform',
+      termsTitle: 'Terms of Use — Unified Medical Platform',
       placeholderDisclaimer: 'Notice: Platform usage is governed by Terms of Service and applicable Republic of Iraq healthcare laws. The platform is not an emergency response service or replacement for physical examination.',
       close: 'Close Window'
     }

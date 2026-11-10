@@ -13,7 +13,6 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenLegal }) => {
 
   const whatsappHref = 'https://wa.me/9647885663748';
   const emailHref = 'mailto:bcgmoc@gmail.com';
-  const instagramHref = 'https://www.instagram.com/sehatok.iq';
 
   return (
     <footer className="bg-[#00172e] text-slate-300 pt-16 pb-12 border-t border-slate-800">
@@ -29,30 +28,6 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenLegal }) => {
             <p className="text-xs sm:text-sm text-slate-300 max-w-sm leading-relaxed">
               {t.footer.brandDesc}
             </p>
-
-            {/* Slogans */}
-            <div className="pt-2">
-              <div className="text-sm font-bold text-white tracking-wide">
-                "{t.footer.slogan}"
-              </div>
-              <div className="text-xs text-red-400 font-semibold mt-1">
-                {t.footer.subSlogan}
-              </div>
-            </div>
-
-            {/* Social Channels */}
-            <div className="pt-2 flex items-center gap-2">
-              <a
-                href={instagramHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-pink-500/20 via-purple-500/20 to-amber-500/20 hover:from-pink-500/30 hover:via-purple-500/30 hover:to-amber-500/30 border border-pink-500/30 text-white text-xs font-bold transition-all shadow-xs group"
-                title="حساب إنستغرام: @sehatok.iq"
-              >
-                <Instagram size={14} className="text-pink-400 group-hover:scale-110 transition-transform" />
-                <span className="font-mono">@sehatok.iq</span>
-              </a>
-            </div>
           </div>
 
           {/* Quick Links Column */}
@@ -154,21 +129,6 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenLegal }) => {
                   <div className="font-semibold text-white font-mono break-all">{t.contact.emailAddress}</div>
                 </div>
               </a>
-
-              <a
-                href={instagramHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 p-3 rounded-xl bg-slate-900/80 hover:bg-slate-900 border border-slate-800 hover:border-pink-500/40 transition-colors group"
-              >
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-amber-500/20 via-pink-500/20 to-purple-500/20 text-pink-400 flex items-center justify-center shrink-0">
-                  <Instagram size={16} />
-                </div>
-                <div>
-                  <div className="text-[11px] text-slate-400">{t.contact.instagramTitle}</div>
-                  <div className="font-bold text-white font-mono">@sehatok.iq</div>
-                </div>
-              </a>
             </div>
           </div>
         </div>
@@ -176,21 +136,6 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenLegal }) => {
         {/* Bottom Bar: Copyright & Medical Motif */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
           <div>{t.footer.copyright}</div>
-
-          {/* ECG Pulse & Heartbeat Motif Icon */}
-          <div className="flex items-center gap-2 text-slate-400">
-            <span>{t.footer.subSlogan}</span>
-            <svg
-              viewBox="0 0 80 20"
-              className="w-16 h-4 text-red-500 stroke-current fill-none"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M 0 10 L 20 10 L 26 4 L 32 16 L 38 2 L 44 18 L 48 10 L 60 10" />
-            </svg>
-            <Stethoscope size={15} className="text-sky-400" />
-          </div>
         </div>
       </div>
     </footer>

@@ -46,7 +46,7 @@ export const AboutUsPage: React.FC<AboutUsPageProps> = ({
           </button>
           <span>{isRTL ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}</span>
           <span className="text-[#003366] font-bold">
-            {language === 'ar' ? 'من نحن (رؤية ورسالة منصة صحتك)' : 'About Sehatok Platform'}
+            {language === 'ar' ? 'من نحن (رؤية ورسالة المنظومة)' : 'About the Healthcare Platform'}
           </span>
         </div>
       </div>
@@ -60,17 +60,17 @@ export const AboutUsPage: React.FC<AboutUsPageProps> = ({
           <div className="relative z-10 max-w-3xl space-y-4">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-emerald-300 text-xs font-bold border border-white/20">
               <Stethoscope size={14} />
-              <span>{language === 'ar' ? 'تواصلك مع الطبيب أسهل' : 'Connecting with your doctor is easier'}</span>
+              <span>{language === 'ar' ? 'الرعاية الطبية المتكاملة' : 'Integrated Healthcare'}</span>
             </div>
 
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
-              {language === 'ar' ? 'منصة صحتك — المنظومة الصحية الرقمية المتكاملة في العراق' : 'Sehatok Platform — Integrated Digital Healthcare Ecosystem in Iraq'}
+              {language === 'ar' ? 'المنظومة الصحية الرقمية الموحدة في العراق' : 'Integrated Digital Healthcare Ecosystem in Iraq'}
             </h1>
 
             <p className="text-sm sm:text-base text-slate-200 leading-relaxed pt-2">
               {language === 'ar'
-                ? 'مشروع وطني رائد يهدف إلى تسهيل التواصل السريري واللوجستي بين المرضى، والأطباء، والمختبرات المرضية، ومراكز الأشعة، والصيدليات، ومذاخر الأدوية لخدمة كل مراجع وكادر صحي بأعلى درجات الدقة والسرعة.'
-                : 'A nationwide Iraqi initiative uniting patients, doctors, diagnostic laboratories, radiology centers, retail pharmacies, and wholesale warehouses to deliver streamlined, synchronized care.'}
+                ? 'مشروع رائد يهدف إلى تسهيل التواصل السريري واللوجستي بين المرضى، والأطباء، والمختبرات المرضية، ومراكز الأشعة، والصيدليات، ومذاخر الأدوية لخدمة كل مراجع وكادر صحي بأعلى درجات الدقة والسرعة.'
+                : 'A nationwide initiative uniting patients, doctors, diagnostic laboratories, radiology centers, retail pharmacies, and wholesale warehouses to deliver streamlined, synchronized care.'}
             </p>
 
             <div className="pt-4 flex flex-wrap items-center gap-3">
@@ -97,20 +97,20 @@ export const AboutUsPage: React.FC<AboutUsPageProps> = ({
         <div className="bg-white rounded-3xl p-8 sm:p-10 border border-slate-200 shadow-sm grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           <div className="lg:col-span-8 space-y-4">
             <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider block">
-              {language === 'ar' ? 'رسالة وهوية المنصة' : 'Identity & Mission'}
+              {language === 'ar' ? 'رسالة وهوية المنظومة' : 'Mission & Architecture'}
             </span>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-              {language === 'ar' ? 'منصة صحتك: تواصلك مع الطبيب أسهل' : 'Sehatok: Connecting with your doctor is easier'}
+              {language === 'ar' ? 'منظومة الرعاية الصحية الرقمية الموحدة' : 'Unified Healthcare Digital Ecosystem'}
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
               {language === 'ar'
-                ? 'انطلقت منصة صحتك لإنهاء معاناة المريض العراقي مع الملفات الورقية المشتتة والانتظار العشوائي في العيادات والمراكز الصحية. نعمل على توفير منظومة سحابية متقدمة وآمنة ترتكز على إتاحة المعلومة الطبية الموثوقة لحظياً بين جميع مفاصل الرعاية.'
-                : 'Sehatok Platform was born to resolve patient frustration with fragmented paper files and disorganized clinic queues. We provide a state-of-the-art secure cloud ecosystem delivering reliable clinical data in real-time across all healthcare touchpoints.'}
+                ? 'انطلقت المنظومة لإنهاء تشتت الملفات الورقية وتسهيل الربط المنظم بين العيادات والمراكز الصحية. نعمل على توفير منظومة سحابية متقدمة وآمنة ترتكز على إتاحة المعلومة الطبية الموثوقة لحظياً بين جميع مفاصل الرعاية.'
+                : 'The platform resolves fragmentation across health touchpoints by offering a state-of-the-art secure cloud ecosystem delivering reliable clinical data in real-time.'}
             </p>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
               {language === 'ar'
-                ? 'شعارنا الدائم: "تواصلك مع الطبيب أسهل"، مستندين إلى كوادرنا الطبية الوطنية وكفاءاتنا العلمية المنتشرة في بغداد وكافة المحافظات.'
-                : 'Our motto: "Connecting with your doctor is easier", grounded in certified Iraqi doctors, pharmacists, pathologists, and radiologists nationwide.'}
+                ? 'نعمل على مدار الساعة لخدمة الكوادر الطبية والمراجعين في بغداد وكافة المحافظات.'
+                : 'Dedicated to serving healthcare practitioners and citizens in Baghdad and across all governorates.'}
             </p>
           </div>
 
@@ -164,7 +164,7 @@ export const AboutUsPage: React.FC<AboutUsPageProps> = ({
             </h3>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
               {language === 'ar'
-                ? 'أن تكون M737IQ البنية التحتية الرقمية الرائدة في العراق، محققة التكامل التام بين القطاعين العام والخاص، وواضعة معياراً عربياً وإقليمياً في أمان البيانات الصحية وانضباط سلاسل التوريد الدوائية.'
+                ? 'أن تكون المنظومة البنية التحتية الرقمية الرائدة في العراق، محققة التكامل التام بين القطاعين العام والخاص، وواضعة معياراً متقدماً في أمان البيانات الصحية وانضباط سلاسل التوريد الدوائية.'
                 : 'To become the benchmark digital healthcare infrastructure in Iraq, fostering seamless collaboration between healthcare providers and setting the standard for clinical data security.'}
             </p>
           </div>
@@ -221,7 +221,7 @@ export const AboutUsPage: React.FC<AboutUsPageProps> = ({
           <div className="text-xs text-slate-600">
             {language === 'ar'
               ? 'جاهز للاستفادة من خدمات المنصة؟ توجه إلى بوابات الأطباء والصيدليات والمختبرات.'
-              : 'Ready to experience M737IQ? Access your dedicated provider or patient portal.'}
+              : 'Ready to access the platform? Access your dedicated provider or patient portal.'}
           </div>
 
           <div className="flex items-center gap-3 shrink-0">

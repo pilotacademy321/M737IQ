@@ -27,12 +27,12 @@ messaging.onBackgroundMessage((payload) => {
   // Generic lockscreen privacy enforcement where requested
   const isGeneric = data.useGenericLockscreen === 'true';
   const defaultTitle = isGeneric
-    ? 'منصة M737IQ الطبية'
-    : (notification.title || data.title || 'M737IQ — إشعار طبي جديد');
+    ? 'المنظومة الطبية'
+    : (notification.title || data.title || 'إشعار طبي جديد');
 
   const defaultBody = isGeneric
     ? 'لديك تحديث طبي جديد في حسابك المعتمد'
-    : (notification.body || data.body || 'لديك إشعار جديد في منصة M737IQ الطبية');
+    : (notification.body || data.body || 'لديك إشعار جديد في المنظومة الطبية');
 
   const targetUrl = data.url || data.link || '/';
   const portal = data.portal || 'home';
@@ -43,7 +43,7 @@ messaging.onBackgroundMessage((payload) => {
     icon: notification.icon || '/icons/icon-192.png',
     badge: '/icons/icon-192.png',
     vibrate: [200, 100, 200, 100, 300],
-    tag: data.tag || `m737-${portal}-${eventId}`,
+    tag: data.tag || `med-${portal}-${eventId}`,
     renotify: true,
     requireInteraction: data.priority === 'urgent',
     data: {
@@ -63,7 +63,7 @@ messaging.onBackgroundMessage((payload) => {
 
 // 4. Handle Standard Web Push Event (fallback for raw WebPush payloads)
 self.addEventListener('push', (event) => {
-  console.log('[M737IQ SW] Raw push event received');
+  console.log('[Push SW] Raw push event received');
   if (!event.data) return;
 
   try {
@@ -73,12 +73,12 @@ self.addEventListener('push', (event) => {
 
     const isGeneric = data.useGenericLockscreen === 'true';
     const title = isGeneric
-      ? 'منصة M737IQ الطبية'
-      : (notification.title || data.title || 'M737IQ — إشعار طبي');
+      ? 'المنظومة الطبية'
+      : (notification.title || data.title || 'إشعار طبي');
 
     const body = isGeneric
       ? 'لديك تحديث طبي جديد في حسابك المعتمد'
-      : (notification.body || data.body || 'لديك إشعار جديد في منصة M737IQ');
+      : (notification.body || data.body || 'لديك إشعار جديد في المنظومة الطبية');
 
     const targetUrl = data.url || data.link || '/';
 
@@ -87,7 +87,7 @@ self.addEventListener('push', (event) => {
       icon: notification.icon || '/icons/icon-192.png',
       badge: '/icons/icon-192.png',
       vibrate: [200, 100, 200],
-      tag: data.tag || `m737-push-${Date.now()}`,
+      tag: data.tag || `med-push-${Date.now()}`,
       renotify: true,
       data: {
         url: targetUrl,
@@ -100,9 +100,9 @@ self.addEventListener('push', (event) => {
 
     event.waitUntil(self.registration.showNotification(title, options));
   } catch (err) {
-    const plainText = event.data.text() || 'لديك إشعار طبي جديد في منصة M737IQ';
+    const plainText = event.data.text() || 'لديك إشعار طبي جديد في المنظومة الطبية';
     event.waitUntil(
-      self.registration.showNotification('M737IQ — تحديث طبي', {
+      self.registration.showNotification('تحديث طبي جديد', {
         body: plainText,
         icon: '/icons/icon-192.png',
         badge: '/icons/icon-192.png',
