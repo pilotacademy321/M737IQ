@@ -176,8 +176,8 @@ export const InstallUpdatePage: React.FC<InstallUpdatePageProps> = ({
   // WhatsApp share link
   const shareText = encodeURIComponent(
     language === 'ar'
-      ? `رابط التثبيت والتحديث الرسمي لتطبيق المنظومة الطبية (أندرويد وآيفون):\n${installUrl}`
-      : `Official installation and update link for the Medical Platform (Android & iPhone):\n${installUrl}`
+      ? `رابط التثبيت والتحديث الرسمي لتطبيق منصة MEDORA | ميدورا العراق (أندرويد وآيفون):\n${installUrl}`
+      : `Official installation and update link for MEDORA | Iraqi Healthcare Platform (Android & iPhone):\n${installUrl}`
   );
   const whatsappUrl = `https://wa.me/?text=${shareText}`;
 
@@ -210,14 +210,14 @@ export const InstallUpdatePage: React.FC<InstallUpdatePageProps> = ({
 
           <h1 className="text-2xl sm:text-4xl font-black tracking-tight leading-tight mb-3">
             {language === 'ar'
-              ? 'تثبيت وتحديث تطبيق المنظومة الطبية'
-              : 'Install & Update Medical Platform App'}
+              ? 'تثبيت وتحديث تطبيق منصة MEDORA | ميدورا العراق'
+              : 'Install & Update MEDORA Platform App'}
           </h1>
 
           <p className="text-sm sm:text-base text-slate-200 leading-relaxed max-w-2xl">
             {language === 'ar'
-              ? 'صفحة رسمية موحدة ودائمة تتيح لجميع المرضى، الأطباء، والمراكز الطبية تثبيت تطبيق المنظومة وتحديثه على أجهزة Android و iPhone والكمبيوتر بخطوات موثوقة ومباشرة.'
-              : 'One permanent official page for patients, doctors, and medical providers to install and update the platform across Android, iPhone, and Desktop.'}
+              ? 'صفحة رسمية موحدة ودائمة تتيح لجميع المرضى، الأطباء، والمراكز الطبية تثبيت تطبيق منصة MEDORA وتحديثه على أجهزة Android و iPhone والكمبيوتر بخطوات موثوقة ومباشرة.'
+              : 'One permanent official page for patients, doctors, and medical providers to install and update the MEDORA platform across Android, iPhone, and Desktop.'}
           </p>
 
           {/* Device Detection Chip */}

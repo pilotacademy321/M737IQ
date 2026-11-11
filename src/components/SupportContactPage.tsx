@@ -153,8 +153,37 @@ export const SupportContactPage: React.FC<SupportContactPageProps> = ({
           </p>
         </div>
 
-        {/* 3 Verified Direct Channels Strip */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Verified Direct Channels Strip */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Instagram Channel */}
+          <a
+            href="https://www.instagram.com/medoraq/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-6 rounded-3xl bg-gradient-to-br from-pink-50/80 via-purple-50/50 to-amber-50/50 hover:from-pink-100/90 hover:via-purple-100/70 hover:to-amber-100/70 border border-pink-200 transition-all flex flex-col justify-between group shadow-xs"
+          >
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 text-white flex items-center justify-center mb-4 shadow-sm group-hover:scale-105 transition-transform">
+                <Instagram size={24} />
+              </div>
+              <span className="text-xs font-bold text-rose-800 uppercase tracking-wide block">
+                {language === 'ar' ? 'حساب إنستغرام الرسمي' : 'Official Instagram'}
+              </span>
+              <div className="text-lg font-mono font-black text-slate-900 mt-1">
+                @medoraq
+              </div>
+              <p className="text-xs text-rose-950/80 mt-2 leading-relaxed">
+                {language === 'ar'
+                  ? 'متابعة الأخبار والإرشادات والفعاليات الصحية الميدانية لمنصة MEDORA.'
+                  : 'Follow official MEDORA updates, health advisories, and releases.'}
+              </p>
+            </div>
+            <div className="pt-4 mt-4 border-t border-pink-200/60 flex items-center justify-between text-xs font-bold text-rose-700">
+              <span>{language === 'ar' ? 'متابعة @medoraq' : 'Follow @medoraq'}</span>
+              <ArrowUpRight size={16} />
+            </div>
+          </a>
+
           {/* WhatsApp Channel */}
           <a
             href={whatsappHref}

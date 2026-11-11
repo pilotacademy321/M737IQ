@@ -94,6 +94,41 @@ export const ContactSection: React.FC = () => {
               </div>
             </a>
 
+            {/* Official Instagram Card */}
+            <a
+              href="https://www.instagram.com/medoraq/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block bg-gradient-to-br from-pink-50/80 via-purple-50/50 to-amber-50/50 hover:from-pink-100/90 hover:via-purple-100/70 hover:to-amber-100/70 border border-pink-200/90 rounded-2xl p-6 transition-all duration-200 shadow-sm hover:shadow-md group"
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 text-white flex items-center justify-center shadow-md shrink-0">
+                    <Instagram size={24} />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-rose-800 uppercase tracking-wide block">
+                      {t.contact.instagramTitle || (language === 'ar' ? 'حساب إنستغرام الرسمي' : 'Official Instagram')}
+                    </span>
+                    <span className="text-lg sm:text-xl font-black text-slate-900 font-mono tracking-wider mt-0.5 block">
+                      @medoraq
+                    </span>
+                  </div>
+                </div>
+                <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-rose-600 shadow-xs group-hover:scale-110 transition-transform">
+                  <ArrowUpRight size={18} />
+                </div>
+              </div>
+              <p className="mt-3 text-xs text-rose-950/80 leading-relaxed">
+                {language === 'ar'
+                  ? 'متابعة آخر التحديثات والإرشادات الطبية والفعاليات الصحية عبر حساب المنصة المعتمد.'
+                  : 'Follow the latest platform releases, healthcare tips, and clinical updates.'}
+              </p>
+              <div className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-rose-700">
+                <span>{t.contact.instagramAction || (language === 'ar' ? 'متابعة @medoraq على إنستغرام' : 'Follow @medoraq on Instagram')}</span>
+              </div>
+            </a>
+
             {/* Email Card */}
             <a
               href={emailHref}

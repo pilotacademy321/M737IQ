@@ -149,14 +149,18 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
             onClick={handleHomeClick}
             className="flex items-center gap-3 text-start group cursor-pointer focus:outline-hidden"
           >
-            {/* Neutral Medical Icon */}
-            <div className="w-10 h-10 rounded-xl bg-slate-800 text-sky-400 flex items-center justify-center border border-slate-700">
-              <Stethoscope size={22} />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#002244] to-[#0d9488] text-white flex items-center justify-center border border-white/20 shadow-md shrink-0">
+              <Stethoscope size={20} className="text-teal-300" />
             </div>
 
             <div>
-              <div className="font-bold text-sm tracking-tight leading-none text-white">
-                {language === 'ar' ? 'المنظومة الطبية' : 'Healthcare Platform'}
+              <div className="flex items-center gap-1.5 leading-none">
+                <span className="font-black text-base tracking-wider text-white">MEDORA</span>
+                <span className="text-slate-400 text-xs">|</span>
+                <span className="text-xs font-bold text-teal-300">ميدورا العراق</span>
+              </div>
+              <div className="text-[10px] text-slate-300 font-bold mt-1 tracking-wider uppercase">
+                {language === 'ar' ? 'صحتك أولويتنا' : 'YOUR HEALTH • OUR PRIORITY'}
               </div>
             </div>
           </button>

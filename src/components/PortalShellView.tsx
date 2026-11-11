@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { PORTALS_DATA } from '../data/portalsData';
 import { PortalId, UserRole, UserProfile, AccountStatus } from '../types';
-import { isVerifiedSuperAdmin } from '../utils/adminSecurity';
+import { isVerifiedSuperAdmin, canUserAccessPortal } from '../utils/adminSecurity';
 import { 
   ArrowLeft, 
   ArrowRight, 
@@ -143,15 +143,23 @@ export const PortalShellView: React.FC<PortalShellViewProps> = ({
     setTimeout(() => setRefreshing(false), 500);
   };
 
-  // Determine Access State
+  // Determine Access State via strict security isolation
   const isAuthenticated = !!user;
   const isSuperAdminPortal = portal.id === 'super_admin';
-  const isAuthorizedSuperAdmin = isSuperAdminPortal
-    ? Boolean(isAdmin && isVerifiedSuperAdmin(user))
-    : false;
-  const roleMatches = isSuperAdminPortal
-    ? isAuthorizedSuperAdmin
-    : Boolean(userProfile && (userProfile.role === portal.role || (isAdmin && isVerifiedSuperAdmin(user))));
+  const accessCheck = canUserAccessPortal(user, userProfile?.role, portal.id);
+  const roleMatches = accessCheck.allowed;
+  const isSuperAdminIsolated = accessCheck.reason === 'super_admin_isolated';
+
+  // Auto-redirect Super Admin if they try to access operational portals
+  useEffect(() => {
+    if (isSuperAdminIsolated) {
+      const redirectTimer = setTimeout(() => {
+        onSelectPortal('super_admin');
+      }, 2500);
+      return () => clearTimeout(redirectTimer);
+    }
+  }, [isSuperAdminIsolated, onSelectPortal]);
+
   const isApproved = userProfile?.status === 'approved';
   const isPending = userProfile?.status === 'pending';
   const isRejected = userProfile?.status === 'rejected';
@@ -236,7 +244,7 @@ export const PortalShellView: React.FC<PortalShellViewProps> = ({
                     {language === 'ar' ? portal.titleAr : portal.titleEn}
                   </h1>
                   <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700">
-                    M737-{portal.order}
+                    MEDORA-{portal.order}
                   </span>
                 </div>
                 <p className="text-sm sm:text-base font-semibold text-slate-600 mt-1">
@@ -300,8 +308,8 @@ export const PortalShellView: React.FC<PortalShellViewProps> = ({
 
             <p className="mt-2 text-xs sm:text-sm text-slate-600 max-w-lg mx-auto leading-relaxed">
               {language === 'ar'
-                ? 'تعتمد منصة M737 الطبية معايير أمان موحدة. يتم تسجيل الدخول عبر حساب Google المعتمد لربط هويتك الرقمية بالسجل الطبي الموحد.'
-                : 'M737 Medical Platform enforces strict role security. Sign in via your verified Google account to establish your certified identity.'}
+                ? 'تعتمد منصة MEDORA | ميدورا العراق معايير أمان موحدة. يتم تسجيل الدخول عبر حساب Google المعتمد لربط هويتك الرقمية بالسجل الطبي الموحد.'
+                : 'MEDORA enforces strict role security. Sign in via your verified Google account to establish your certified identity.'}
             </p>
 
             {/* Role mapping for quick demo access */}
@@ -393,43 +401,77 @@ export const PortalShellView: React.FC<PortalShellViewProps> = ({
           </div>
         )}
 
-        {/* STATE 2: User IS Authenticated, but has MISMATCHED Role */}
+        {/* STATE 2: User IS Authenticated, but Access is Denied */}
         {isAuthenticated && !roleMatches && (
           <div className="bg-white rounded-3xl p-8 sm:p-10 shadow-sm border border-amber-200 mb-8 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto mb-4">
-              <ShieldAlert size={32} />
-            </div>
+            {isSuperAdminIsolated ? (
+              <>
+                <div className="w-16 h-16 rounded-2xl bg-red-100 text-red-700 flex items-center justify-center mx-auto mb-4 border border-red-200">
+                  <ShieldAlert size={36} />
+                </div>
 
-            <h2 className="text-xl sm:text-2xl font-bold text-slate-900">
-              {language === 'ar' ? 'صلاحيات البوابة غير متطابقة' : 'Role Mismatch — Access Restricted'}
-            </h2>
+                <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-red-50 border border-red-200 text-red-700 text-xs font-bold mb-3">
+                  <Lock size={13} />
+                  <span>{language === 'ar' ? 'إجراء أمني إلزامي: عزل حساب الإدارة العليا' : 'Mandatory Security Gate: Super Admin Isolated'}</span>
+                </div>
 
-            <p className="mt-2 text-xs sm:text-sm text-slate-600 max-w-lg mx-auto leading-relaxed">
-              {isSuperAdminPortal
-                ? (language === 'ar'
-                    ? 'هذه البوابة مخصصة حصراً للمشرف العام المعتمد (bcgmoc@gmail.com). تم حظر وتقييد الوصول لجميع الحسابات الأخرى.'
-                    : 'This portal is restricted exclusively to the verified Super Administrator (bcgmoc@gmail.com). All other accounts are denied access.')
-                : (language === 'ar'
-                    ? `أنت مسجل حالياً بصفتك (${userProfile?.role}). هذه البوابة مخصصة حصراً لـ (${portal.role}). عملاً بمعايير حماية البيانات الطبية، لا يمكن الدخول إلا من خلال الحساب المصرح له.`
-                    : `You are currently authenticated as (${userProfile?.role}). This portal requires (${portal.role}). Medical confidentiality prevents cross-role authorization.`)}
-            </p>
+                <h2 className="text-xl sm:text-2xl font-black text-slate-900">
+                  {language === 'ar' ? 'تم رفض الوصول: حساب المشرف العام معزول تشغيلياً' : 'Access Denied: Super Admin Account Isolated'}
+                </h2>
 
-            {(() => {
-              const portalRoleMap: Record<string, UserRole> = {
-                doctor: 'doctor',
-                radiology: 'radiology_center',
-                laboratory: 'laboratory',
-                pharmacy: 'pharmacy',
-                wholesaler: 'wholesaler',
-                patient: 'patient',
-                super_admin: 'super_admin',
-                secretary: 'secretary',
-              };
-              const targetRole = portalRoleMap[portal.id] || 'patient';
+                <p className="mt-3 text-xs sm:text-sm text-slate-700 max-w-xl mx-auto leading-relaxed">
+                  {language === 'ar'
+                    ? 'حساب المشرف العام (bcgmoc@gmail.com) مخصص حصرياً للرقابة المركزية والتدقيق الأمني وإدارة منصة MEDORA العليا، ولا يملك صلاحية الدخول المباشر إلى بوابات الرعاية والتشغيل السريري واليومي (المرضى، الأطباء، الصيدليات، المختبرات، الأشعة، المذاخر، السكرتارية) صوناً لخصوصية وسرية البيانات الطبية.'
+                    : 'The Super Admin account (bcgmoc@gmail.com) is strictly dedicated to central governance and platform security. To safeguard medical confidentiality, this account is prevented from accessing operational clinical portals.'}
+                </p>
 
-              return (
+                <div className="mt-4 p-3 rounded-2xl bg-slate-50 border border-slate-200 max-w-md mx-auto text-xs text-slate-600 flex items-center justify-center gap-2">
+                  <RefreshCw size={14} className="animate-spin text-[#003366]" />
+                  <span>
+                    {language === 'ar'
+                      ? 'جارٍ إعادة توجيهك تلقائياً إلى بوابة الإدارة العليا خلال ثوانٍ...'
+                      : 'Automatically redirecting you to the Super Admin Portal...'}
+                  </span>
+                </div>
+
+                <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                  <button
+                    onClick={() => onSelectPortal('super_admin')}
+                    className="px-6 py-3 rounded-xl text-xs sm:text-sm font-bold text-white brand-gradient-btn shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center gap-2"
+                  >
+                    <ShieldCheck size={16} />
+                    <span>{language === 'ar' ? 'الانتقال فوراً إلى بوابة الإدارة العليا' : 'Go to Super Admin Portal Now'}</span>
+                  </button>
+
+                  <button
+                    onClick={onBackToHome}
+                    className="px-5 py-3 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
+                  >
+                    {language === 'ar' ? 'الرجوع إلى الرئيسية' : 'Return to Home'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="w-16 h-16 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto mb-4">
+                  <ShieldAlert size={32} />
+                </div>
+
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900">
+                  {language === 'ar' ? 'صلاحيات البوابة غير متطابقة' : 'Role Mismatch — Access Restricted'}
+                </h2>
+
+                <p className="mt-2 text-xs sm:text-sm text-slate-600 max-w-lg mx-auto leading-relaxed">
+                  {isSuperAdminPortal
+                    ? (language === 'ar'
+                        ? 'هذه البوابة مخصصة حصراً للمشرف العام المعتمد (bcgmoc@gmail.com). تم حظر وتقييد الوصول لجميع الحسابات الأخرى.'
+                        : 'This portal is restricted exclusively to the verified Super Administrator (bcgmoc@gmail.com). All other accounts are denied access.')
+                    : (language === 'ar'
+                        ? `أنت مسجل حالياً بصفتك (${userProfile?.role}). هذه البوابة مخصصة حصراً لـ (${portal.role}). عملاً بمعايير حماية البيانات الطبية، لا يمكن الدخول إلا من خلال الحساب المصرح له.`
+                        : `You are currently authenticated as (${userProfile?.role}). This portal requires (${portal.role}). Medical confidentiality prevents cross-role authorization.`)}
+                </p>
+
                 <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-                  {/* Button to navigate to their own role's portal */}
                   <button
                     onClick={() => {
                       const targetPortal = PORTALS_DATA.find((p) => p.role === userProfile?.role);
@@ -449,8 +491,8 @@ export const PortalShellView: React.FC<PortalShellViewProps> = ({
                     {language === 'ar' ? 'تسجيل الخروج والتبديل' : 'Sign Out / Switch Account'}
                   </button>
                 </div>
-              );
-            })()}
+              </>
+            )}
           </div>
         )}
 
@@ -543,8 +585,8 @@ export const PortalShellView: React.FC<PortalShellViewProps> = ({
 
             <p className="mt-2 text-xs sm:text-sm text-slate-600 max-w-lg mx-auto leading-relaxed">
               {language === 'ar'
-                ? 'يرجى مراجعة إدارة منصة M737 الطبية عبر البريد الرسمي أو الواتساب لتعديل بيانات الترخيص أو فك التعليق.'
-                : 'Please contact M737 support via email or WhatsApp to resolve accreditation status.'}
+                ? 'يرجى مراجعة إدارة منصة MEDORA | ميدورا العراق عبر البريد الرسمي أو الواتساب لتعديل بيانات الترخيص أو فك التعليق.'
+                : 'Please contact MEDORA support via email or WhatsApp to resolve accreditation status.'}
             </p>
 
             <div className="mt-6 flex flex-wrap justify-center gap-3">
@@ -620,7 +662,7 @@ export const PortalShellView: React.FC<PortalShellViewProps> = ({
                     {language === 'ar' ? 'جاري تهيئة مساحة العمل الآمنة...' : 'Loading secure workspace...'}
                   </p>
                   <span className="text-xs text-slate-400 mt-1">
-                    {language === 'ar' ? 'M737 Healthcare Cloud' : 'M737 Healthcare Cloud'}
+                    {language === 'ar' ? 'MEDORA Healthcare Cloud' : 'MEDORA Healthcare Cloud'}
                   </span>
                 </div>
               }
@@ -670,7 +712,7 @@ export const PortalShellView: React.FC<PortalShellViewProps> = ({
                     </div>
 
                     <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
-                      <span>M737 Protocol</span>
+                      <span>MEDORA Protocol</span>
                       <span className="text-[#003366] font-semibold">{language === 'ar' ? 'عرض السجلات' : 'View Scope'}</span>
                     </div>
                   </div>
@@ -731,8 +773,8 @@ export const PortalShellView: React.FC<PortalShellViewProps> = ({
             <div className="p-4 rounded-2xl bg-red-50/80 border border-red-200 text-xs text-slate-700 space-y-2">
               <p className="font-semibold text-red-950">
                 {language === 'ar'
-                  ? `هل أنت متأكد تماماً من رغبتك بحذف حسابك (${userProfile?.displayName || user?.email}) نهائياً من منصة M737 الطبية؟`
-                  : `Are you sure you want to permanently delete your account (${userProfile?.displayName || user?.email}) from M737?`}
+                  ? `هل أنت متأكد تماماً من رغبتك بحذف حسابك (${userProfile?.displayName || user?.email}) نهائياً من منصة MEDORA | ميدورا العراق؟`
+                  : `Are you sure you want to permanently delete your account (${userProfile?.displayName || user?.email}) from MEDORA?`}
               </p>
               <p className="text-slate-600 leading-relaxed">
                 {language === 'ar'

@@ -161,7 +161,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <h2 className="text-base sm:text-lg font-bold tracking-tight">
                 {mode === 'reset' 
                   ? (language === 'ar' ? 'استعادة كلمة المرور' : 'Reset Password')
-                  : (language === 'ar' ? 'تسجيل الدخول إلى المنظومة الطبية' : 'Sign in to Healthcare Platform')}
+                  : (language === 'ar' ? 'تسجيل الدخول إلى منصة MEDORA | ميدورا العراق' : 'Sign in to MEDORA Platform')}
               </h2>
               <p className="text-xs text-slate-300">
                 {mode === 'reset'

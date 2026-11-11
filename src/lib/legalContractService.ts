@@ -28,17 +28,17 @@ export const CURRENT_CONTRACT_VERSION = 'v1.0.0-iq-2026';
 export const DEFAULT_CONTRACT_TEMPLATE: LegalContractTemplate = {
   id: 'current_contract',
   version: CURRENT_CONTRACT_VERSION,
-  titleAr: 'عقد الاتفاق والشروط القانونية والطبية المعتمدة — منصة صحتك',
-  titleEn: 'Official Medical Terms & Electronic User Agreement — Sehatok Platform',
-  sloganAr: 'تواصلك مع الطبيب أسهل',
-  sloganEn: 'Connecting with your doctor is easier',
+  titleAr: 'عقد الاتفاق والشروط القانونية والطبية المعتمدة — منصة MEDORA | ميدورا العراق',
+  titleEn: 'Official Medical Terms & Electronic User Agreement — MEDORA Platform',
+  sloganAr: 'صحتك أولويتنا',
+  sloganEn: 'YOUR HEALTH • OUR PRIORITY',
   contentAr: `عقد اتفاق وإقرار استخدام الخدمات الصحية الرقمية
 
 المقدمة والأطراف:
-يُبرم هذا العقد الإلكتروني بين "إدارة منصة صحتك" (الطرف الأول - المزود التقني للخدمة) والمستخدم المسجل أو الكادر الطبي المعتمد (الطرف الثاني - المستخدم أو مقدم الخدمة الصحية). يمثل استخدام المنصة أو تسجيل الحساب موافقة قانونية صريحة وكاملة على البنود والشروط الواردة أدناه وفقاً للقوانين العراقية المعمول بها.
+يُبرم هذا العقد الإلكتروني بين "إدارة منصة MEDORA | ميدورا العراق" (الطرف الأول - المزود التقني للخدمة) والمستخدم المسجل أو الكادر الطبي المعتمد (الطرف الثاني - المستخدم أو مقدم الخدمة الصحية). يمثل استخدام المنصة أو تسجيل الحساب موافقة قانونية صريحة وكاملة على البنود والشروط الواردة أدناه وفقاً للقوانين العراقية المعمول بها.
 
 المادة الأولى — طبيعة الخدمة وحدودها:
-1. "منصة صحتك" هي منصة رقمية وسيطة لتنظيم وتسهيل التواصل وحجز المواعيد وإدارة السجلات والفحوصات الطبية وصرف الوصفات بين المريض ومقدمي الرعاية الصحية المرخصين.
+1. "منصة MEDORA | ميدورا العراق" هي منصة رقمية وسيطة لتنظيم وتسهيل التواصل وحجز المواعيد وإدارة السجلات والفحوصات الطبية وصرف الوصفات بين المريض ومقدمي الرعاية الصحية المرخصين.
 2. المنصة ليست مستشفى أو مركز طوارئ، ولا تقدم خدمات الإسعاف الفوري أو التدخل الجراحي العاجل.
 3. يقر المستخدم إقراراً قاطعاً بأنه في حالات الطوارئ القصوى أو الحوادث الحرجة أو النوبات الحادة، يجب التوجه فوراً وبشكل مباشر إلى أقرب مستشفى أو الاتصال بالإسعاف الفوري، وأن الاستشارات الرقمية لا تحل محل الفحص السريري المباشر.
 
@@ -51,7 +51,7 @@ export const DEFAULT_CONTRACT_TEMPLATE: LegalContractTemplate = {
 2. توضيح صريح: موافقة المستخدم على هذه الشروط لا تعتبر إعفاءً تلقائياً للمنصة أو مديرها من أي مسؤولية قانونية نظامية مقررة بحكم القانون العراقي النافذ، وتبقى هذه الاتفاقية خاضعة لأحكام القانون والمراجعة القضائية المختصة.
 
 المادة الرابعة — الموافقة الصريحة على معالجة البيانات الصحية الحساسة:
-1. يوافق الطرف الثاني صراحةً ومسبقاً على قيام "منصة صحتك" بتخزين ومعالجة وتشفير البيانات الطبية والصحية (بما في ذلك السجل المرضي، نتائج التحاليل، صور الأشعة، الوصفات، والمواعيد).
+1. يوافق الطرف الثاني صراحةً ومسبقاً على قيام "منصة MEDORA | ميدورا العراق" بتخزين ومعالجة وتشفير البيانات الطبية والصحية (بما في ذلك السجل المرضي، نتائج التحاليل، صور الأشعة، الوصفات، والمواعيد).
 2. الغرض الحصري من هذه المعالجة هو تمكين الأطباء المعالجين والمراكز الطبية المصرح لها من تقديم رعاية صحية متسلسلة ودقيقة.
 3. تلتزم المنصة بأعلى معايير التشفير والسرية التامة، وتتعهد بعدم بيع أو مشاركة البيانات الطبية لأي جهات تجارية أو إعلانية.
 
@@ -63,10 +63,10 @@ export const DEFAULT_CONTRACT_TEMPLATE: LegalContractTemplate = {
   contentEn: `Digital Healthcare Services User Agreement & Consent Contract
 
 Preamble & Parties:
-This Electronic Agreement is entered into between "Sehatok Platform Administration" (First Party - Technical Infrastructure Provider) and the Registered User or Accredited Healthcare Professional (Second Party - User or Clinical Provider). Using the platform or registering an account constitutes explicit and binding consent under applicable Iraqi laws.
+This Electronic Agreement is entered into between "MEDORA Platform Administration" (First Party - Technical Infrastructure Provider) and the Registered User or Accredited Healthcare Professional (Second Party - User or Clinical Provider). Using the platform or registering an account constitutes explicit and binding consent under applicable Iraqi laws.
 
 Article 1 — Nature and Scope of Services:
-1. "Sehatok Platform" is a digital healthcare coordination platform designed to facilitate appointments, communication, health records, lab reports, and e-prescriptions.
+1. "MEDORA Platform" is a digital healthcare coordination platform designed to facilitate appointments, communication, health records, lab reports, and e-prescriptions.
 2. The platform is NOT an emergency response facility and does not provide immediate trauma or critical surgical care.
 3. The user explicitly acknowledges that in critical medical emergencies, acute episodes, or severe distress, they must immediately visit the nearest emergency room or hospital; digital tools are not a substitute for physical in-person clinical examinations.
 
@@ -79,7 +79,7 @@ Article 3 — Platform Management Liability Limits under Iraqi Law:
 2. Explicit Clause: User acceptance of these terms does NOT constitute an automatic statutory waiver of legal liability for the platform or its manager under mandatory Iraqi law.
 
 Article 4 — Explicit Consent for Sensitive Health Data Processing:
-1. The Second Party hereby provides explicit, informed consent for Sehatok Platform to securely store, process, and encrypt sensitive health information (records, lab tests, scans, prescriptions).
+1. The Second Party hereby provides explicit, informed consent for MEDORA Platform to securely store, process, and encrypt sensitive health information (records, lab tests, scans, prescriptions).
 2. The sole authorized purpose is enabling treating clinicians to deliver coordinated healthcare.
 3. The platform applies rigorous encryption and pledges never to sell or disclose medical data for commercial advertising.
 
@@ -160,8 +160,8 @@ export async function saveUserLegalAgreement({
     signatureDrawData: signatureDrawData || undefined,
     signedAt: now,
     contractVersion,
-    contractTitleAr: 'عقد الاتفاق والشروط القانونية والطبية — منصة صحتك',
-    contractTitleEn: 'Official Medical Terms & User Agreement — Sehatok Platform',
+    contractTitleAr: 'عقد الاتفاق والشروط القانونية والطبية — منصة MEDORA | ميدورا العراق',
+    contractTitleEn: 'Official Medical Terms & User Agreement — MEDORA Platform',
     contractTextSnapshot,
     termsAccepted: true,
     medicalDisclaimerAccepted: true,

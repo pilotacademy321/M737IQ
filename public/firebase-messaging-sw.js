@@ -27,12 +27,12 @@ messaging.onBackgroundMessage((payload) => {
   // Generic lockscreen privacy enforcement where requested
   const isGeneric = data.useGenericLockscreen === 'true';
   const defaultTitle = isGeneric
-    ? 'المنظومة الطبية'
-    : (notification.title || data.title || 'إشعار طبي جديد');
+    ? 'MEDORA | ميدورا العراق'
+    : (notification.title || data.title || 'MEDORA — إشعار طبي');
 
   const defaultBody = isGeneric
     ? 'لديك تحديث طبي جديد في حسابك المعتمد'
-    : (notification.body || data.body || 'لديك إشعار جديد في المنظومة الطبية');
+    : (notification.body || data.body || 'لديك إشعار جديد في منصة MEDORA | ميدورا العراق');
 
   const targetUrl = data.url || data.link || '/';
   const portal = data.portal || 'home';

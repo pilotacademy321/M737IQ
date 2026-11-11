@@ -509,6 +509,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const registerAsPatient = async (displayName?: string, phone?: string) => {
     if (!user) throw new Error('User must be authenticated');
+    if (isVerifiedSuperAdmin(user)) {
+      throw new Error('حساب المشرف العام (bcgmoc@gmail.com) مخصص حصرياً للإدارة العليا ولا يمكن تحويله إلى حساب مريض تشغيلي.');
+    }
     setLoading(true);
     setAuthError(null);
     try {
@@ -586,6 +589,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!user) throw new Error('User must be authenticated');
     if (payload.role === 'super_admin') {
       throw new Error('لا يمكن التقديم على صلاحية المشرف العام (Unauthorized)');
+    }
+    if (isVerifiedSuperAdmin(user)) {
+      throw new Error('حساب المشرف العام (bcgmoc@gmail.com) مخصص حصرياً للإدارة العليا ولا يمكن تحويله إلى صفة مهنية أخرى.');
     }
     setLoading(true);
     setAuthError(null);

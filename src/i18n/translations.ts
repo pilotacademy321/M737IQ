@@ -1,7 +1,12 @@
 export const translations = {
   ar: {
-    brandName: '',
-    brandTagline: '',
+    brandName: 'ميدورا العراق',
+    brandNameAr: 'ميدورا العراق',
+    brandNameEn: 'MEDORA',
+    brandCombined: 'MEDORA | ميدورا العراق',
+    brandTagline: 'صحتك أولويتنا',
+    brandTaglineAr: 'صحتك أولويتنا',
+    brandTaglineEn: 'YOUR HEALTH • OUR PRIORITY',
     nav: {
       home: 'الرئيسية',
       about: 'من نحن',
@@ -19,7 +24,7 @@ export const translations = {
       secondarySubtitle: 'Bringing doctors, clinics, laboratories, radiology, pharmacies, and patients together.',
       getStartedBtn: 'ابدأ الآن',
       learnMoreBtn: 'استكشف البوابات',
-      slogan: '',
+      slogan: 'YOUR HEALTH • OUR PRIORITY — صحتك أولويتنا',
       stats: {
         portalsCount: '٨ بوابات مستقلة',
         portalsDesc: 'تغطي كافة الاحتياجات الصحية',
@@ -134,9 +139,10 @@ export const translations = {
       whatsappTitle: 'تواصل معنا عبر واتساب',
       whatsappNumber: '07885663748',
       whatsappAction: 'مراسلة عبر واتساب الآن',
-      instagramTitle: '',
-      instagramHandle: '',
-      instagramAction: '',
+      instagramTitle: 'حساب إنستغرام الرسمي',
+      instagramHandle: '@medoraq',
+      instagramUrl: 'https://www.instagram.com/medoraq/',
+      instagramAction: 'متابعة @medoraq على إنستغرام',
       emailTitle: 'البريد الإلكتروني للدعم',
       emailAddress: 'bcgmoc@gmail.com',
       emailAction: 'إرسال بريد إلكتروني',
@@ -154,10 +160,10 @@ export const translations = {
       successMessage: 'شكراً لتواصلك. سيقوم فريق الدعم الفني بمتابعة استفسارك عبر الواتساب أو البريد الإلكتروني خلال وقت وجيز.'
     },
     footer: {
-      brandDesc: 'منظومة طبية رقمية متكاملة لربط الأطباء والمختبرات ومراكز الأشعة والصيدليات والمراجعين في بيئة آمنة وفعالة.',
-      slogan: '',
-      subSlogan: '',
-      copyright: 'جميع الحقوق محفوظة. © 2026 المنظومة الطبية الموحدة.',
+      brandDesc: 'منصة MEDORA | ميدورا العراق — منظومة طبية رقمية متكاملة لربط الأطباء والمختبرات ومراكز الأشعة والصيدليات والمرضى في بيئة آمنة وفعالة.',
+      slogan: 'صحتك أولويتنا',
+      subSlogan: 'YOUR HEALTH • OUR PRIORITY',
+      copyright: 'جميع الحقوق محفوظة. © 2026 منصة MEDORA | ميدورا العراق.',
       links: {
         about: 'من نحن',
         terms: 'شروط الاستخدام',
@@ -173,8 +179,13 @@ export const translations = {
     }
   },
   en: {
-    brandName: '',
-    brandTagline: '',
+    brandName: 'MEDORA',
+    brandNameAr: 'ميدورا العراق',
+    brandNameEn: 'MEDORA',
+    brandCombined: 'MEDORA | ميدورا العراق',
+    brandTagline: 'YOUR HEALTH • OUR PRIORITY',
+    brandTaglineAr: 'صحتك أولويتنا',
+    brandTaglineEn: 'YOUR HEALTH • OUR PRIORITY',
     nav: {
       home: 'Home',
       about: 'About Us',
@@ -192,7 +203,7 @@ export const translations = {
       secondarySubtitle: 'Unified digital healthcare ecosystem across Iraq.',
       getStartedBtn: 'Get Started',
       learnMoreBtn: 'Explore Portals',
-      slogan: '',
+      slogan: 'YOUR HEALTH • OUR PRIORITY',
       stats: {
         portalsCount: '8 Dedicated Portals',
         portalsDesc: 'Covering every clinical necessity',
@@ -307,9 +318,10 @@ export const translations = {
       whatsappTitle: 'Contact Us via WhatsApp',
       whatsappNumber: '07885663748',
       whatsappAction: 'Open WhatsApp Chat',
-      instagramTitle: '',
-      instagramHandle: '',
-      instagramAction: '',
+      instagramTitle: 'Official Instagram',
+      instagramHandle: '@medoraq',
+      instagramUrl: 'https://www.instagram.com/medoraq/',
+      instagramAction: 'Follow @medoraq on Instagram',
       emailTitle: 'Support Email',
       emailAddress: 'bcgmoc@gmail.com',
       emailAction: 'Send Email Message',
@@ -327,10 +339,10 @@ export const translations = {
       successMessage: 'Thank you for reaching out. Our support team will review your message and reply via WhatsApp or email shortly.'
     },
     footer: {
-      brandDesc: 'An integrated digital healthcare platform connecting clinicians, laboratories, radiology centers, pharmacies, and patients into a unified ecosystem.',
-      slogan: '',
-      subSlogan: '',
-      copyright: 'All rights reserved. © 2026 Unified Healthcare Platform.',
+      brandDesc: 'MEDORA | Unified Iraqi Healthcare Platform — Connecting clinicians, laboratories, radiology centers, pharmacies, and patients into a secure, coordinated ecosystem.',
+      slogan: 'YOUR HEALTH • OUR PRIORITY',
+      subSlogan: 'صحتك أولويتنا',
+      copyright: 'All rights reserved. © 2026 MEDORA Platform.',
       links: {
         about: 'About Us',
         terms: 'Terms of Use',

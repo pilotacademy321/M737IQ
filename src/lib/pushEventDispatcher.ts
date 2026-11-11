@@ -170,7 +170,7 @@ export async function dispatchM737Notification(
   });
 
   // 4. Create Push Outbox Record for Background & Cloud Push Tracking
-  const genericBody = 'لديك تحديث طبي جديد في منصة M737IQ';
+  const genericBody = 'لديك تحديث طبي جديد في منصة MEDORA | ميدورا العراق';
   const outboxRecord: PushOutboxRecord = {
     id: `push_${notifId}`,
     recipientUid,
@@ -693,10 +693,10 @@ export async function notifyUserAccountApprovalStatus({
     titleAr: isApproved ? 'تهانينا! تم اعتماد حسابك المهني' : 'تحديث حول حالة مراجعة حسابك',
     titleEn: isApproved ? 'Congratulations! Professional Account Approved' : 'Account Verification Update',
     messageAr: isApproved
-      ? 'تم تدقيق وثائقك وتفعيل حسابك المهني في منصة M737IQ بالكامل. يمكنك الآن بدء العمل.'
+      ? 'تم تدقيق وثائقك وتفعيل حسابك المهني في منصة MEDORA | ميدورا العراق بالكامل. يمكنك الآن بدء العمل.'
       : 'تمت مراجعة طلب الاعتماد المهني. يرجى مراجعة إدارة المنصة لطلب توضيحات.',
     messageEn: isApproved
-      ? 'Your professional credentials have been verified and your M737IQ account is active.'
+      ? 'Your professional credentials have been verified and your MEDORA account is active.'
       : 'Your application has been reviewed. Please contact platform support.',
     targetPortal: (userRole as any) || 'patient',
     targetUrl: `/${userRole}`,

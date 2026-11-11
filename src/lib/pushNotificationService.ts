@@ -395,8 +395,8 @@ export async function saveUserNotificationPreferences(
  * to verify device and browser notification delivery on the user's phone or desktop.
  */
 export async function sendLocalTestNotification({
-  title = 'M737IQ — تجربة الإشعار المباشر',
-  body = 'نظام الإشعارات المباشرة نشط وموثق بنجاح على جهازك.',
+  title = 'MEDORA — تجربة الإشعار المباشر',
+  body = 'نظام الإشعارات المباشرة نشط وموثق بنجاح على جهازك في منصة MEDORA | ميدورا العراق.',
   url = '/patient',
 }: {
   title?: string;
@@ -498,7 +498,7 @@ export function listenToForegroundMessages(
     if (messaging) {
       unsubscribe = onMessage(messaging, (payload) => {
         console.log('[PushService] Foreground message received:', payload);
-        const title = payload.notification?.title || payload.data?.title || 'M737IQ';
+        const title = payload.notification?.title || payload.data?.title || 'MEDORA';
         const body = payload.notification?.body || payload.data?.body || 'لديك إشعار طبي جديد';
         onReceive({
           title,

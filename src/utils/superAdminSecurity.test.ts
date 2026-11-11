@@ -11,6 +11,7 @@ import {
   isVerifiedSuperAdmin, 
   isRevokedAdminEmail, 
   assertSuperAdminAccess,
+  canUserAccessPortal,
   MinimalUserAuth 
 } from './adminSecurity';
 import { UserProfile } from '../types';
@@ -238,6 +239,85 @@ export function runSuperAdminSecurityTests(): { total: number; passed: number; f
     sanitizedProfile.displayName === legacyProfile.displayName &&
     sanitizedProfile.uid === legacyProfile.uid,
     'User profile data was corrupted or lost during demotion'
+  );
+
+  // ==============================================================
+  // 7. SUPER ADMIN ACCOUNT ISOLATION (bcgmoc@gmail.com)
+  // ==============================================================
+  const superAdminAuth: MinimalUserAuth = {
+    email: 'bcgmoc@gmail.com',
+    emailVerified: true,
+  };
+
+  // Super Admin entering super_admin portal -> MUST SUCCEED
+  const superAdminOnAdminPortal = canUserAccessPortal(superAdminAuth, 'super_admin', 'super_admin');
+  assert(
+    'Super Admin Isolation',
+    'bcgmoc@gmail.com is permitted to enter the Super Admin portal',
+    superAdminOnAdminPortal.allowed === true,
+    'Super Admin was denied access to super_admin portal'
+  );
+
+  // Super Admin entering all 7 operational portals -> MUST BE STRICTLY DENIED
+  const operationalPortals = ['patient', 'doctor', 'pharmacy', 'laboratory', 'radiology', 'wholesaler', 'secretary'] as const;
+  for (const portalId of operationalPortals) {
+    const check = canUserAccessPortal(superAdminAuth, 'super_admin', portalId);
+    assert(
+      'Super Admin Isolation',
+      `bcgmoc@gmail.com is strictly DENIED from entering ${portalId} portal (super_admin_isolated)`,
+      check.allowed === false && check.reason === 'super_admin_isolated',
+      `Super Admin was improperly granted or incorrectly flagged for ${portalId} portal: ${JSON.stringify(check)}`
+    );
+  }
+
+  // ==============================================================
+  // 8. NON-ADMIN ACCESS GATING TO SUPER ADMIN PORTAL
+  // ==============================================================
+  const patientAuth: MinimalUserAuth = { email: 'patient@example.com', emailVerified: true };
+  const doctorAuth: MinimalUserAuth = { email: 'doctor@example.com', emailVerified: true };
+
+  const patientOnAdmin = canUserAccessPortal(patientAuth, 'patient', 'super_admin');
+  assert(
+    'Non-Admin Gate',
+    'Patient account is strictly denied access to super_admin portal',
+    patientOnAdmin.allowed === false && patientOnAdmin.reason === 'unauthorized_super_admin',
+    'Patient was allowed into super_admin portal'
+  );
+
+  const doctorOnAdmin = canUserAccessPortal(doctorAuth, 'doctor', 'super_admin');
+  assert(
+    'Non-Admin Gate',
+    'Doctor account is strictly denied access to super_admin portal',
+    doctorOnAdmin.allowed === false && doctorOnAdmin.reason === 'unauthorized_super_admin',
+    'Doctor was allowed into super_admin portal'
+  );
+
+  // Unauthenticated user
+  const unauthCheck = canUserAccessPortal(null, undefined, 'super_admin');
+  assert(
+    'Non-Admin Gate',
+    'Unauthenticated visitor is rejected across portals with reason unauthenticated',
+    unauthCheck.allowed === false && unauthCheck.reason === 'unauthenticated',
+    'Unauthenticated check failed'
+  );
+
+  // ==============================================================
+  // 9. NORMAL ROLE VALIDATION
+  // ==============================================================
+  const doctorOnDoctor = canUserAccessPortal(doctorAuth, 'doctor', 'doctor');
+  assert(
+    'Role Validation',
+    'Doctor is allowed into doctor portal',
+    doctorOnDoctor.allowed === true,
+    'Doctor was denied doctor portal'
+  );
+
+  const doctorOnPatient = canUserAccessPortal(doctorAuth, 'doctor', 'patient');
+  assert(
+    'Role Validation',
+    'Doctor is denied into patient portal (role_mismatch)',
+    doctorOnPatient.allowed === false && doctorOnPatient.reason === 'role_mismatch',
+    'Doctor was allowed into patient portal'
   );
 
   const passed = results.filter((r) => r.passed).length;

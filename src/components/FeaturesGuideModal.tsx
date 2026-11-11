@@ -103,7 +103,7 @@ export const FeaturesGuideModal: React.FC<FeaturesGuideModalProps> = ({
             </div>
             <div>
               <h2 className="text-lg font-black text-white">
-                {language === 'ar' ? 'دليل ميزات المنظومة الطبية الموحدة' : 'Unified Healthcare Platform Features Guide'}
+                {language === 'ar' ? 'دليل ميزات منصة MEDORA | ميدورا العراق' : 'MEDORA Platform Features Guide'}
               </h2>
               <p className="text-xs text-slate-300">
                 {language === 'ar' ? 'منظومة الرعاية الصحية المتكاملة في العراق' : 'Integrated Healthcare Architecture in Iraq'}

@@ -211,7 +211,7 @@ export const OnboardingModal: React.FC = () => {
         <div className="text-center pb-5 border-b border-slate-100">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-semibold mb-3 border border-emerald-200">
             <ShieldCheck size={14} className="text-emerald-600" />
-            <span>{language === 'ar' ? 'المنظومة الطبية الموحدة — بوابات الرعاية الصحية' : 'Unified Healthcare Platform — Medical Gateways'}</span>
+            <span>{language === 'ar' ? 'منصة MEDORA | ميدورا العراق — بوابات الرعاية الصحية' : 'MEDORA Platform — Healthcare Gateways'}</span>
           </div>
 
           <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
@@ -507,11 +507,11 @@ export const OnboardingModal: React.FC = () => {
                 <span className="leading-snug">
                   {language === 'ar' ? (
                     <>
-                      أوافق صراحة وبشكل كامل على <strong className="text-slate-900">شروط الاستخدام وسياسة الخصوصية وحماية البيانات</strong> الخاصة بالمنظومة الطبية.
+                      أوافق صراحة وبشكل كامل على <strong className="text-slate-900">شروط الاستخدام وسياسة الخصوصية وحماية البيانات</strong> الخاصة بمنصة MEDORA | ميدورا العراق.
                     </>
                   ) : (
                     <>
-                      I explicitly agree to the <strong className="text-slate-900">Terms of Service and Privacy Policy</strong> of the Healthcare Platform.
+                      I explicitly agree to the <strong className="text-slate-900">Terms of Service and Privacy Policy</strong> of the MEDORA Platform.
                     </>
                   )}
                 </span>

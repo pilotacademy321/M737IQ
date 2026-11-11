@@ -71,6 +71,86 @@ export function assertSuperAdminAccess(user: MinimalUserAuth | null | undefined)
   }
 }
 
+export type PortalAccessResult = {
+  allowed: boolean;
+  reason?: 'super_admin_isolated' | 'unauthorized_super_admin' | 'role_mismatch' | 'unauthenticated';
+  messageAr?: string;
+  messageEn?: string;
+};
+
+/**
+ * Strict portal access validation with Super Admin Isolation.
+ * 
+ * CORE RULES:
+ * 1. The Super Admin account ("bcgmoc@gmail.com") CANNOT access operational portals
+ *    (patient, doctor, secretary, pharmacy, laboratory, radiology, wholesaler).
+ *    They are restricted SOLELY and EXCLUSIVELY to the Super Admin portal ('super_admin').
+ * 2. Non-super-admin accounts CANNOT access the Super Admin portal ('super_admin').
+ * 3. Operational users can only access the portal corresponding to their assigned/approved role.
+ */
+export function canUserAccessPortal(
+  user: MinimalUserAuth | null | undefined,
+  userProfileRole: UserRole | string | undefined,
+  portalId: string
+): PortalAccessResult {
+  if (!user) {
+    return {
+      allowed: false,
+      reason: 'unauthenticated',
+      messageAr: 'يتطلب الوصول إلى هذه البوابة تسجيل الدخول أولاً.',
+      messageEn: 'Sign-in is required to access this portal.',
+    };
+  }
+
+  const isSuperAdmin = isVerifiedSuperAdmin(user);
+
+  // RULE 1: Super Admin Account Isolation
+  if (isSuperAdmin) {
+    if (portalId === 'super_admin') {
+      return { allowed: true };
+    }
+    return {
+      allowed: false,
+      reason: 'super_admin_isolated',
+      messageAr: 'حساب المشرف العام (bcgmoc@gmail.com) مخصص حصرياً للرقابة والإدارة المركزية، ولا يُسمح له بالدخول إلى بوابات التشغيل اليومية للحفاظ على خصوصية وسرية السجلات الطبية.',
+      messageEn: 'The Super Admin account (bcgmoc@gmail.com) is isolated exclusively to the Super Admin portal and cannot access operational healthcare portals.',
+    };
+  }
+
+  // RULE 2: Non-super-admin attempting to access super_admin
+  if (portalId === 'super_admin') {
+    return {
+      allowed: false,
+      reason: 'unauthorized_super_admin',
+      messageAr: 'بوابة الإدارة العليا مخصصة حصرياً للمشرف العام المعتمد للمنصة (bcgmoc@gmail.com). تم حظر الوصول لهذا الحساب.',
+      messageEn: 'The Super Admin portal is strictly restricted to the verified administrator (bcgmoc@gmail.com). Access denied.',
+    };
+  }
+
+  // RULE 3: Operational role validation
+  const portalRoleMap: Record<string, string> = {
+    doctor: 'doctor',
+    radiology: 'radiology_center',
+    laboratory: 'laboratory',
+    pharmacy: 'pharmacy',
+    wholesaler: 'wholesaler',
+    patient: 'patient',
+    secretary: 'secretary',
+  };
+
+  const expectedRole = portalRoleMap[portalId];
+  if (expectedRole && userProfileRole === expectedRole) {
+    return { allowed: true };
+  }
+
+  return {
+    allowed: false,
+    reason: 'role_mismatch',
+    messageAr: `حسابك الحالي مسجل بصفة (${userProfileRole || 'غير محدد'})، بينما تتطلب هذه البوابة صلاحية (${expectedRole || portalId}).`,
+    messageEn: `Your account role is (${userProfileRole || 'unspecified'}), but this portal requires (${expectedRole || portalId}).`,
+  };
+}
+
 /**
  * Scans Firestore and actively revokes administrative claims, admin documents,
  * and 'super_admin' roles from any unauthorized account (including the two revoked accounts).

@@ -103,6 +103,28 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenLegal }) => {
             
             <div className="space-y-3 text-xs sm:text-sm">
               <a
+                href="https://www.instagram.com/medoraq/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between p-3 rounded-xl bg-slate-900/80 hover:bg-slate-900 border border-slate-800 hover:border-pink-500/40 transition-all group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                    <Instagram size={17} />
+                  </div>
+                  <div>
+                    <div className="text-[11px] text-slate-400">
+                      {language === 'ar' ? 'الحساب الرسمي على إنستغرام' : 'Official Instagram'}
+                    </div>
+                    <div className="font-bold text-white font-mono group-hover:text-pink-300 transition-colors">
+                      @medoraq
+                    </div>
+                  </div>
+                </div>
+                <ExternalLink size={14} className="text-slate-500 group-hover:text-pink-400 transition-colors" />
+              </a>
+
+              <a
                 href={whatsappHref}
                 target="_blank"
                 rel="noopener noreferrer"
