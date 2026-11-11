@@ -225,7 +225,7 @@ export const PortalShellView: React.FC<PortalShellViewProps> = ({
       {/* Main Portal Shell Content Container */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Portal Header Card */}
-        <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-200 mb-8 relative overflow-hidden">
+        <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 sm:p-8 shadow-sm border border-white/80 mb-8 relative overflow-hidden">
           <div 
             className="absolute top-0 left-0 right-0 h-2" 
             style={{ backgroundColor: portal.accentColor }}

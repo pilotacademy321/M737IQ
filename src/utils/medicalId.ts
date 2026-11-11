@@ -448,8 +448,8 @@ export async function searchAccountWithAuthorization(
     return {
       success: false,
       code: 'invalid_format',
-      errorAr: 'يرجى إدخال معرف الحساب المطلوب للبحث (مثال: M737-PAT-XXXXXX).',
-      errorEn: 'Please enter an account ID to search (e.g. M737-PAT-XXXXXX).'
+      errorAr: 'يرجى إدخال معرف الحساب المطلوب للبحث (مثال: MEDORA-PAT-XXXXXX).',
+      errorEn: 'Please enter an account ID to search (e.g. MEDORA-PAT-XXXXXX).'
     };
   }
 

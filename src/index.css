@@ -41,3 +41,62 @@
 .brand-gradient-btn {
   background: linear-gradient(135deg, #003366 0%, #1e4b85 45%, #c4152e 100%);
 }
+
+/* Official MEDORA Multi-Device Responsive Background Rules */
+.medora-responsive-bg {
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-size: cover;
+  background-position: center top;
+  transition: background-position 0.3s ease, background-size 0.3s ease;
+  will-change: transform;
+}
+
+/* 1. Mobile Phones Portrait (Android & iPhone <= 640px) */
+@media (max-width: 640px) {
+  .medora-responsive-bg {
+    background-size: cover;
+    background-position: 50% 0%;
+  }
+}
+
+/* 2. Mobile Phones Landscape (height <= 500px) */
+@media (max-height: 500px) and (orientation: landscape) {
+  .medora-responsive-bg {
+    background-size: cover;
+    background-position: center center;
+  }
+}
+
+/* 3. Mobile Landscape & Small Tablets (641px - 768px) */
+@media (min-width: 641px) and (max-width: 768px) {
+  .medora-responsive-bg {
+    background-size: cover;
+    background-position: 50% 10%;
+  }
+}
+
+/* 3. Tablets & iPads Portrait/Landscape (769px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .medora-responsive-bg {
+    background-size: cover;
+    background-position: center 15%;
+  }
+}
+
+/* 4. Laptops & Standard Desktops (1025px - 1536px) */
+@media (min-width: 1025px) and (max-width: 1536px) {
+  .medora-responsive-bg {
+    background-size: cover;
+    background-position: center center;
+  }
+}
+
+/* 5. Ultra-Wide & 4K Displays (>= 1537px) */
+@media (min-width: 1537px) {
+  .medora-responsive-bg {
+    background-size: cover;
+    background-position: center center;
+  }
+}
+

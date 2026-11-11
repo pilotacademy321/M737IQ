@@ -77,7 +77,7 @@ export const PortalsSelectionPage: React.FC<PortalsSelectionPageProps> = ({
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 pt-24 pb-20">
+    <div className="min-h-screen bg-transparent pt-24 pb-20">
       {/* Top Breadcrumb Navigation */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6 sm:mb-8">
         <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-500 py-3 border-b border-slate-200">
@@ -160,7 +160,7 @@ export const PortalsSelectionPage: React.FC<PortalsSelectionPageProps> = ({
           {filteredPortals.map((portal) => (
             <div
               key={portal.id}
-              className={`bg-white rounded-3xl p-6 shadow-sm hover:shadow-xl border ${portal.borderColor} transition-all duration-300 flex flex-col justify-between group relative overflow-hidden`}
+              className={`bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-sm hover:shadow-xl border ${portal.borderColor} transition-all duration-300 flex flex-col justify-between group relative overflow-hidden`}
             >
               {/* Colored Accent Top Strip */}
               <div

@@ -1568,7 +1568,7 @@ export const SecretaryPortalWorkspace: React.FC<SecretaryPortalWorkspaceProps> =
                     setWalkinSearchMedicalId(e.target.value);
                     if (walkinSearchMsg) setWalkinSearchMsg(null);
                   }}
-                  placeholder="M737-PAT-XXXXXX"
+                  placeholder="MEDORA-PAT-XXXXXX"
                   className="flex-1 px-3.5 py-2 rounded-xl border border-blue-300 bg-white font-mono text-xs uppercase focus:ring-2 focus:ring-blue-500 outline-none"
                 />
                 <button

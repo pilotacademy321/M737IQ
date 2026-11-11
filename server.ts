@@ -76,7 +76,7 @@ async function startServer() {
   app.get('/api/push/status', (_req, res) => {
     res.json({
       ok: true,
-      service: 'M737IQ Push Delivery Engine',
+      service: 'MEDORA Push Delivery Engine',
       isConfigured: Boolean(vapidKeys.publicKey && vapidKeys.privateKey),
       vapidPublicKey: vapidKeys.publicKey,
       platforms: ['android', 'ios', 'desktop'],
@@ -123,7 +123,7 @@ async function startServer() {
 
       const payload = JSON.stringify({
         notification: {
-          title: title || 'منصة M737IQ الطبية',
+          title: title || 'منصة MEDORA | ميدورا العراق',
           body: body || 'لديك تحديث طبي جديد',
           icon: '/icons/icon-192.png',
           badge: '/icons/icon-192.png',
@@ -133,7 +133,7 @@ async function startServer() {
           portal: targetPortal,
           category,
           sourceEventId: sourceEventId || `evt_${Date.now()}`,
-          genericBody: genericBody || 'لديك تحديث طبي جديد في منصة M737IQ',
+          genericBody: genericBody || 'لديك تحديث طبي جديد في منصة MEDORA | ميدورا العراق',
           priority,
           timestamp: String(Date.now()),
         },
@@ -193,7 +193,7 @@ async function startServer() {
 
       const payload = JSON.stringify({
         notification: {
-          title: title || 'M737IQ — إشعار تجريبي مباشر',
+          title: title || 'MEDORA — إشعار تجريبي مباشر',
           body: body || 'تم ربط هاتفك بنظام الإشعارات المباشرة بنجاح.',
           icon: '/icons/icon-192.png',
           badge: '/icons/icon-192.png',
@@ -237,7 +237,7 @@ async function startServer() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[Server] M737IQ Full-Stack Server running at http://0.0.0.0:${PORT}`);
+    console.log(`[Server] MEDORA Full-Stack Server running at http://0.0.0.0:${PORT}`);
   });
 }
 

@@ -33,7 +33,7 @@ export const AboutUsPage: React.FC<AboutUsPageProps> = ({
   const { t, isRTL, language } = useLanguage();
 
   return (
-    <div className="min-h-screen bg-slate-50 pt-24 pb-20">
+    <div className="min-h-screen bg-transparent pt-24 pb-20">
       {/* Top Breadcrumb Navigation */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mb-6 sm:mb-8">
         <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-500 py-3 border-b border-slate-200">

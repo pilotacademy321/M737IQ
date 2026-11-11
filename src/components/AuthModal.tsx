@@ -152,8 +152,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         dir={isRTL ? 'rtl' : 'ltr'}
       >
         {/* Header */}
-        <div className="px-6 py-5 bg-gradient-to-r from-slate-900 to-[#003366] text-white flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
+        <div className="relative px-6 py-5 bg-gradient-to-r from-slate-900 via-[#002244] to-[#003366] text-white flex items-center justify-between shrink-0 overflow-hidden">
+          <div 
+            className="absolute inset-0 opacity-15 pointer-events-none bg-cover bg-center"
+            style={{ backgroundImage: `url('/assets/images/medora-official-background.png')` }}
+          />
+          <div className="relative z-10 flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-white">
               {mode === 'reset' ? <KeyRound size={20} /> : <LogIn size={20} />}
             </div>
@@ -172,7 +176,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </div>
           <button
             onClick={handleClose}
-            className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+            className="relative z-10 p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
             aria-label="Close"
           >
             <X size={20} />

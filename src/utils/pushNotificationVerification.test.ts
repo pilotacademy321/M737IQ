@@ -147,7 +147,7 @@ export function runPushNotificationVerificationTests(): { total: number; passed:
   // 5. LOCKSCREEN PRIVACY (CONFIDENTIALITY ENFORCEMENT)
   // ==============================================================
   const sensitiveMedicalDetails = 'تم صرف أموكسيسيلين 500 ملغم من صيدلية النور';
-  const genericConfidentialPreview = 'لديك تحديث طبي جديد في منصة M737IQ';
+  const genericConfidentialPreview = 'لديك تحديث طبي جديد في منصة MEDORA | ميدورا العراق';
 
   const lockscreenPrefActive = true;
   const renderedLockscreenBody = lockscreenPrefActive

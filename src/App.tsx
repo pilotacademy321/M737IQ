@@ -22,6 +22,7 @@ import { NotificationPermissionBanner } from './components/NotificationPermissio
 import { NotificationSettingsModal } from './components/NotificationSettingsModal';
 import { NotificationInbox } from './components/NotificationInbox';
 import { InstallUpdatePage } from './components/InstallUpdatePage';
+import { AppBackground } from './components/AppBackground';
 import { registerPushServiceWorker } from './lib/pushNotificationService';
 import { PortalId } from './types';
 import { parseCurrentRoute, navigateTo, RouteState } from './utils/navigation';
@@ -167,7 +168,10 @@ const MainAppContent: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900 transition-colors duration-200">
+    <div className="min-h-screen bg-transparent flex flex-col font-sans text-slate-900 transition-colors duration-200 relative">
+      {/* Official MEDORA Multi-Device Responsive Background */}
+      <AppBackground />
+
       {/* Right Persistent Dark-Navy Sidebar (Matching Mockup) */}
       <AppSidebar
         currentRoute={routeState.route}

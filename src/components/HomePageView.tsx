@@ -137,7 +137,7 @@ export const HomePageView: React.FC<HomePageViewProps> = ({
     return () => { isMounted = false; };
   }, [user]);
 
-  // The 8 Portal Cards in exact RTL order as requested in the mockup
+  // The 8 Portal Cards in exact RTL order with refined light colors and high-contrast typography
   const portalCards: Array<{
     id: PortalId;
     titleAr: string;
@@ -145,7 +145,10 @@ export const HomePageView: React.FC<HomePageViewProps> = ({
     subtitleAr: string;
     subtitleEn: string;
     accentColor: string;
-    hoverColor: string;
+    cardBg: string;
+    borderColor: string;
+    badgeBg: string;
+    btnClass: string;
     icon: React.ReactNode;
   }> = [
     {
@@ -154,9 +157,12 @@ export const HomePageView: React.FC<HomePageViewProps> = ({
       titleEn: 'Patient',
       subtitleAr: 'حجوزاتك وملفي وتقاريرك',
       subtitleEn: 'Bookings, records & tests',
-      accentColor: 'bg-[#00a0b0]', // Cyan
-      hoverColor: 'hover:bg-[#008c9a]',
-      icon: <User size={26} className="text-white" />,
+      accentColor: '#0097a7',
+      cardBg: 'bg-gradient-to-b from-cyan-50/95 via-white/95 to-cyan-50/85',
+      borderColor: 'border-cyan-200/90 hover:border-cyan-400',
+      badgeBg: 'bg-gradient-to-tr from-[#00838f] to-[#00acc1]',
+      btnClass: 'bg-[#00838f] hover:bg-[#006064] text-white',
+      icon: <User size={22} className="text-white" />,
     },
     {
       id: 'doctor',
@@ -164,9 +170,12 @@ export const HomePageView: React.FC<HomePageViewProps> = ({
       titleEn: 'Doctor',
       subtitleAr: 'متابعة المرضى والحجوزات',
       subtitleEn: 'Patient follow-up & slots',
-      accentColor: 'bg-[#2563eb]', // Blue
-      hoverColor: 'hover:bg-[#1d4ed8]',
-      icon: <Stethoscope size={26} className="text-white" />,
+      accentColor: '#1d4ed8',
+      cardBg: 'bg-gradient-to-b from-blue-50/95 via-white/95 to-blue-50/85',
+      borderColor: 'border-blue-200/90 hover:border-blue-400',
+      badgeBg: 'bg-gradient-to-tr from-[#1d4ed8] to-[#3b82f6]',
+      btnClass: 'bg-[#1d4ed8] hover:bg-[#1e40af] text-white',
+      icon: <Stethoscope size={22} className="text-white" />,
     },
     {
       id: 'pharmacy',
@@ -174,9 +183,12 @@ export const HomePageView: React.FC<HomePageViewProps> = ({
       titleEn: 'Pharmacy',
       subtitleAr: 'صرف الأدوية وإدارة المخزون',
       subtitleEn: 'Prescriptions & inventory',
-      accentColor: 'bg-[#10b981]', // Green / Emerald
-      hoverColor: 'hover:bg-[#059669]',
-      icon: <Pill size={26} className="text-white" />,
+      accentColor: '#059669',
+      cardBg: 'bg-gradient-to-b from-emerald-50/95 via-white/95 to-emerald-50/85',
+      borderColor: 'border-emerald-200/90 hover:border-emerald-400',
+      badgeBg: 'bg-gradient-to-tr from-[#059669] to-[#10b981]',
+      btnClass: 'bg-[#059669] hover:bg-[#047857] text-white',
+      icon: <Pill size={22} className="text-white" />,
     },
     {
       id: 'laboratory',
@@ -184,9 +196,12 @@ export const HomePageView: React.FC<HomePageViewProps> = ({
       titleEn: 'Medical Labs',
       subtitleAr: 'الفحوصات والتحاليل وإصدار النتائج',
       subtitleEn: 'Pathology & certified tests',
-      accentColor: 'bg-[#f43f5e]', // Rose / Pink
-      hoverColor: 'hover:bg-[#e11d48]',
-      icon: <FlaskConical size={26} className="text-white" />,
+      accentColor: '#e11d48',
+      cardBg: 'bg-gradient-to-b from-rose-50/95 via-white/95 to-rose-50/85',
+      borderColor: 'border-rose-200/90 hover:border-rose-400',
+      badgeBg: 'bg-gradient-to-tr from-[#e11d48] to-[#f43f5e]',
+      btnClass: 'bg-[#e11d48] hover:bg-[#be123c] text-white',
+      icon: <FlaskConical size={22} className="text-white" />,
     },
     {
       id: 'radiology',
@@ -194,9 +209,12 @@ export const HomePageView: React.FC<HomePageViewProps> = ({
       titleEn: 'Radiology',
       subtitleAr: 'التصوير الطبي والتقارير المتخصصة',
       subtitleEn: 'Scans, imaging & findings',
-      accentColor: 'bg-[#06b6d4]', // Sky / Teal
-      hoverColor: 'hover:bg-[#0891b2]',
-      icon: <Scan size={26} className="text-white" />,
+      accentColor: '#0284c7',
+      cardBg: 'bg-gradient-to-b from-sky-50/95 via-white/95 to-sky-50/85',
+      borderColor: 'border-sky-200/90 hover:border-sky-400',
+      badgeBg: 'bg-gradient-to-tr from-[#0284c7] to-[#38bdf8]',
+      btnClass: 'bg-[#0284c7] hover:bg-[#0369a1] text-white',
+      icon: <Scan size={22} className="text-white" />,
     },
     {
       id: 'wholesaler',
@@ -204,9 +222,12 @@ export const HomePageView: React.FC<HomePageViewProps> = ({
       titleEn: 'Wholesalers',
       subtitleAr: 'توفير الأدوية والمستلزمات الصيدلانية',
       subtitleEn: 'B2B supply & batch orders',
-      accentColor: 'bg-[#f59e0b]', // Warm Amber
-      hoverColor: 'hover:bg-[#d97706]',
-      icon: <Truck size={26} className="text-white" />,
+      accentColor: '#d97706',
+      cardBg: 'bg-gradient-to-b from-amber-50/95 via-white/95 to-amber-50/85',
+      borderColor: 'border-amber-200/90 hover:border-amber-400',
+      badgeBg: 'bg-gradient-to-tr from-[#d97706] to-[#f59e0b]',
+      btnClass: 'bg-[#d97706] hover:bg-[#b45309] text-white',
+      icon: <Truck size={22} className="text-white" />,
     },
     {
       id: 'secretary',
@@ -214,9 +235,12 @@ export const HomePageView: React.FC<HomePageViewProps> = ({
       titleEn: 'Secretary',
       subtitleAr: 'تنظيم المواعيد والطلبات ودعم الفرق الطبية',
       subtitleEn: 'Reception triage & queue',
-      accentColor: 'bg-[#8b5cf6]', // Purple / Violet
-      hoverColor: 'hover:bg-[#7c3aed]',
-      icon: <Users size={26} className="text-white" />,
+      accentColor: '#7c3aed',
+      cardBg: 'bg-gradient-to-b from-violet-50/95 via-white/95 to-violet-50/85',
+      borderColor: 'border-violet-200/90 hover:border-violet-400',
+      badgeBg: 'bg-gradient-to-tr from-[#7c3aed] to-[#8b5cf6]',
+      btnClass: 'bg-[#7c3aed] hover:bg-[#6d28d9] text-white',
+      icon: <Users size={22} className="text-white" />,
     },
     {
       id: 'super_admin',
@@ -224,9 +248,12 @@ export const HomePageView: React.FC<HomePageViewProps> = ({
       titleEn: 'Super Admin',
       subtitleAr: 'إدارة شاملة ومتابعة جميع العمليات',
       subtitleEn: 'Central licensing & audit',
-      accentColor: 'bg-[#0d9488]', // Teal
-      hoverColor: 'hover:bg-[#0f766e]',
-      icon: <Settings size={26} className="text-white" />,
+      accentColor: '#0f766e',
+      cardBg: 'bg-gradient-to-b from-teal-50/95 via-white/95 to-teal-50/85',
+      borderColor: 'border-teal-200/90 hover:border-teal-400',
+      badgeBg: 'bg-gradient-to-tr from-[#0f766e] to-[#14b8a6]',
+      btnClass: 'bg-[#0f766e] hover:bg-[#115e59] text-white',
+      icon: <Settings size={22} className="text-white" />,
     },
   ];
 
@@ -262,38 +289,44 @@ export const HomePageView: React.FC<HomePageViewProps> = ({
 
   return (
     <div className="space-y-6 pb-12">
-      {/* 1. CLEAN PORTALS HEADER (No hero banner, no promotional images or old brands) */}
+      {/* 1. CLEAN PORTALS HEADER */}
       <div className="pt-2 pb-1">
         <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
           {language === 'ar' ? 'البوابات الطبية المستقلة' : 'Medical Portals'}
         </h2>
-        <p className="text-xs sm:text-sm text-slate-500 mt-1">
+        <p className="text-xs sm:text-sm text-slate-600 mt-1 font-medium">
           {language === 'ar' 
             ? 'اختر البوابة المطلوبة للوصول إلى بيئة العمل والخدمات المخصصة'
             : 'Select a portal to access your dedicated workspace and services'}
         </p>
       </div>
 
-      {/* 2. THE 8 COLORFUL PORTAL CARDS GRID */}
+      {/* 2. THE 8 ELEGANT HIGH-CONTRAST PORTAL CARDS GRID */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-3.5">
         {portalCards.map((portal) => (
           <div
             key={portal.id}
-            className={`${portal.accentColor} rounded-2xl p-4 text-white flex flex-col justify-between shadow-sm hover:shadow-md transition-all duration-200 min-h-[175px] group text-center relative overflow-hidden`}
+            className={`${portal.cardBg} ${portal.borderColor} rounded-2xl p-3.5 sm:p-4 text-slate-900 flex flex-col justify-between shadow-xs hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 min-h-[190px] group text-center relative overflow-hidden backdrop-blur-md border`}
           >
-            {/* Top Icon in subtle circular badge */}
-            <div className="flex justify-center mb-2">
-              <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-xs flex items-center justify-center group-hover:scale-110 transition-transform shadow-xs">
+            {/* Top Micro Accent Line */}
+            <div 
+              className="absolute top-0 inset-x-0 h-1 transition-all group-hover:h-1.5"
+              style={{ backgroundColor: portal.accentColor }}
+            />
+
+            {/* Top Icon in vibrant circular badge */}
+            <div className="flex justify-center mb-2 mt-1">
+              <div className={`w-11 h-11 rounded-full ${portal.badgeBg} flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm`}>
                 {portal.icon}
               </div>
             </div>
 
             {/* Title & Subtitle */}
             <div className="flex-1 flex flex-col justify-center">
-              <h3 className="font-extrabold text-sm sm:text-base leading-snug drop-shadow-xs">
+              <h3 className="font-black text-sm sm:text-base leading-snug text-[#002244] group-hover:text-black transition-colors">
                 {language === 'ar' ? portal.titleAr : portal.titleEn}
               </h3>
-              <p className="text-[11px] text-white/90 font-medium mt-1 line-clamp-2 leading-tight">
+              <p className="text-[11px] text-slate-600 font-semibold mt-1.5 line-clamp-2 leading-tight">
                 {language === 'ar' ? portal.subtitleAr : portal.subtitleEn}
               </p>
             </div>
@@ -301,7 +334,7 @@ export const HomePageView: React.FC<HomePageViewProps> = ({
             {/* Action Button: دخول */}
             <button
               onClick={() => onSelectPortal(portal.id)}
-              className="mt-3 w-full py-1.5 px-2 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-xs font-bold text-xs text-white flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-white/25"
+              className={`mt-3 w-full py-1.5 px-2 rounded-xl ${portal.btnClass} font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs hover:shadow-sm`}
             >
               <span>{language === 'ar' ? 'دخول' : 'Enter'}</span>
               <Sparkles size={12} className="opacity-90" />
@@ -313,7 +346,7 @@ export const HomePageView: React.FC<HomePageViewProps> = ({
       {/* 3. LOWER 3 PANELS: إحصائيات سريعة | أحدث النشاطات | صحتك .. أولويتنا */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-stretch">
         {/* Panel 1 (Left in RTL): إحصائيات سريعة (Starts at ZERO, Real Live Counters Only) */}
-        <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-sm flex flex-col justify-between">
+        <div className="bg-white/95 backdrop-blur-md rounded-3xl p-5 sm:p-6 border border-white/80 shadow-sm flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
@@ -431,7 +464,7 @@ export const HomePageView: React.FC<HomePageViewProps> = ({
         </div>
 
         {/* Panel 2 (Middle in RTL): أحدث النشاطات (Purely Real Activities) */}
-        <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-sm flex flex-col justify-between">
+        <div className="bg-white/95 backdrop-blur-md rounded-3xl p-5 sm:p-6 border border-white/80 shadow-sm flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
@@ -508,7 +541,7 @@ export const HomePageView: React.FC<HomePageViewProps> = ({
         </div>
 
         {/* Panel 3: System Overview (Clean, unbranded, no promotional background image) */}
-        <div className="rounded-3xl shadow-sm border border-slate-200/90 min-h-[300px] flex flex-col justify-between text-slate-800 p-6 bg-white">
+        <div className="rounded-3xl shadow-sm border border-white/80 min-h-[300px] flex flex-col justify-between text-slate-800 p-6 bg-white/95 backdrop-blur-md">
           {/* Top text */}
           <div className="text-center pt-2">
             <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
