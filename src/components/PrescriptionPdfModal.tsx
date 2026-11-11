@@ -171,8 +171,14 @@ export const PrescriptionPdfModal: React.FC<PrescriptionPdfModalProps> = ({
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b-2 border-slate-800">
                 <div className="space-y-1 text-start">
                   <div className="flex items-center gap-2">
+                    <img 
+                      src="/assets/images/medora-official-logo.png" 
+                      alt="MEDORA" 
+                      className="h-9 w-auto object-contain"
+                      onError={(e) => { (e.target as HTMLImageElement).src = '/assets/images/medora-logo.png'; }}
+                    />
                     <span className="text-xl sm:text-2xl font-black text-[#003366] tracking-tight">
-                      M737 MEDICAL PLATFORM
+                      MEDORA MEDICAL PLATFORM
                     </span>
                   </div>
                   <p className="text-xs font-bold text-slate-600">
@@ -383,7 +389,7 @@ export const PrescriptionPdfModal: React.FC<PrescriptionPdfModalProps> = ({
                   </div>
                   <div className="text-[10px] text-slate-500">
                     <div className="font-mono font-bold text-slate-700">{prescription.prescriptionNumber}</div>
-                    <div>{language === 'ar' ? 'رمز التحقق الرقمي لمنصة M737' : 'M737 Digital Cryptographic Seal'}</div>
+                    <div>{language === 'ar' ? 'رمز التحقق الرقمي لمنصة MEDORA' : 'MEDORA Digital Cryptographic Seal'}</div>
                     <div>{language === 'ar' ? 'لا يجوز الصرف المتكرر أو التلاعب' : 'Single dispensation only. Tamper evident.'}</div>
                   </div>
                 </div>

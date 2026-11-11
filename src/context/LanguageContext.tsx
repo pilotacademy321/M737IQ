@@ -20,8 +20,8 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     document.documentElement.lang = language;
     document.documentElement.dir = isRtl ? 'rtl' : 'ltr';
     document.title = language === 'ar' 
-      ? 'منصة M737 الطبية المتكاملة' 
-      : 'M737 Integrated Medical Platform';
+      ? 'MEDORA | ميدورا العراق — صحتك أولويتنا' 
+      : 'MEDORA | YOUR HEALTH • OUR PRIORITY';
   }, [language]);
 
   const setLanguage = (lang: Language) => {

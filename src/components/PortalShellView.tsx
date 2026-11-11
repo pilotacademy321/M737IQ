@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import { Logo } from './Logo';
 import { PORTALS_DATA } from '../data/portalsData';
 import { PortalId, UserRole, UserProfile, AccountStatus } from '../types';
 import { isVerifiedSuperAdmin, canUserAccessPortal } from '../utils/adminSecurity';
@@ -253,6 +254,9 @@ export const PortalShellView: React.FC<PortalShellViewProps> = ({
                 <p className="text-xs sm:text-sm text-slate-500 mt-1.5 max-w-2xl leading-relaxed">
                   {language === 'ar' ? portal.descAr : portal.descEn}
                 </p>
+                <div className="mt-3 flex items-center gap-2">
+                  <Logo size="sm" showTagline={false} />
+                </div>
               </div>
             </div>
 

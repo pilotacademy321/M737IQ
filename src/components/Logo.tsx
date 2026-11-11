@@ -6,6 +6,7 @@ interface LogoProps {
   showTagline?: boolean;
   className?: string;
   light?: boolean;
+  imageOnly?: boolean;
 }
 
 export const Logo: React.FC<LogoProps> = ({
@@ -13,87 +14,45 @@ export const Logo: React.FC<LogoProps> = ({
   showTagline = true,
   className = '',
   light = false,
+  imageOnly = false,
 }) => {
   const { language } = useLanguage();
 
   const dimensions = {
-    sm: { iconSize: 32, brandClass: 'text-base sm:text-lg', subClass: 'text-[10px]', tagClass: 'text-[9px]' },
-    md: { iconSize: 42, brandClass: 'text-xl sm:text-2xl', subClass: 'text-xs sm:text-sm', tagClass: 'text-[10px] sm:text-xs' },
-    lg: { iconSize: 54, brandClass: 'text-2xl sm:text-3xl', subClass: 'text-sm sm:text-base', tagClass: 'text-xs' },
-    xl: { iconSize: 68, brandClass: 'text-3xl sm:text-4xl', subClass: 'text-base sm:text-lg', tagClass: 'text-sm' },
+    sm: { imgHeight: 'h-8 sm:h-9', brandClass: 'text-base sm:text-lg', subClass: 'text-[10px]', tagClass: 'text-[9px]' },
+    md: { imgHeight: 'h-11 sm:h-12', brandClass: 'text-xl sm:text-2xl', subClass: 'text-xs sm:text-sm', tagClass: 'text-[10px] sm:text-xs' },
+    lg: { imgHeight: 'h-14 sm:h-16', brandClass: 'text-2xl sm:text-3xl', subClass: 'text-sm sm:text-base', tagClass: 'text-xs' },
+    xl: { imgHeight: 'h-20 sm:h-24', brandClass: 'text-3xl sm:text-4xl', subClass: 'text-base sm:text-lg', tagClass: 'text-sm' },
   }[size];
 
   const primaryTextColor = light ? 'text-white' : 'text-[#002244]';
-  const accentTealColor = light ? '#2dd4bf' : '#0d9488';
-  const deepBlueColor = light ? '#60a5fa' : '#003366';
-  const pulseRed = '#e11d48';
+  const logoSrc = '/assets/images/medora-official-logo.png';
+  const fallbackSrc = '/assets/aistudio/file_00000000c14c8212bf0596ef74f11668_1fe788e9.png';
+
+  if (imageOnly) {
+    return (
+      <img
+        src={logoSrc}
+        alt="MEDORA | ميدورا العراق"
+        className={`${dimensions.imgHeight} w-auto object-contain select-none transition-transform duration-200 hover:scale-[1.02] ${className}`}
+        onError={(e) => {
+          (e.target as HTMLImageElement).src = fallbackSrc;
+        }}
+      />
+    );
+  }
 
   return (
     <div className={`inline-flex items-center gap-3 select-none ${className}`}>
-      {/* Official MEDORA Medical Protective Emblem */}
-      <div 
-        className="relative shrink-0 transition-transform hover:scale-105 duration-200"
-        style={{ width: dimensions.iconSize, height: dimensions.iconSize }}
-      >
-        <svg
-          viewBox="0 0 100 100"
-          className="w-full h-full"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          aria-hidden="true"
-        >
-          <defs>
-            <linearGradient id={`medGrad-${size}-${light ? 'l' : 'd'}`} x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor={deepBlueColor} />
-              <stop offset="100%" stopColor={accentTealColor} />
-            </linearGradient>
-            <filter id={`glow-${size}`} x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="2.5" result="blur" />
-              <feComposite in="SourceGraphic" in2="blur" operator="over" />
-            </filter>
-          </defs>
-
-          {/* Protective Rounded Hex/Shield Badge */}
-          <rect
-            x="6"
-            y="6"
-            width="88"
-            height="88"
-            rx="24"
-            fill={light ? 'rgba(255, 255, 255, 0.12)' : '#f0fdfa'}
-            stroke={`url(#medGrad-${size}-${light ? 'l' : 'd'})`}
-            strokeWidth="3.5"
-          />
-
-          {/* Stethoscope Arch (Clinical Care) */}
-          <path
-            d="M 28 32 C 28 54, 42 66, 50 66 C 58 66, 72 54, 72 32"
-            stroke={accentTealColor}
-            strokeWidth="4.5"
-            strokeLinecap="round"
-            fill="none"
-          />
-          <path
-            d="M 36 22 L 36 28 M 64 22 L 64 28"
-            stroke={deepBlueColor}
-            strokeWidth="3.5"
-            strokeLinecap="round"
-          />
-          <circle cx="36" cy="20" r="3" fill={accentTealColor} />
-          <circle cx="64" cy="20" r="3" fill={accentTealColor} />
-
-          {/* Vital ECG Heartbeat Wave */}
-          <path
-            d="M 18 50 L 32 50 L 38 40 L 45 64 L 54 26 L 61 58 L 66 48 L 82 48"
-            stroke={pulseRed}
-            strokeWidth="4"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            filter={`url(#glow-${size})`}
-          />
-          <circle cx="54" cy="26" r="3.5" fill={pulseRed} />
-        </svg>
-      </div>
+      {/* Official Attached MEDORA Transparent PNG Logo */}
+      <img
+        src={logoSrc}
+        alt="MEDORA Logo"
+        className={`${dimensions.imgHeight} w-auto object-contain shrink-0 transition-transform hover:scale-105 duration-200`}
+        onError={(e) => {
+          (e.target as HTMLImageElement).src = fallbackSrc;
+        }}
+      />
 
       {/* Official MEDORA Typography */}
       <div className="flex flex-col text-start justify-center">
@@ -122,3 +81,4 @@ export const Logo: React.FC<LogoProps> = ({
     </div>
   );
 };
+

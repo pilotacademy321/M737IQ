@@ -13,7 +13,7 @@ interface NotificationPermissionBannerProps {
   onOpenSettings: () => void;
 }
 
-const DISMISS_KEY = 'm737_push_banner_dismissed_until';
+const DISMISS_KEY = 'medora_push_banner_dismissed_until';
 
 export const NotificationPermissionBanner: React.FC<NotificationPermissionBannerProps> = ({
   onOpenSettings,
@@ -110,7 +110,7 @@ export const NotificationPermissionBanner: React.FC<NotificationPermissionBanner
                   <h3 className="text-xs sm:text-sm font-black text-white flex items-center gap-1.5">
                     <span>{language === 'ar' ? 'تفعيل الإشعارات الفورية' : 'Enable Mobile Push'}</span>
                     <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-amber-400/20 text-amber-300 border border-amber-400/30">
-                      M737 Push
+                      MEDORA Push
                     </span>
                   </h3>
                   <p className="text-[11px] text-slate-300 leading-snug mt-0.5">

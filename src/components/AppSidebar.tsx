@@ -2,6 +2,7 @@ import React from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { PortalId } from '../types';
+import { Logo } from './Logo';
 import { 
   Home, 
   User, 
@@ -144,25 +145,12 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
         }`}
       >
         {/* Top Header with Brand Logo */}
-        <div className="p-5 pb-4 border-b border-slate-800/80 flex items-center justify-between">
+        <div className="p-4 pb-3.5 border-b border-slate-800/80 flex items-center justify-between">
           <button
             onClick={handleHomeClick}
-            className="flex items-center gap-3 text-start group cursor-pointer focus:outline-hidden"
+            className="flex items-center gap-2 text-start group cursor-pointer focus:outline-hidden"
           >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#002244] to-[#0d9488] text-white flex items-center justify-center border border-white/20 shadow-md shrink-0">
-              <Stethoscope size={20} className="text-teal-300" />
-            </div>
-
-            <div>
-              <div className="flex items-center gap-1.5 leading-none">
-                <span className="font-black text-base tracking-wider text-white">MEDORA</span>
-                <span className="text-slate-400 text-xs">|</span>
-                <span className="text-xs font-bold text-teal-300">ميدورا العراق</span>
-              </div>
-              <div className="text-[10px] text-slate-300 font-bold mt-1 tracking-wider uppercase">
-                {language === 'ar' ? 'صحتك أولويتنا' : 'YOUR HEALTH • OUR PRIORITY'}
-              </div>
-            </div>
+            <Logo size="sm" showTagline={true} light={true} />
           </button>
 
           {/* Close button for mobile */}

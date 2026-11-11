@@ -821,7 +821,7 @@ export const SecretaryPortalWorkspace: React.FC<SecretaryPortalWorkspaceProps> =
 
           <div className="mt-6 pt-6 border-t border-slate-100 text-xs text-slate-500 flex items-center justify-center gap-2">
             <Lock className="w-4 h-4 text-emerald-600" />
-            {language === 'ar' ? 'منصة M737 — بيئة آمنة مشفرة وفق الضوابط الطبية' : 'M737 Platform — HIPAA & Medical syndicate compliant'}
+            {language === 'ar' ? 'منصة MEDORA — بيئة آمنة مشفرة وفق الضوابط الطبية' : 'MEDORA Platform — HIPAA & Medical syndicate compliant'}
           </div>
         </div>
       </div>

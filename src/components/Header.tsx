@@ -229,6 +229,20 @@ export const Header: React.FC<HeaderProps> = ({
                 </button>
               )}
 
+              {/* Mobile Logo Branding */}
+              <div 
+                className="lg:hidden shrink-0 flex items-center cursor-pointer" 
+                onClick={onResetToHome}
+                title="MEDORA | ميدورا العراق"
+              >
+                <img 
+                  src="/assets/images/medora-official-logo.png" 
+                  alt="MEDORA Logo" 
+                  className="h-8 w-auto object-contain"
+                  onError={(e) => { (e.target as HTMLImageElement).src = '/assets/images/medora-logo.png'; }}
+                />
+              </div>
+
               {/* Mockup Search Bar */}
               <form onSubmit={handleSearchSubmit} className="relative w-full">
                 <div className="relative flex items-center">
@@ -627,7 +641,7 @@ export const Header: React.FC<HeaderProps> = ({
                   <span>
                     {copiedId 
                       ? (language === 'ar' ? 'تم النسخ!' : 'Copied!') 
-                      : (userProfile?.accountId || userProfile?.medicalId || (user ? generateFacilityOrUserId(userProfile?.role || 'patient', user.uid) : 'M737-ID'))
+                      : (userProfile?.accountId || userProfile?.medicalId || (user ? generateFacilityOrUserId(userProfile?.role || 'patient', user.uid) : 'MEDORA-ID'))
                     }
                   </span>
                 </button>
